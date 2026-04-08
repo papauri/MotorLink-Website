@@ -1,0 +1,59 @@
+<!-- AI Car Chat Widget - Global Assistant -->
+<link rel="stylesheet" href="css/ai-car-chat.css">
+<div class="ai-car-chat-widget" id="aiCarChatWidget">
+    <div class="ai-chat-header" id="aiChatHeader">
+        <div class="ai-chat-header-info">
+            <div class="ai-chat-avatar">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="ai-chat-title">
+                <h3>MotorLink AI Assistant</h3>
+                <p>Your personal assistant</p>
+            </div>
+        </div>
+        <button class="ai-chat-toggle" id="aiChatToggle">
+            <i class="fas fa-times" id="aiChatToggleIcon"></i>
+        </button>
+    </div>
+    <div class="ai-chat-body" id="aiChatBody" style="display: none;">
+        <div class="ai-chat-messages" id="aiChatMessages">
+            <div class="ai-chat-welcome">
+                <div class="ai-chat-avatar-large">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>Hello! I'm MotorLink AI Assistant</h3>
+                <p>I can help you with:</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Car questions and specifications</li>
+                    <li><i class="fas fa-check"></i> Finding vehicles on our website</li>
+                    <li><i class="fas fa-check"></i> Managing your listings</li>
+                    <li><i class="fas fa-check"></i> Garage, dealer, and car hire info</li>
+                    <li><i class="fas fa-check"></i> General car advice</li>
+                </ul>
+                <p class="ai-chat-disclaimer">Just ask me anything!</p>
+            </div>
+        </div>
+        <div class="ai-chat-input-container">
+            <div class="ai-chat-input-wrapper">
+                <textarea 
+                    id="aiChatInput" 
+                    placeholder="Ask me anything..." 
+                    rows="1"
+                    maxlength="500"
+                ></textarea>
+                <button class="ai-chat-send-btn" id="aiChatSendBtn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            <div class="ai-chat-char-count">
+                <span id="aiChatCharCount">0</span>/500
+            </div>
+        </div>
+    </div>
+    <button class="ai-chat-minimized" id="aiChatMinimized">
+        <i class="fas fa-comments"></i>
+        <span>MotorLink AI</span>
+    </button>
+</div>
+<script src="js/ai-car-chat.js"></script>
+

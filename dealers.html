@@ -1,0 +1,348 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Dealers - MotorLink Malawi</title>
+    <meta name="description" content="Find trusted car dealers in Malawi. Browse professional showrooms and discover your next car from verified dealers.">
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/dealers.css">
+    <link rel="stylesheet" href="css/dealer-business-cards.css">
+    <link rel="stylesheet" href="css/dealers-page.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+    <link rel="stylesheet" href="css/unified-filters.css">
+    <link rel="stylesheet" href="css/mobile-filter-tray.css">
+
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-container">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                <nav class="nav" id="mainNav">
+                    <a href="index.html">Home</a>
+                    <a href="car-database.html">Know Your Car</a>
+                    <a href="garages.html">Garages</a>
+                    <a href="dealers.html">Dealers</a>
+                    <a href="car-hire.html">Car Hire</a>
+                    <a href="sell.html">Sell Car</a>
+                </nav>
+                <div class="user-menu" id="userMenu">
+                    <div id="userInfo" style="display: none;">
+                        <a href="profile.html" class="user-avatar-btn" title="My Profile" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </a>
+                        <button onclick="logout()" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    <div id="guestMenu">
+                        <a href="login.html" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="register.html" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+                <button class="mobile-menu-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <h1>Car Dealers & Showrooms</h1>
+        <p class="hero-subtitle">Browse verified dealers across Malawi.</p>
+
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-number" id="totalDealers">Loading...</div>
+                <div class="hero-stat-label">Dealers</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-number" id="totalCarsAvailable">Loading...</div>
+                <div class="hero-stat-label">Cars</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-number" id="totalCities">Loading...</div>
+                <div class="hero-stat-label">Cities</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-number" id="featuredDealers">Loading...</div>
+                <div class="hero-stat-label">Featured Dealers</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+    <!-- Mobile Filter FAB (Floating Action Button) -->
+    <button class="mobile-filter-fab" id="mobileFilterFab" aria-label="Open filters">
+        <i class="fas fa-sliders-h"></i>
+    </button>
+
+    <!-- Mobile Filter Tray Overlay -->
+    <div class="mobile-filter-overlay" id="mobileFilterOverlay"></div>
+
+    <!-- Mobile Filter Tray -->
+    <div class="mobile-filter-tray" id="mobileFilterTray" role="dialog" aria-label="Filter options">
+        <div class="mobile-filter-tray-header">
+            <h3><i class="fas fa-filter"></i> Filter Dealers</h3>
+            <button class="mobile-filter-tray-close" id="mobileFilterTrayClose" aria-label="Close filters">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mobile-filter-tray-content">
+            <!-- Filters will be populated here on mobile -->
+        </div>
+        <div class="mobile-filter-tray-actions">
+            <button type="button" class="btn btn-outline-primary btn-clear-filters-mobile">
+                <i class="fas fa-redo"></i> Clear All
+            </button>
+            <button type="submit" class="btn btn-primary btn-apply-filters-mobile">
+                <i class="fas fa-check"></i> Apply
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="dealers-page-wrapper">
+    <section class="main-content">
+        <div class="dealers-page-container">
+            <!-- Enhanced Filters -->
+            <!-- Enhanced Filters -->
+<div class="dealers-filters" id="dealersFilters">
+    <div class="filter-group">
+        <label class="filter-label"><i class="fas fa-search"></i> Search Dealers</label>
+        <input type="text" class="search-input" placeholder="Search by dealer name..." id="dealerSearch">
+    </div>
+    
+    <div class="filter-group">
+        <label class="filter-label"><i class="fas fa-map-marker-alt"></i> Location</label>
+        <select class="filter-select" id="locationFilter">
+            <option value="">All Locations</option>
+        </select>
+    </div>
+    
+    <div class="filter-group">
+        <label class="filter-label"><i class="fas fa-shield-alt"></i> Verification Status</label>
+        <select class="filter-select" id="verificationFilter">
+            <option value="">All Dealers</option>
+            <option value="verified">Verified Only</option>
+            <option value="unverified">Unverified Only</option>
+        </select>
+    </div>
+    
+    <div class="filter-group">
+        <label class="filter-label"><i class="fas fa-crown"></i> Featured</label>
+        <select class="filter-select" id="featuredFilter">
+            <option value="">All Dealers</option>
+            <option value="featured">Featured Only</option>
+            <option value="regular">Regular Only</option>
+        </select>
+    </div>
+    
+    <div class="filter-actions">
+        <button class="btn btn-outline-primary" id="clearFilters">
+            <i class="fas fa-times"></i> Clear
+        </button>
+        <button class="btn btn-primary" id="applyFilters">
+            <i class="fas fa-filter"></i> Apply
+        </button>
+    </div>
+</div>
+
+            <!-- Results Header -->
+            <div class="results-header">
+                <div>
+                    <h2 class="results-title">Our Trusted Dealers</h2>
+                    <p class="results-count" id="resultsCount">Loading dealers...</p>
+                </div>
+                
+                <div class="sort-controls">
+                    <label for="sortSelect"><i class="fas fa-sort"></i> Sort by:</label>
+                    <select class="filter-select" id="sortSelect">
+                        <option value="featured">Featured First</option>
+                        <option value="name">Name A-Z</option>
+                        <option value="cars">Most Cars</option>
+                        <option value="verified">Verified First</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading-container" id="loadingContainer">
+                <div class="loading-spinner"></div>
+                <p>Loading trusted dealers...</p>
+            </div>
+
+            <!-- Dealers Grid -->
+            <div class="dealers-grid" id="dealersGrid">
+                <!-- Dealers will be loaded here -->
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState" style="display: none;">
+                <i class="fas fa-store-slash"></i>
+                <h3>No Dealers Found</h3>
+                <p>Try adjusting your search criteria or check back later for new dealers.</p>
+                <button onclick="clearAllFilters()" class="btn btn-primary">
+                    <i class="fas fa-refresh"></i> Clear Filters
+                </button>
+            </div>
+        </div>
+    </section>
+    </div><!-- End dealers-page-wrapper -->
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-car"></i> MotorLink Malawi</h4>
+                    <p>Your trusted partner for buying and selling cars in Malawi. We connect buyers and sellers in a safe, secure environment with the latest cars from trusted dealers across all 28 districts.</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="Follow us on Facebook" title="MotorLink Malawi Facebook">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Twitter" title="MotorLink Malawi Twitter">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Instagram" title="MotorLink Malawi Instagram">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" aria-label="Contact us on WhatsApp" title="MotorLink Malawi WhatsApp">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-link"></i> Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Browse Cars</a></li>
+                        <li><a href="sell.html">Sell Your Car</a></li>
+                        <li><a href="garages.html">Find Garages</a></li>
+                        <li><a href="dealers.html">Car Dealers</a></li>
+                        <li><a href="car-hire.html">Car Hire</a></li>
+                        <li><a href="car-database.html">Know Your Car</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-life-ring"></i> Support & Help</h4>
+                    <ul>
+                        <li><a href="help.html">Help Center</a></li>
+                        <li><a href="safety.html">Safety Tips</a></li>
+                        <li><a href="contact.html">Contact Us</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-phone"></i> Contact & Payment</h4>
+                    <p><i class="fas fa-envelope"></i> <strong>Email:</strong> <a href="mailto:info@motorlink.mw">info@motorlink.mw</a></p>
+                    <p><i class="fas fa-phone"></i> <strong>Phone:</strong> <a href="tel:+265991234567">+265 991 234 567</a></p>
+                    
+                    <div style="margin-top: 20px;">
+                        <h5><i class="fas fa-mobile-alt"></i> Mobile Money Payments</h5>
+                        <p><strong>Airtel Money:</strong> +265 991 234 567</p>
+                        <p><strong>TNM Mpamba:</strong> +265 881 765 432</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 MotorLink Malawi. All rights reserved. | Connecting Malawi's automotive community since 2025</p>
+                <p style="margin-top: 10px; font-size: 14px;">
+                    <i class="fas fa-shield-alt"></i> Safe Trading • 
+                    <i class="fas fa-mobile-alt"></i> Mobile Friendly • 
+                    <i class="fas fa-globe"></i> Hosted by <a href="https://promanaged-it.com" target="_blank" rel="noopener">ProManaged IT</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Contact Modal -->
+    <div id="contactModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="contactTitle">Contact Dealer</h2>
+                <button class="modal-close" onclick="closeContactModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="contactContent">
+                <!-- Contact details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        // Suppress Google Maps analytics errors (gen_204) that are blocked by ad blockers
+        // This doesn't affect Maps functionality, just analytics tracking
+        const originalError = window.onerror;
+        window.onerror = function(msg, url, line, col, error) {
+            // Suppress gen_204 errors (Google Maps analytics blocked by ad blockers)
+            if (msg && (msg.includes('gen_204') || msg.includes('ERR_BLOCKED_BY_CLIENT'))) {
+                return true; // Suppress the error
+            }
+            // Call original error handler if it exists
+            if (originalError) {
+                return originalError.apply(this, arguments);
+            }
+            return false;
+        };
+
+        // Also catch fetch/network errors
+        window.addEventListener('unhandledrejection', function(event) {
+            if (event.reason && event.reason.message && event.reason.message.includes('gen_204')) {
+                event.preventDefault();
+            }
+        });
+
+        // Load Google Maps API for geocoding addresses
+        (async () => {
+            try {
+                const mapConfig = await window.getGoogleMapsConfig();
+                if (!mapConfig || !mapConfig.apiKey) {
+                    return;
+                }
+
+                const gmapsScript = document.createElement('script');
+                gmapsScript.src = `https://maps.googleapis.com/maps/api/js?key=${mapConfig.apiKey}&libraries=places&loading=async`;
+                gmapsScript.async = true;
+                gmapsScript.defer = true;
+                document.head.appendChild(gmapsScript);
+            } catch (error) {
+                console.error('Failed to load Google Maps config:', error);
+            }
+        })();
+    </script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="js/footer-loader.js"></script>
+    <script src="js/mobile-filter-tray.js"></script>
+    <script src="script.js"></script>
+    <script src="js/cookie-consent.js"></script>
+
+    <script src="js/page-transitions.js"></script>
+</body>
+</html>

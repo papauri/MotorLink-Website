@@ -1,0 +1,630 @@
+/* ============================================================================
+   UNIFIED FILTER SYSTEM - MotorLink
+   Consistent, modern filter styling across all pages
+   ============================================================================ */
+
+/* ========================================
+   GLOBAL FILTER CONTAINER STYLES
+   ======================================== */
+
+/* Base filter container - applies to all pages */
+.filters-container,
+.dealers-filters,
+.garage-filters-container,
+.showroom-filters,
+.filter-bar,
+.listings-search {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+    position: sticky;
+    top: 60px;
+    z-index: 1000;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================
+   FILTER GRID LAYOUT
+   ======================================== */
+
+/* Grid layout for filter groups */
+.filters-grid,
+.dealers-filters,
+.garage-filters-grid,
+.filter-bar {
+    display: grid !important;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: end;
+    flex-direction: row !important; /* Override any flex-direction */
+}
+
+@media (min-width: 640px) {
+    .filters-grid,
+    .dealers-filters,
+    .garage-filters-grid,
+    .filter-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 768px) {
+    .filters-grid,
+    .dealers-filters,
+    .garage-filters-grid,
+    .filter-bar {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .filters-grid,
+    .dealers-filters,
+    .garage-filters-grid,
+    .filter-bar {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    /* Dealers filters - horizontal layout with 5 filters + actions */
+    .dealers-filters {
+        grid-template-columns: repeat(5, 1fr) auto !important;
+    }
+}
+
+/* ========================================
+   FILTER GROUPS & LABELS
+   ======================================== */
+
+/* Individual filter group */
+.filter-group,
+.garage-filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0; /* Prevent overflow */
+}
+
+/* Filter labels */
+.filter-label,
+.garage-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+}
+
+.filter-label i,
+.garage-filter-label i {
+    color: #00c853;
+    font-size: 13px;
+    width: 16px;
+    text-align: center;
+}
+
+/* ========================================
+   INPUT & SELECT STYLING
+   ======================================== */
+
+/* All filter inputs and selects */
+.filter-select,
+.garage-filter-input,
+.search-input,
+select.filter-select,
+input.filter-input {
+    width: 100%;
+    height: 40px;
+    padding: 0 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2937;
+    background: #ffffff;
+    border: 1.5px solid #d1d5db;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    appearance: none;
+    cursor: pointer;
+}
+
+/* Custom dropdown arrow for selects */
+select.filter-select,
+.filter-select,
+.garage-filter-input[type="select"],
+select.garage-filter-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath fill='%23374151' d='M4 6l4 4 4-4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 36px;
+}
+
+/* Input focus states */
+.filter-select:focus,
+.garage-filter-input:focus,
+.search-input:focus {
+    outline: none;
+    border-color: #00c853;
+    box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.1);
+    background: #ffffff;
+}
+
+/* Hover states */
+.filter-select:hover,
+.garage-filter-input:hover,
+.search-input:hover {
+    border-color: #9ca3af;
+}
+
+/* Disabled state */
+.filter-select:disabled,
+.garage-filter-input:disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* ========================================
+   SEARCH FORM SPECIFIC
+   ======================================== */
+
+.search-form {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+}
+
+.search-form .search-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-form .search-btn,
+.search-form button[type="submit"] {
+    height: 40px;
+    padding: 0 20px;
+    background: linear-gradient(135deg, #00c853 0%, #00b248 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-form .search-btn:hover,
+.search-form button[type="submit"]:hover {
+    background: linear-gradient(135deg, #00b248 0%, #009639 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+}
+
+.search-form .search-btn:active,
+.search-form button[type="submit"]:active {
+    transform: translateY(0);
+}
+
+/* ========================================
+   FILTER ACTION BUTTONS
+   ======================================== */
+
+.filter-actions,
+.garage-filter-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+@media (min-width: 1024px) {
+    .filter-actions,
+    .garage-filter-actions {
+        margin-top: 0;
+        grid-column: -1;
+    }
+}
+
+/* Primary filter button */
+.filter-actions .btn-primary,
+.filter-actions .btn,
+.garage-filter-actions .btn-primary,
+.btn-filter {
+    height: 40px;
+    padding: 0 18px;
+    background: linear-gradient(135deg, #00c853 0%, #00b248 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-actions .btn-primary:hover,
+.filter-actions .btn:hover,
+.garage-filter-actions .btn-primary:hover,
+.btn-filter:hover {
+    background: linear-gradient(135deg, #00b248 0%, #009639 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+}
+
+/* Outline/Clear button */
+.filter-actions .btn-outline-primary,
+.filter-actions .btn-outline,
+.garage-filter-actions .btn-outline {
+    height: 40px;
+    padding: 0 18px;
+    background: #ffffff;
+    color: #00c853;
+    border: 1.5px solid #00c853;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.filter-actions .btn-outline-primary:hover,
+.filter-actions .btn-outline:hover,
+.garage-filter-actions .btn-outline:hover {
+    background: #00c853;
+    color: #ffffff;
+    transform: translateY(-1px);
+}
+
+/* ========================================
+   SIDEBAR FILTERS (Index.html)
+   ======================================== */
+
+.sidebar {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+}
+
+@media (min-width: 1024px) {
+    .sidebar {
+        position: sticky;
+        top: 140px;
+        max-height: calc(100vh - 160px);
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 200, 83, 0.3) transparent;
+    }
+
+    .sidebar::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+        background: rgba(0, 200, 83, 0.3);
+        border-radius: 3px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 200, 83, 0.5);
+    }
+}
+
+.sidebar .filter-group {
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.sidebar .filter-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* ========================================
+   SHOWROOM FILTERS SPECIFIC
+   ======================================== */
+
+.showroom-filters,
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.filters > div {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.filters label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+/* ========================================
+   SORT CONTROLS
+   ======================================== */
+
+.sort-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.sort-controls label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sort-controls .filter-select,
+.sort-select {
+    min-width: 160px;
+}
+
+/* ========================================
+   MOBILE FILTER TOGGLE
+   ======================================== */
+
+.mobile-filter-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 44px;
+    background: linear-gradient(135deg, #00c853 0%, #00b248 100%);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 16px;
+    transition: all 0.2s ease;
+}
+
+.mobile-filter-toggle:hover {
+    background: linear-gradient(135deg, #00b248 0%, #009639 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 200, 83, 0.3);
+}
+
+@media (min-width: 768px) {
+    .mobile-filter-toggle {
+        display: none;
+    }
+}
+
+/* ========================================
+   ACTIVE FILTERS DISPLAY
+   ======================================== */
+
+.active-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.filter-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #e8f5e9;
+    color: #1b5e20;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.filter-tag .remove-filter {
+    background: none;
+    border: none;
+    color: #1b5e20;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.2s ease;
+}
+
+.filter-tag .remove-filter:hover {
+    color: #d32f2f;
+}
+
+/* ========================================
+   RESULTS COUNT & HEADER
+   ======================================== */
+
+.results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.results-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.results-count {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 4px 0 0 0;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media (max-width: 639px) {
+    .filters-container,
+    .dealers-filters,
+    .garage-filters-container,
+    .filter-bar {
+        padding: 16px;
+    }
+
+    .filter-label,
+    .garage-filter-label {
+        font-size: 11px;
+    }
+
+    .filter-select,
+    .garage-filter-input,
+    .search-input {
+        height: 38px;
+        font-size: 13px;
+    }
+
+    .filter-actions .btn,
+    .garage-filter-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .search-form {
+        flex-direction: column;
+    }
+
+    .search-form .search-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ========================================
+   LOADING STATE
+   ======================================== */
+
+.filters-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.filters-loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+
+.filter-select:focus-visible,
+.garage-filter-input:focus-visible,
+.search-input:focus-visible {
+    outline: 2px solid #00c853;
+    outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+    .filter-select,
+    .garage-filter-input,
+    .search-input {
+        border-width: 2px;
+    }
+}
+
+/* Extra small mobile devices - improved readability */
+@media (max-width: 360px) {
+    .filter-select,
+    .garage-filter-input,
+    .search-input {
+        font-size: 12px;
+        height: 36px;
+        padding: 0 10px;
+        padding-right: 32px;
+    }
+    
+    select.filter-select,
+    .filter-select,
+    .garage-filter-input[type="select"],
+    select.garage-filter-input {
+        background-size: 14px;
+        background-position: right 8px center;
+    }
+    
+    .filter-label,
+    .garage-filter-label {
+        font-size: 10px;
+    }
+}
+
+/* Ensure text in selects is not cut off on any device */
+.filter-select option,
+.garage-filter-input option {
+    padding: 8px;
+    font-size: 14px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .filter-select,
+    .garage-filter-input,
+    .search-input,
+    .filter-actions .btn,
+    .search-btn {
+        transition: none;
+    }
+}

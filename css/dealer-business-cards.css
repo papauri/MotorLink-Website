@@ -1,0 +1,1093 @@
+/* ========================================
+   DEALER BUSINESS CARDS - Unique Styling
+   Used only on dealers.html
+======================================== */
+
+/* Clickable Card Link Wrapper */
+.dealer-business-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+  cursor: pointer;
+}
+
+.dealer-business-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 280px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.dealer-business-card-link:hover .dealer-business-card {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: #00c853;
+  transform: translateY(-4px);
+}
+
+.dealer-business-card-link:focus {
+  outline: 2px solid #00c853;
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+.dealer-business-card-link:focus .dealer-business-card {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: #00c853;
+}
+
+.dealer-business-card.featured-dealer {
+  border-top: 4px solid #f59e0b;
+  background: linear-gradient(to bottom, #fffbf5 0%, #ffffff 100%);
+}
+
+/* Header Section - Uniform Height */
+.dealer-business-card .dealer-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 70px; /* Ensures uniform header height across all cards */
+  margin-bottom: 6px;
+}
+
+.dealer-business-card .dealer-header-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-right: 60px; /* Reduced - location-meta now outside header */
+}
+
+/* Corner Ribbon Badges Container */
+.dealer-business-card .dealer-header-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  z-index: 5;
+}
+
+.dealer-business-card .dealer-business-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+/* Modern 2-row grid layout: district+distance / years+cars - ALL SCREENS */
+.dealer-business-card .dealer-location-meta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-start;
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  color: #374151;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.dealer-business-card .dealer-location-meta span,
+.dealer-business-card .dealer-location-meta .distance-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 10px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: #374151;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  flex: 0 0 calc(50% - 3px);
+  max-width: calc(50% - 3px);
+  transition: all 0.2s ease;
+}
+
+.dealer-business-card .dealer-location-meta span:hover,
+.dealer-business-card .dealer-location-meta .distance-info:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.dealer-business-card .dealer-location-meta i {
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+/* Distance info inherits pill styling but keeps green color */
+.dealer-business-card .dealer-location-meta .distance-info {
+  color: #374151;
+}
+
+/* Modern badge-style address - ALL SCREENS */
+.dealer-business-card .dealer-address {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: #fef3c7;
+  border-radius: 6px;
+  border: 1px solid #fbbf24;
+  font-size: 0.75rem;
+  color: #1f2937;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  max-width: fit-content;
+  line-height: 1.3;
+  margin-top: 0;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.dealer-business-card .dealer-address:hover {
+  background: #fde68a;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(251, 191, 36, 0.2);
+}
+
+.dealer-business-card .dealer-address i {
+  font-size: 0.7rem;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.dealer-business-card .dealer-address span {
+  color: #92400e;
+  font-weight: 700;
+}
+
+/* Distance info inherits all span styling - only icon color differs */
+.dealer-business-card .dealer-location-meta .distance-info i {
+  color: #00c853 !important;
+}
+
+/* Add clock icon for years established - ALL SCREENS */
+.dealer-business-card .dealer-location-meta span:nth-child(3)::before {
+  content: '\f017' !important;
+  font-family: 'Font Awesome 5 Free' !important;
+  font-weight: 900 !important;
+  margin-right: 4px;
+  font-size: 0.7rem;
+  color: #00c853;
+  display: inline-block;
+}
+
+/* Add car icon for cars available - ALL SCREENS */
+.dealer-business-card .dealer-location-meta span:nth-child(4)::before {
+  content: '\f1b9' !important;
+  font-family: 'Font Awesome 5 Free' !important;
+  font-weight: 900 !important;
+  margin-right: 4px;
+  font-size: 0.7rem;
+  color: #00c853;
+  display: inline-block;
+}
+
+/* Corner Ribbon Badge Style - Elegant Watermark */
+.dealer-business-card .dealer-status-tag {
+  position: relative;
+  padding: 6px 14px 6px 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%);
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 90px;
+  backdrop-filter: blur(10px);
+}
+
+.dealer-business-card .dealer-status-tag i {
+  font-size: 0.7rem;
+}
+
+/* Folded corner effect */
+.dealer-business-card .dealer-status-tag::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  width: 10px;
+  height: 5px;
+  background: inherit;
+  filter: brightness(0.6);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* Featured Badge - Vibrant Gold */
+.dealer-business-card .dealer-status-tag.featured-dealer-tag {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Verified Badge - Professional Blue */
+.dealer-business-card .dealer-status-tag.verified-dealer-tag {
+  background: linear-gradient(135deg, #159a5b 0%, #0f7f4c 100%);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Certified Badge - Softer, Elegant Gold */
+.dealer-business-card .dealer-status-tag.certified-dealer-tag {
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Body Section - Enhanced Visual Hierarchy with Uniform Layout */
+.dealer-business-card .dealer-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  flex: 1;
+  min-height: 140px; /* Reduced for more compact design */
+}
+
+/* Rating - Enhanced Visibility */
+.dealer-business-card .dealer-rating-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  background: #fffbf0;
+  border-radius: 8px;
+  border: 1px solid #fef3c7;
+}
+
+.dealer-business-card .dealer-stars {
+  display: flex;
+  gap: 3px;
+  font-size: 0.9rem;
+  color: #f59e0b;
+}
+
+.dealer-business-card .dealer-rating-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.dealer-business-card .dealer-reviews-count {
+  font-size: 0.8rem;
+  color: #78716c;
+  font-weight: 500;
+}
+
+/* Info Lines - Improved Readability with Uniform Positioning */
+.dealer-business-card .dealer-stats-display,
+.dealer-business-card .dealer-specializations-display {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #4b5563;
+  font-weight: 500;
+  min-height: 40px; /* Reduced for more compact design */
+}
+
+.dealer-business-card .dealer-stats-display i,
+.dealer-business-card .dealer-specializations-display i {
+  font-size: 0.85rem;
+  color: #00c853;
+  width: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Wrapper for specializations to maintain uniform spacing */
+.dealer-business-card .dealer-specializations-display > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Specialization Tags - Compact & Fancy Design */
+.dealer-business-card .dealer-specializations-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.dealer-business-card .dealer-spec-tag {
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  font-weight: 700;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  box-shadow: 0 1px 3px rgba(0, 200, 83, 0.1);
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dealer-business-card .dealer-spec-tag::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s ease;
+}
+
+.dealer-business-card .dealer-spec-tag:hover::before {
+  left: 100%;
+}
+
+.dealer-business-card .dealer-spec-tag:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 200, 83, 0.2);
+  border-color: #4ade80;
+  background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%);
+}
+
+.dealer-business-card .dealer-spec-tag.more-specs {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border-color: #fbbf24;
+}
+
+.dealer-business-card .dealer-spec-tag.more-specs:hover {
+  background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
+  border-color: #f59e0b;
+}
+
+/* Actions - Compact Fancy Button Design */
+.dealer-business-card .dealer-card-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.dealer-business-card .dealer-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #00c853 0%, #00a844 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(0, 200, 83, 0.25);
+}
+
+/* Shimmer effect */
+.dealer-business-card .dealer-action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.6s ease;
+}
+
+.dealer-business-card-link:hover .dealer-action-btn::before {
+  left: 100%;
+}
+
+.dealer-business-card .dealer-action-btn i {
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.dealer-business-card-link:hover .dealer-action-btn {
+  background: linear-gradient(135deg, #00b248 0%, #009639 100%);
+  box-shadow: 0 5px 15px rgba(0, 200, 83, 0.4);
+  transform: translateY(-2px) scale(1.02);
+}
+
+.dealer-business-card-link:hover .dealer-action-btn i {
+  transform: rotate(5deg) scale(1.1);
+}
+
+.dealer-business-card-link:active .dealer-action-btn {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .dealer-business-card {
+    padding: 12px;
+    min-height: 220px;
+  }
+
+  .dealer-business-card .dealer-card-header {
+    min-height: 60px;
+    gap: 8px;
+  }
+
+  .dealer-business-card .dealer-business-name {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+  
+  .dealer-business-card .dealer-location-meta {
+    font-size: 0.72rem;
+    gap: 8px;
+  }
+  
+  .dealer-business-card .dealer-location-meta i {
+    font-size: 0.7rem;
+  }
+  
+  /* Corner ribbon - smaller on mobile */
+  .dealer-business-card .dealer-status-tag {
+    font-size: 0.6rem;
+    padding: 5px 10px 5px 8px;
+    min-width: 75px;
+  }
+
+  .dealer-business-card .dealer-status-tag i {
+    font-size: 0.65rem;
+  }
+
+  .dealer-business-card .dealer-card-body {
+    min-height: 120px;
+    gap: 8px;
+    padding: 10px 0;
+  }
+  
+  /* Compact rating display */
+  .dealer-business-card .dealer-rating-display {
+    padding: 5px 8px;
+    gap: 6px;
+  }
+  
+  .dealer-business-card .dealer-stars {
+    font-size: 0.8rem;
+    gap: 2px;
+  }
+  
+  .dealer-business-card .dealer-rating-number {
+    font-size: 0.9rem;
+  }
+  
+  .dealer-business-card .dealer-reviews-count {
+    font-size: 0.7rem;
+  }
+
+  /* Compact stats and specializations */
+  .dealer-business-card .dealer-stats-display,
+  .dealer-business-card .dealer-specializations-display {
+    min-height: 35px;
+    font-size: 0.8rem;
+    gap: 6px;
+  }
+  
+  .dealer-business-card .dealer-stats-display i,
+  .dealer-business-card .dealer-specializations-display i {
+    font-size: 0.8rem;
+    width: 14px;
+  }
+
+  .dealer-business-card .dealer-card-actions {
+    padding-top: 8px;
+  }
+
+  .dealer-business-card .dealer-action-btn {
+    padding: 10px 16px;
+    font-size: 0.8rem;
+    width: 100%;
+    gap: 6px;
+  }
+  
+  .dealer-business-card .dealer-action-btn i {
+    font-size: 0.9rem;
+  }
+
+  .dealer-business-card .dealer-spec-tag {
+    font-size: 0.55rem;
+    padding: 2px 6px;
+  }
+}
+
+/* Tablet devices - optimize spacing and sizing */
+@media (max-width: 768px) {
+  .dealer-business-card .dealer-header-left {
+    padding-right: 50px;
+  }
+
+  .dealer-business-card .dealer-location-meta {
+    gap: 5px;
+    margin-top: 6px;
+  }
+
+  .dealer-business-card .dealer-location-meta span,
+  .dealer-business-card .dealer-location-meta .distance-info {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    flex: 0 0 calc(50% - 2.5px);
+    max-width: calc(50% - 2.5px);
+  }
+
+  .dealer-business-card .dealer-location-meta i {
+    font-size: 0.65rem;
+  }
+
+  .dealer-business-card .dealer-address {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
+
+  .dealer-business-card .dealer-address i {
+    font-size: 0.65rem;
+  }
+}
+
+/* ============================================================================
+   🔥 ULTRA-MODERN MOBILE REDESIGN - STUNNING UI/UX (≤480px) 🔥
+   Premium neumorphic design, vibrant gradients, smooth animations
+   ============================================================================ */
+@media (max-width: 480px) {
+  /* 🎨 PREMIUM CARD STYLING - Neumorphic Design */
+  .dealer-business-card,
+  .dealer-business-card.featured-dealer {
+    padding: 18px;
+    min-height: 240px;
+    border-radius: 20px;
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+    border: none;
+    box-shadow:
+      0 10px 30px rgba(0, 0, 0, 0.12),
+      0 1px 8px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 1);
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: visible;
+  }
+
+  /* ✨ Dramatic card-link active effects */
+  .dealer-business-card-link:active .dealer-business-card,
+  .dealer-business-card-link:active .dealer-business-card.featured-dealer {
+    transform: scale(0.96) translateY(2px);
+    box-shadow:
+      0 4px 15px rgba(0, 0, 0, 0.08),
+      inset 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+
+  /* 📋 Modern unified header with accent - FIX BADGE OVERLAP */
+  .dealer-business-card .dealer-card-header,
+  .dealer-business-card.featured-dealer .dealer-card-header {
+    min-height: 52px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 3px solid #00c853;
+    background: linear-gradient(to right, rgba(0, 200, 83, 0.05) 0%, transparent 100%);
+    padding-left: 8px;
+    margin-left: -8px;
+    border-radius: 8px 0 0 0;
+    position: relative;
+  }
+
+  /* Fix header-left to prevent badge overlap */
+  .dealer-business-card .dealer-header-left,
+  .dealer-business-card.featured-dealer .dealer-header-left {
+    padding-right: 85px !important; /* More space for badges */
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Ensure badges don't overlap content */
+  .dealer-business-card .dealer-header-right,
+  .dealer-business-card.featured-dealer .dealer-header-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 3 !important;
+    pointer-events: none; /* Allow clicking through badges */
+  }
+
+  /* 🌟 STUNNING LOCATION META - Ultra-Modern Badge Design - FORCE GRID LAYOUT */
+  .dealer-business-card .dealer-location-meta,
+  .dealer-business-card.featured-dealer .dealer-location-meta {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    grid-template-rows: auto auto !important;
+    gap: 8px !important;
+    margin-top: 12px;
+    margin-bottom: 14px;
+    width: 100%;
+    flex-direction: unset !important;
+    flex-wrap: unset !important;
+  }
+
+  .dealer-business-card .dealer-location-meta span,
+  .dealer-business-card .dealer-location-meta .distance-info,
+  .dealer-business-card.featured-dealer .dealer-location-meta span,
+  .dealer-business-card.featured-dealer .dealer-location-meta .distance-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2px;
+    padding: 5px 6px;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 0.62rem;
+    color: #374151;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+    flex: 1;
+    max-width: 100%;
+  }
+
+  @keyframes badgeShine {
+    0%, 100% { left: -100%; }
+    50% { left: 100%; }
+  }
+
+  /* 📍 Perfect grid positioning - EXPLICIT PLACEMENT */
+  .dealer-business-card .dealer-location-meta span:nth-child(1),
+  .dealer-business-card.featured-dealer .dealer-location-meta span:nth-child(1) {
+    grid-column: 1 / 2 !important;
+    grid-row: 1 / 2 !important;
+  }
+
+  .dealer-business-card .dealer-location-meta .distance-info,
+  .dealer-business-card .dealer-location-meta span:nth-child(2),
+  .dealer-business-card.featured-dealer .dealer-location-meta .distance-info,
+  .dealer-business-card.featured-dealer .dealer-location-meta span:nth-child(2) {
+    grid-column: 2 / 3 !important;
+    grid-row: 1 / 2 !important;
+  }
+
+  .dealer-business-card .dealer-location-meta span:nth-child(3),
+  .dealer-business-card.featured-dealer .dealer-location-meta span:nth-child(3) {
+    grid-column: 1 / 2 !important;
+    grid-row: 2 / 3 !important;
+  }
+
+  .dealer-business-card .dealer-location-meta span:nth-child(4),
+  .dealer-business-card.featured-dealer .dealer-location-meta span:nth-child(4) {
+    grid-column: 2 / 3 !important;
+    grid-row: 2 / 3 !important;
+  }
+
+  .dealer-business-card .dealer-location-meta i {
+    font-size: 0.65rem;
+    flex-shrink: 0;
+    margin-bottom: 1px;
+  }
+
+  /* ❌ HIDE fa-location-arrow icon on mobile - takes up too much space */
+  .dealer-business-card .dealer-location-meta .distance-info i,
+  .dealer-business-card.featured-dealer .dealer-location-meta .distance-info i {
+    display: none !important;
+  }
+
+  /* 📍 Make distance-info PROMINENT without icon - easier to read */
+  .dealer-business-card .dealer-location-meta .distance-info,
+  .dealer-business-card.featured-dealer .dealer-location-meta .distance-info {
+    font-weight: 700 !important;
+    font-size: 0.78rem !important;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+    border: 2px solid #10b981 !important;
+    color: #047857 !important;
+    padding: 8px 10px !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
+  }
+
+  /* ⚡ Dynamic active state with spring animation */
+  .dealer-business-card .dealer-location-meta span:active,
+  .dealer-business-card .dealer-location-meta .distance-info:active,
+  .dealer-business-card.featured-dealer .dealer-location-meta span:active,
+  .dealer-business-card.featured-dealer .dealer-location-meta .distance-info:active {
+    transform: scale(0.94) translateY(1px);
+    background: linear-gradient(135deg, #cbd5e1 0%, #e2e8f0 100%);
+    border-color: #94a3b8;
+    box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 🏢 STUNNING ADDRESS BADGE - Vibrant Green with Glow */
+  .dealer-business-card .dealer-address,
+  .dealer-business-card.featured-dealer .dealer-address {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 8px;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+
+  .dealer-business-card .dealer-address i {
+    font-size: 0.65rem;
+    color: #f59e0b;
+  }
+
+  .dealer-business-card .dealer-address span {
+    color: #374151;
+    font-weight: 700;
+  }
+
+  .dealer-business-card .dealer-address:hover {
+    transform: none;
+  }
+
+  .dealer-business-card .dealer-address:active {
+    opacity: 0.7;
+  }
+
+  /* Compact status tags */
+  .dealer-business-card .dealer-status-tag {
+    font-size: 0.6rem;
+    padding: 3px 7px;
+  }
+
+  /* Tighter card body */
+  .dealer-business-card .dealer-card-body {
+    min-height: 95px;
+    gap: 8px;
+    padding: 10px 0;
+  }
+
+  .dealer-business-card .dealer-rating-display {
+    padding: 4px 6px;
+  }
+  
+  .dealer-business-card .dealer-stars {
+    font-size: 0.75rem;
+  }
+  
+  .dealer-business-card .dealer-rating-number {
+    font-size: 0.85rem;
+  }
+  
+  .dealer-business-card .dealer-reviews-count {
+    font-size: 0.65rem;
+  }
+
+  .dealer-business-card .dealer-stats-display,
+  .dealer-business-card .dealer-specializations-display {
+    min-height: 30px;
+    font-size: 0.75rem;
+  }
+
+  .dealer-business-card .dealer-action-btn {
+    padding: 9px 14px;
+    font-size: 0.75rem;
+  }
+
+  .dealer-business-card .dealer-spec-tag {
+    font-size: 0.5rem;
+    padding: 2px 5px;
+  }
+
+  /* ========== PREMIUM FEATURED DEALER STYLING FOR MOBILE ========== */
+  .dealer-business-card.featured-dealer {
+    position: relative;
+    padding: 14px;
+    background: linear-gradient(135deg, #fffbf5 0%, #fff8e8 50%, #ffffff 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 16px;
+    box-shadow:
+      0 8px 24px rgba(245, 158, 11, 0.25),
+      0 4px 12px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    overflow: hidden;
+    animation: featuredGlow 3s ease-in-out infinite;
+  }
+
+  /* Premium glow animation */
+  @keyframes featuredGlow {
+    0%, 100% {
+      box-shadow:
+        0 8px 24px rgba(245, 158, 11, 0.25),
+        0 4px 12px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+    50% {
+      box-shadow:
+        0 12px 32px rgba(245, 158, 11, 0.35),
+        0 6px 16px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    }
+  }
+
+  /* Compact header for featured - no ribbon badge */
+  .dealer-business-card.featured-dealer .dealer-card-header {
+    padding-bottom: 8px;
+    border-bottom: 2px solid #fef3c7;
+    min-height: 50px;
+    margin-bottom: 8px;
+  }
+
+  /* Keep header-left compact without excessive padding */
+  .dealer-business-card.featured-dealer .dealer-header-left {
+    padding-right: 45px; /* Minimal padding since location-meta is outside */
+  }
+
+  /* Business name - compact but prominent */
+  .dealer-business-card.featured-dealer .dealer-business-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #92400e;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    letter-spacing: 0.2px;
+    margin-bottom: 4px;
+    line-height: 1.2;
+  }
+
+  /* Featured dealer uses CSS Grid too - golden theme */
+  .dealer-business-card.featured-dealer .dealer-location-meta {
+    gap: 4px;
+  }
+
+  .dealer-business-card.featured-dealer .dealer-location-meta span,
+  .dealer-business-card.featured-dealer .dealer-location-meta .distance-info {
+    background: transparent;
+    color: #92400e;
+    font-size: 0.62rem;
+    padding: 5px 6px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  .dealer-business-card.featured-dealer .dealer-location-meta span:active,
+  .dealer-business-card.featured-dealer .dealer-location-meta .distance-info:active {
+    opacity: 0.7;
+  }
+
+  .dealer-business-card.featured-dealer .dealer-location-meta i {
+    color: #f59e0b;
+    font-size: 0.65rem;
+    margin-bottom: 1px;
+  }
+
+  .dealer-business-card.featured-dealer .dealer-location-meta .distance-info i {
+    color: #00c853 !important;
+  }
+
+  /* Premium featured address styling */
+  .dealer-business-card.featured-dealer .dealer-address {
+    background: transparent;
+    color: #92400e;
+    font-weight: 700;
+    padding: 5px 8px;
+    font-size: 0.68rem;
+    letter-spacing: -0.01em;
+  }
+
+  .dealer-business-card .dealer-address i,
+  .dealer-business-card.featured-dealer .dealer-address i {
+    color: #f59e0b;
+    font-size: 0.65rem;
+  }
+
+  .dealer-business-card .dealer-address span,
+  .dealer-business-card.featured-dealer .dealer-address span {
+    color: #92400e;
+    font-weight: 700;
+  }
+
+  .dealer-business-card .dealer-address:active,
+  .dealer-business-card.featured-dealer .dealer-address:active {
+    opacity: 0.7;
+  }
+
+  /* 🏷️ PREMIUM STATUS TAGS */
+  .dealer-business-card .dealer-status-tag,
+  .dealer-business-card.featured-dealer .dealer-status-tag {
+    font-size: 0.65rem;
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-weight: 800;
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  /* 📦 MODERN CARD BODY */
+  .dealer-business-card .dealer-card-body,
+  .dealer-business-card.featured-dealer .dealer-card-body {
+    min-height: 100px;
+    gap: 12px;
+    padding: 14px 0;
+    background: transparent;
+    border: none;
+  }
+
+  /* ⭐ VIBRANT RATING DISPLAY */
+  .dealer-business-card .dealer-rating-display,
+  .dealer-business-card.featured-dealer .dealer-rating-display {
+    padding: 8px 12px;
+    background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
+    border: 2px solid #fbbf24;
+    border-radius: 12px;
+    box-shadow:
+      0 3px 10px rgba(251, 191, 36, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  }
+
+  .dealer-business-card .dealer-stars,
+  .dealer-business-card.featured-dealer .dealer-stars {
+    font-size: 0.85rem;
+    filter: drop-shadow(0 1px 2px rgba(251, 191, 36, 0.4));
+  }
+
+  .dealer-business-card .dealer-rating-number,
+  .dealer-business-card.featured-dealer .dealer-rating-number {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #92400e;
+  }
+
+  .dealer-business-card .dealer-reviews-count,
+  .dealer-business-card.featured-dealer .dealer-reviews-count {
+    font-size: 0.7rem;
+    color: #92400e;
+    font-weight: 600;
+  }
+
+  /* 📊 MODERN STATS & SPECIALIZATIONS */
+  .dealer-business-card .dealer-stats-display,
+  .dealer-business-card .dealer-specializations-display,
+  .dealer-business-card.featured-dealer .dealer-stats-display,
+  .dealer-business-card.featured-dealer .dealer-specializations-display {
+    min-height: 36px;
+    font-size: 0.75rem;
+    background: linear-gradient(135deg, #f1f5f9 0%, #ffffff 100%);
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 8px 10px;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  /* 💚 FRIENDLY ACTION BUTTON - Green Theme, Approachable Design */
+  .dealer-business-card .dealer-action-btn,
+  .dealer-business-card.featured-dealer .dealer-action-btn {
+    padding: 12px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, #00c853 0%, #00a843 100%);
+    color: #ffffff;
+    border: 2px solid rgba(0, 200, 83, 0.3);
+    border-radius: 12px;
+    box-shadow:
+      0 3px 12px rgba(0, 200, 83, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    letter-spacing: 0.02em;
+    text-transform: capitalize;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle shimmer effect */
+  .dealer-business-card .dealer-action-btn::after,
+  .dealer-business-card.featured-dealer .dealer-action-btn::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+    animation: buttonShimmer 4s infinite;
+  }
+
+  @keyframes buttonShimmer {
+    0%, 100% { left: -100%; }
+    50% { left: 100%; }
+  }
+
+  /* Button text on top of animation */
+  .dealer-business-card .dealer-action-btn i,
+  .dealer-business-card.featured-dealer .dealer-action-btn i {
+    position: relative;
+    z-index: 2;
+  }
+
+  .dealer-business-card .dealer-action-btn:active,
+  .dealer-business-card.featured-dealer .dealer-action-btn:active {
+    transform: scale(0.96) translateY(1px);
+    background: linear-gradient(135deg, #00a843 0%, #008a37 100%);
+    box-shadow:
+      0 2px 6px rgba(0, 200, 83, 0.25),
+      inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  /* 🎨 MODERN SPEC TAGS */
+  .dealer-business-card .dealer-spec-tag,
+  .dealer-business-card.featured-dealer .dealer-spec-tag {
+    font-size: 0.6rem;
+    padding: 4px 8px;
+    background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%);
+    color: #0c4a6e;
+    border: 1.5px solid #7dd3fc;
+    font-weight: 700;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(125, 211, 252, 0.2);
+  }
+
+  /* 🎉 End of ULTRA-MODERN mobile styles - All cards unified with stunning design */
+}

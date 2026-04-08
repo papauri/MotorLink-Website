@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - MotorLink Malawi</title>
+    <meta name="description" content="Manage your profile, listings, and account settings on MotorLink Malawi.">
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+    <style>
+        .profile-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 120px 20px 40px;
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, #00c853 0%, #00a843 50%, #008c3a 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            flex-wrap: wrap;
+            box-shadow: 0 4px 20px rgba(0, 200, 83, 0.2);
+        }
+
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            flex-shrink: 0;
+        }
+
+        .profile-info h1 {
+            font-size: 2.2rem;
+            margin: 0 0 8px 0;
+        }
+
+        .profile-info p {
+            margin: 4px 0;
+            opacity: 0.9;
+        }
+
+        .profile-tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
+        .profile-tab {
+            padding: 16px 24px;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-weight: 600;
+            white-space: nowrap;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .profile-tab.active {
+            color: var(--primary-green);
+            border-bottom-color: var(--primary-green);
+        }
+
+        .profile-tab:hover {
+            background: #f8f9fa;
+        }
+
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-section {
+            margin-bottom: 32px;
+        }
+
+        .form-section h3 {
+            font-size: 1.4rem;
+            margin-bottom: 16px;
+            color: #333;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary-green);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 24px;
+            border-radius: 12px;
+            text-align: center;
+            border-left: 4px solid var(--primary-green);
+        }
+
+        .stat-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--primary-green);
+            display: block;
+        }
+
+        .stat-card .label {
+            color: #666;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .listings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .listings-table th,
+        .listings-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .listings-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-denied {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .btn-update {
+            background: var(--primary-green);
+            color: white;
+            padding: 12px 32px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-update:hover {
+            background: var(--primary-green-dark);
+        }
+
+        .btn-update:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 16px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .profile-container {
+                padding: 100px 15px 20px;
+            }
+
+            .profile-header {
+                flex-direction: column;
+                text-align: center;
+                padding: 30px 20px;
+            }
+
+            .tab-content {
+                padding: 20px;
+            }
+
+            .profile-tabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-container">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                <nav class="nav" id="mainNav">
+                    <a href="index.html">Home</a>
+                    <a href="car-database.html">Know Your Car</a>
+                    <a href="garages.html">Garages</a>
+                    <a href="dealers.html">Dealers</a>
+                    <a href="car-hire.html">Car Hire</a>
+                    <a href="sell.html">Sell Car</a>
+                </nav>
+                <div class="user-menu" id="userMenu">
+                    <div id="userInfo" style="display: none;">
+                        
+                        <a href="profile.html" class="user-avatar-btn" title="My Profile" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </a>
+                        <button onclick="logout()" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    <div id="guestMenu">
+                        <a href="login.html" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="register.html" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+                <button class="mobile-menu-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Profile Container -->
+    <div class="profile-container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="profile-avatar">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="profile-info">
+                <h1 id="profileName">Loading...</h1>
+                <p><i class="fas fa-envelope"></i> <span id="profileEmail">Loading...</span></p>
+                <p><i class="fas fa-phone"></i> <span id="profilePhone">Loading...</span></p>
+                <p><i class="fas fa-map-marker-alt"></i> <span id="profileCity">Loading...</span></p>
+            </div>
+        </div>
+
+        <!-- Profile Tabs -->
+        <div class="profile-tabs">
+            <button class="profile-tab active" onclick="showTab('overview')">
+                <i class="fas fa-chart-line"></i> Overview
+            </button>
+            <button class="profile-tab" onclick="showTab('edit')">
+                <i class="fas fa-edit"></i> Edit Profile
+            </button>
+            <button class="profile-tab" onclick="showTab('listings')">
+                <i class="fas fa-car"></i> My Listings
+            </button>
+            <button class="profile-tab" onclick="showTab('messages')">
+                <i class="fas fa-comments"></i> Messages
+            </button>
+            <button class="profile-tab" onclick="showTab('security')">
+                <i class="fas fa-shield-alt"></i> Security
+            </button>
+        </div>
+
+        <!-- Overview Tab -->
+        <div class="tab-content active" id="overview">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="number" id="totalListings">0</span>
+                    <div class="label">Total Listings</div>
+                </div>
+                <div class="stat-card">
+                    <span class="number" id="approvedListings">0</span>
+                    <div class="label">Approved Listings</div>
+                </div>
+                <div class="stat-card">
+                    <span class="number" id="pendingListings">0</span>
+                    <div class="label">Pending Approval</div>
+                </div>
+                <div class="stat-card">
+                    <span class="number" id="totalViews">0</span>
+                    <div class="label">Total Views</div>
+                </div>
+            </div>
+            
+            <h3>Recent Activity</h3>
+            <div id="recentActivity">
+                <div class="loading">
+                    <i class="fas fa-spinner"></i>
+                    <p>Loading activity...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Profile Tab -->
+        <div class="tab-content" id="edit">
+            <form id="profileForm">
+                <div class="form-section">
+                    <h3>Personal Information</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fullName">Full Name *</label>
+                            <input type="text" id="fullName" name="full_name" required autocomplete="name">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number *</label>
+                            <input type="tel" id="phone" name="phone" required autocomplete="tel">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="whatsapp">WhatsApp Number</label>
+                            <input type="tel" id="whatsapp" name="whatsapp" autocomplete="tel">
+                        </div>
+                        <div class="form-group">
+                            <label for="city">City *</label>
+                            <input type="text" id="city" name="city" required autocomplete="address-level2">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>Contact & Location</h3>
+                    <div class="form-group">
+                        <label for="address">Address</label>
+                        <input type="text" id="address" name="address" placeholder="Street address, area" autocomplete="street-address">
+                    </div>
+                    <div class="form-group">
+                        <label for="bio">Bio</label>
+                        <textarea id="bio" name="bio" rows="3" placeholder="Tell us about yourself..."></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-update" id="updateBtn">
+                    <i class="fas fa-save"></i> Update Profile
+                </button>
+            </form>
+        </div>
+
+        <!-- My Listings Tab -->
+        <div class="tab-content" id="listings">
+            <div id="userListings">
+                <div class="loading">
+                    <i class="fas fa-spinner"></i>
+                    <p>Loading your listings...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Tab -->
+        <div class="tab-content" id="messages">
+            <div class="form-section">
+                <h3><i class="fas fa-inbox"></i> Your Messages</h3>
+                <p style="color: #666; margin-bottom: 20px;">Manage your conversations with buyers and sellers.</p>
+                <a href="chat_system.html" class="btn-update" style="display: inline-block; text-decoration: none;">
+                    <i class="fas fa-comments"></i> Open Messages
+                </a>
+            </div>
+
+            <div class="form-section">
+                <h3><i class="fas fa-robot"></i> Auto-Reply Settings</h3>
+                <p style="color: #666; margin-bottom: 20px;">
+                    Set up an automatic reply message that will be sent to buyers when they first contact you about your listings.
+                    This is useful when you're busy or away.
+                </p>
+                <form id="autoReplyForm">
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" id="autoReplyEnabled" name="auto_reply_enabled" style="width: 20px; height: 20px; cursor: pointer;">
+                            <span style="font-weight: 600;">Enable Auto-Reply</span>
+                        </label>
+                        <small style="color: #888; display: block; margin-top: 5px; margin-left: 30px;">
+                            When enabled, new conversations will receive your auto-reply message automatically.
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label for="autoReplyMessage">Auto-Reply Message</label>
+                        <textarea id="autoReplyMessage" name="auto_reply_message" rows="4"
+                            placeholder="Example: Thank you for your interest! I'll get back to you as soon as possible. In the meantime, feel free to check out my other listings."
+                            style="resize: vertical;"></textarea>
+                        <small style="color: #888; display: block; margin-top: 5px;">
+                            This message will be sent automatically when a buyer starts a new conversation with you.
+                        </small>
+                    </div>
+                    <button type="submit" class="btn-update" id="saveAutoReplyBtn">
+                        <i class="fas fa-save"></i> Save Auto-Reply Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Security Tab -->
+        <div class="tab-content" id="security">
+            <div class="form-section">
+                <h3>Change Password</h3>
+                <form id="passwordForm">
+                    <div class="form-group">
+                        <label for="currentPassword">Current Password</label>
+                        <input type="password" id="currentPassword" name="current_password" required autocomplete="current-password">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newPassword">New Password</label>
+                            <input type="password" id="newPassword" name="new_password" required minlength="6" autocomplete="new-password">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmPassword">Confirm New Password</label>
+                            <input type="password" id="confirmPassword" name="confirm_password" required minlength="6" autocomplete="new-password">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-update">
+                        <i class="fas fa-key"></i> Change Password
+                    </button>
+                </form>
+            </div>
+
+            <div class="form-section">
+                <h3>Account Settings</h3>
+                <p style="color: #666; margin-bottom: 20px;">Manage your account preferences and data.</p>
+                <button class="btn-update" style="background: #dc3545;" onclick="confirmDeleteAccount()">
+                    <i class="fas fa-trash"></i> Delete Account
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container"></div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="js/footer-loader.js"></script>
+    <script src="script.js"></script>
+    <script src="js/profile.js"></script>
+
+    <script>
+    // Profile tab switching functionality
+    function showTab(tabName) {
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+
+        // Remove active class from all tab buttons
+        document.querySelectorAll('.profile-tab').forEach(button => {
+            button.classList.remove('active');
+        });
+
+        // Show selected tab content
+        const selectedTab = document.getElementById(tabName);
+        if (selectedTab) {
+            selectedTab.classList.add('active');
+        }
+
+        // Add active class to clicked button
+        const clickedButton = event.target.closest('.profile-tab');
+        if (clickedButton) {
+            clickedButton.classList.add('active');
+        }
+
+        // Load auto-reply settings when messages tab is opened
+        if (tabName === 'messages') {
+            loadAutoReplySettings();
+        }
+    }
+
+    // Auto-reply settings
+    async function loadAutoReplySettings() {
+        try {
+            const response = await fetch(`${CONFIG.API_URL}?action=get_auto_reply_settings`, {
+                credentials: 'include'
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('autoReplyEnabled').checked = data.auto_reply_enabled;
+                document.getElementById('autoReplyMessage').value = data.auto_reply_message || '';
+            }
+        } catch (error) {
+            console.error('Failed to load auto-reply settings:', error);
+        }
+    }
+
+    // Handle auto-reply form submission
+    document.addEventListener('DOMContentLoaded', function() {
+        const autoReplyForm = document.getElementById('autoReplyForm');
+        if (autoReplyForm) {
+            autoReplyForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const btn = document.getElementById('saveAutoReplyBtn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+                btn.disabled = true;
+
+                try {
+                    const response = await fetch(`${CONFIG.API_URL}?action=update_auto_reply_settings`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            auto_reply_enabled: document.getElementById('autoReplyEnabled').checked,
+                            auto_reply_message: document.getElementById('autoReplyMessage').value
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('Auto-reply settings saved successfully!');
+                    } else {
+                        alert(data.message || 'Failed to save settings');
+                    }
+                } catch (error) {
+                    console.error('Failed to save auto-reply settings:', error);
+                    alert('Failed to save settings. Please try again.');
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            });
+        }
+    });
+    </script>
+
+
+    <script src="js/page-transitions.js"></script>
+</body>
+</html>

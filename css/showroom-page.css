@@ -1,0 +1,94 @@
+/* ========================================
+   SHOWROOM PAGE - Completely Isolated Layout Styles
+   Targets actual classes used in showroom.html
+======================================== */
+
+/* Main wrapper ensures everything centers */
+.showroom-page-wrapper {
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Container with explicit centering */
+.showroom-page-wrapper .showroom-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure main-content section is centered */
+.showroom-page-wrapper .main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+/* Cars Grid - More compact layout */
+.showroom-page-wrapper .cars-grid {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin: 0 auto;
+  max-width: 1200px !important;
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+@media (min-width: 640px) {
+  .showroom-page-wrapper .cars-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .showroom-page-wrapper .cars-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .showroom-page-wrapper .cars-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+}
+
+/* Filters section - Ensure centered */
+.showroom-page-wrapper .filters {
+  max-width: 1200px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
+}
+
+/* Empty and loading states */
+.showroom-page-wrapper .empty-state,
+.showroom-page-wrapper .loading-container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Mobile - Fix sidebar overlapping cars-grid */
+@media (max-width: 768px) {
+  .showroom-page-wrapper .main-content {
+    padding: 12px 0;
+  }
+  
+  .showroom-page-wrapper .filters.sidebar {
+    position: relative !important;
+    top: auto !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+  }
+  
+  .showroom-page-wrapper .cars-grid {
+    clear: both;
+    margin-top: 16px !important;
+    gap: 12px;
+  }
+}

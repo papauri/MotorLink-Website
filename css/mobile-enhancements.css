@@ -1,0 +1,3195 @@
+/**
+ * MotorLink Mobile Enhancements
+ * Comprehensive mobile responsiveness fixes for ALL pages
+ * Target: 320px - 768px mobile devices
+ */
+
+/* ============================================================================
+   GLOBAL MOBILE IMPROVEMENTS
+   ============================================================================ */
+
+/* Ensure all text is readable on mobile */
+@media (max-width: 768px) {
+    body {
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    /* Hide user dashboard container on mobile completely */
+    .user-dashboard,
+    #userDashboard {
+        display: none !important;
+    }
+
+    /* Mobile dashboard links in hamburger menu - WOW DESIGN */
+    .mobile-dashboard-links {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        padding: 16px 0 !important;
+        border-top: 2px solid rgba(0, 200, 83, 0.2) !important;
+        border-bottom: 2px solid rgba(0, 200, 83, 0.2) !important;
+        margin: 16px 0 !important;
+        background: linear-gradient(135deg, rgba(0, 200, 83, 0.03) 0%, transparent 100%) !important;
+        border-radius: 12px !important;
+        padding: 12px 8px !important;
+    }
+
+    .mobile-dash-link {
+        display: flex !important;
+        align-items: center !important;
+        gap: 14px !important;
+        padding: 14px 16px !important;
+        color: #374151 !important;
+        text-decoration: none !important;
+        border-radius: 10px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        position: relative !important;
+        overflow: hidden !important;
+        border: 2px solid transparent !important;
+        background: white !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .mobile-dash-link::before {
+        content: '' !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        height: 100% !important;
+        width: 4px !important;
+        background: linear-gradient(to bottom, var(--primary-green), #00a843) !important;
+        transform: scaleY(0) !important;
+        transition: transform 0.3s ease !important;
+    }
+
+    .mobile-dash-link:hover,
+    .mobile-dash-link:active {
+        background: linear-gradient(135deg, rgba(0, 200, 83, 0.08) 0%, rgba(0, 200, 83, 0.02) 100%) !important;
+        color: var(--primary-green) !important;
+        border-color: rgba(0, 200, 83, 0.2) !important;
+        transform: translateX(6px) !important;
+        box-shadow: 0 4px 12px rgba(0, 200, 83, 0.15) !important;
+    }
+
+    .mobile-dash-link:hover::before {
+        transform: scaleY(1) !important;
+    }
+
+    .mobile-dash-link i {
+        width: 24px !important;
+        height: 24px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-size: 1rem !important;
+        color: var(--primary-green) !important;
+        background: rgba(0, 200, 83, 0.1) !important;
+        border-radius: 6px !important;
+        padding: 4px !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .mobile-dash-link:hover i {
+        transform: scale(1.1) rotate(5deg) !important;
+        background: var(--primary-green) !important;
+        color: white !important;
+    }
+
+    /* Logout link styling - PROMINENT AND SAFE */
+    .logout-link {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.03) 100%) !important;
+        color: #ef4444 !important;
+        border: 2px solid rgba(239, 68, 68, 0.2) !important;
+        margin-top: 12px !important;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1) !important;
+    }
+
+    .logout-link::before {
+        background: linear-gradient(to bottom, #ef4444, #dc2626) !important;
+    }
+
+    .logout-link i {
+        background: rgba(239, 68, 68, 0.1) !important;
+        color: #ef4444 !important;
+    }
+
+    .logout-link:hover,
+    .logout-link:active {
+        background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0.05) 100%) !important;
+        color: #dc2626 !important;
+        border-color: rgba(239, 68, 68, 0.3) !important;
+        box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2) !important;
+    }
+
+    .logout-link:hover i {
+        background: #ef4444 !important;
+        color: white !important;
+    }
+
+    h1 {
+        font-size: 1.75rem !important;
+    }
+
+    h2 {
+        font-size: 1.5rem !important;
+    }
+
+    h3 {
+        font-size: 1.25rem !important;
+    }
+
+    /* Ensure all containers have proper padding on mobile */
+    .container {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+    
+    /* Ensure footer container maintains 1200px max-width */
+    footer.footer .container {
+        max-width: 1200px !important;
+    }
+
+    /* Reduce button sizes EVEN MORE for mobile */
+    .btn, button, .search-btn, input[type="submit"] {
+        min-height: 34px !important;
+        padding: 6px 12px !important;
+        font-size: 0.75rem !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+    }
+
+    /* Primary buttons slightly more prominent */
+    .btn-primary {
+        padding: 7px 14px !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Reduce input fields EVEN MORE for mobile */
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    select,
+    textarea {
+        min-height: 36px !important;
+        font-size: 0.85rem !important; /* Prevents zoom on iOS */
+        padding: 8px 10px !important;
+        border-radius: 6px !important;
+        border: 1px solid #d1d5db !important;
+    }
+
+    /* Filter selects and search inputs */
+    .filter-select, .search-input {
+        height: 36px !important;
+        min-height: 36px !important;
+        padding: 8px 10px !important;
+        font-size: 0.85rem !important;
+    }
+
+    /* Fix select dropdowns */
+    select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        background-size: 16px;
+        padding-right: 40px;
+    }
+}
+
+/* ============================================================================
+   CAR DATABASE MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Hero section */
+    .car-db-hero {
+        padding: 60px 20px 40px !important;
+        margin-top: 60px !important;
+    }
+
+    .car-db-hero h1 {
+        font-size: 1.75rem !important;
+        margin-bottom: 12px;
+    }
+
+    .car-db-hero p {
+        font-size: 14px;
+    }
+
+    /* Search container */
+    .search-container {
+        margin: -20px auto 30px !important;
+        padding: 0 16px !important;
+    }
+
+    .search-card {
+        padding: 12px !important;
+        border-radius: 10px !important;
+    }
+
+    /* Search grid - stack on mobile */
+    .search-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    .search-group label {
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 4px;
+    }
+
+    /* Search button */
+    .search-btn {
+        padding: 12px !important;
+        font-size: 14px !important;
+        margin-top: 6px;
+    }
+
+    /* Results container */
+    .results-container {
+        padding: 0 16px;
+    }
+
+    /* Specs card */
+    .specs-card {
+        padding: 14px !important;
+        margin-bottom: 20px;
+        border-radius: 10px;
+    }
+
+    /* Car image placeholder */
+    .car-image-placeholder {
+        height: 200px !important;
+        margin-bottom: 20px !important;
+    }
+
+    .car-image-placeholder i {
+        font-size: 60px !important;
+    }
+
+    .car-image-placeholder p {
+        font-size: 18px !important;
+    }
+
+    /* Specs header */
+    .specs-header h2 {
+        font-size: 1.5rem !important;
+        margin-bottom: 8px;
+    }
+
+    .specs-header .subtitle {
+        font-size: 13px;
+    }
+
+    /* Specs grid - 2-column on mobile for horizontal layout */
+    .specs-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .spec-group {
+        padding: 16px !important;
+    }
+
+    .spec-group h3 {
+        font-size: 1.1rem !important;
+        margin-bottom: 12px;
+    }
+
+    .spec-item {
+        padding: 10px 0 !important;
+        flex-direction: column;
+        align-items: flex-start !important;
+    }
+
+    .spec-label {
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+
+    .spec-value {
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    /* Popular cars section */
+    .popular-cars {
+        padding: 40px 16px !important;
+    }
+
+    .popular-cars h2 {
+        font-size: 1.5rem !important;
+        margin-bottom: 20px;
+    }
+
+    .popular-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .popular-card {
+        padding: 16px !important;
+    }
+
+    .popular-card h3 {
+        font-size: 13px !important;
+    }
+
+    .popular-card p {
+        font-size: 11px;
+    }
+
+    .popular-card i {
+        font-size: 28px !important;
+    }
+
+    /* Disclaimer */
+    .disclaimer {
+        padding: 16px !important;
+        font-size: 12px;
+        margin-top: 30px;
+    }
+}
+
+/* Extra small mobile devices */
+@media (max-width: 480px) {
+    .car-db-hero h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .popular-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .search-btn {
+        font-size: 14px !important;
+    }
+}
+
+/* ============================================================================
+   ADMIN PANEL MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 1024px) {
+    /* Sidebar */
+    .admin-sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .admin-sidebar.active {
+        transform: translateX(0);
+    }
+
+    /* Admin already uses #mobileOverlay in admin-styles.css; avoid duplicate dim layer */
+    .admin-sidebar.active::after {
+        content: none;
+    }
+
+    /* Mobile menu toggle */
+    .mobile-admin-toggle {
+        display: block !important;
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1001;
+        background: var(--primary-orange);
+        color: white;
+        border: none;
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        font-size: 20px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Admin content */
+    .admin-content {
+        margin-left: 0 !important;
+        padding: 20px 16px !important;
+        padding-top: 80px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    /* Admin header */
+    .admin-header {
+        padding: 16px !important;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .admin-header h1 {
+        font-size: 1.5rem !important;
+    }
+
+    /* Stats grid */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    .stat-card {
+        padding: 12px !important;
+    }
+
+    .stat-card .stat-value {
+        font-size: 1.75rem !important;
+    }
+
+    .stat-card .stat-label {
+        font-size: 12px;
+    }
+
+    /* Admin cards */
+    .admin-card {
+        padding: 14px !important;
+        margin-bottom: 16px;
+    }
+
+    /* Tables - horizontal scroll */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -16px;
+        padding: 0 16px;
+    }
+
+    .admin-table {
+        min-width: 600px; /* Force horizontal scroll */
+        font-size: 13px;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 10px 8px !important;
+        white-space: nowrap;
+    }
+
+    /* Action buttons in tables */
+    .admin-table .btn {
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+        min-height: auto !important;
+    }
+
+    /* Filters */
+    .filters {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+
+    .filter-group {
+        width: 100% !important;
+    }
+
+    .filters input,
+    .filters select {
+        padding: 10px !important;
+    }
+
+    /* Modals on mobile */
+    .modal-content {
+        width: 95% !important;
+        max-width: 95% !important;
+        margin: 20px auto !important;
+        max-height: 90vh !important;
+        overflow-y: auto;
+    }
+
+    .modal-header h2 {
+        font-size: 1.25rem !important;
+    }
+
+    .modal-body {
+        padding: 20px 16px !important;
+    }
+
+    /* Form groups in modals */
+    .form-group {
+        margin-bottom: 16px !important;
+    }
+
+    .form-group label {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .admin-table {
+        font-size: 12px;
+    }
+
+    .admin-table th,
+    .admin-table td {
+        padding: 8px 6px !important;
+    }
+}
+
+/* ============================================================================
+   ONBOARDING MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Onboarding container */
+    .onboarding-container {
+        padding: 20px 16px !important;
+    }
+
+    /* Steps */
+    .onboarding-steps {
+        flex-direction: column !important;
+        gap: 12px !important;
+        margin-bottom: 30px !important;
+    }
+
+    .step {
+        width: 100% !important;
+        padding: 12px !important;
+    }
+
+    .step-number {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+    }
+
+    .step-title {
+        font-size: 13px !important;
+    }
+
+    /* Onboarding content */
+    .onboarding-content {
+        padding: 24px 16px !important;
+    }
+
+    .onboarding-content h2 {
+        font-size: 1.5rem !important;
+        margin-bottom: 12px;
+    }
+
+    /* Buttons */
+    .onboarding-buttons {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .onboarding-buttons .btn {
+        width: 100% !important;
+    }
+}
+
+/* ============================================================================
+   FORMS MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* All forms */
+    .form-container {
+        padding: 16px 12px !important;
+    }
+
+    .form-card {
+        padding: 16px 12px !important;
+    }
+
+    /* Form grid layouts */
+    .form-grid,
+    .form-row {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    /* File upload areas */
+    .file-upload-area {
+        padding: 24px 16px !important;
+    }
+
+    .file-upload-area p {
+        font-size: 13px;
+    }
+
+    /* Image previews */
+    .image-preview-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .image-preview {
+        height: 120px !important;
+    }
+
+    /* Price inputs with currency */
+    .price-input-group {
+        flex-direction: column;
+    }
+
+    /* Multi-step forms */
+    .form-steps {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -16px;
+        padding: 0 16px 16px;
+    }
+
+    .form-step {
+        min-width: 100px;
+        font-size: 12px;
+        padding: 8px 12px;
+    }
+}
+
+/* ============================================================================
+   NAVIGATION MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Header */
+    .header {
+        padding: 12px 0 !important;
+    }
+
+    .header-container {
+        padding: 0 16px;
+    }
+
+    /* Logo */
+    .logo {
+        font-size: 1.25rem !important;
+    }
+
+    /* Mobile navigation - WOW SLIDE ANIMATION */
+    .nav {
+        display: flex !important;
+        position: fixed;
+        top: 64px;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+        flex-direction: column !important;
+        padding: 20px 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 200, 83, 0.1);
+        transform: translateY(-100%) scale(0.95);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        z-index: 9999;
+        max-height: calc(100vh - 64px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        border-bottom-left-radius: 20px;
+        border-bottom-right-radius: 20px;
+    }
+
+    .nav.active {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+        visibility: visible;
+        animation: menuSlideIn 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @keyframes menuSlideIn {
+        0% {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        100% {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .nav a {
+        padding: 14px 18px !important;
+        border-radius: 10px;
+        margin: 4px 0;
+        display: flex !important;
+        align-items: center !important;
+        text-align: left;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #374151 !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        border: 2px solid transparent;
+    }
+
+    .nav a::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 5px;
+        background: linear-gradient(to bottom, var(--primary-green), #00a843);
+        transform: scaleY(0);
+        transition: transform 0.3s ease;
+        border-radius: 10px 0 0 10px;
+    }
+
+    .nav a::after {
+        content: '';
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 6px;
+        height: 6px;
+        background: var(--primary-green);
+        border-radius: 50%;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    /* Active page highlighting - Enhanced for better visibility on mobile */
+    .nav a.active {
+        background: linear-gradient(135deg, rgba(0, 200, 83, 0.15) 0%, rgba(0, 200, 83, 0.08) 100%) !important;
+        color: var(--primary-green) !important;
+        border-left: 5px solid var(--primary-green) !important;
+        font-weight: 700 !important;
+        position: relative;
+        box-shadow: inset 0 0 20px rgba(0, 200, 83, 0.1), 0 2px 8px rgba(0, 200, 83, 0.15) !important;
+        transform: translateX(8px) !important;
+    }
+
+    .nav a.active::before {
+        content: '';
+        position: absolute;
+        left: -5px;
+        top: 0;
+        bottom: 0;
+        width: 5px;
+        background: linear-gradient(180deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);
+        border-radius: 0 4px 4px 0;
+        box-shadow: 0 0 12px rgba(0, 200, 83, 0.5), inset 0 0 8px rgba(255, 255, 255, 0.3);
+    }
+
+    .nav a.active::after {
+        content: '●';
+        position: absolute;
+        right: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 14px;
+        color: var(--primary-green);
+        text-shadow: 0 0 10px rgba(0, 200, 83, 0.8);
+        animation: activePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes activePulse {
+        0%, 100% {
+            transform: translateY(-50%) scale(1);
+            opacity: 1;
+            text-shadow: 0 0 10px rgba(0, 200, 83, 0.8);
+        }
+        50% {
+            transform: translateY(-50%) scale(1.4);
+            opacity: 0.7;
+            text-shadow: 0 0 16px rgba(0, 200, 83, 1);
+        }
+    }
+
+    /* Hover state for active nav items on mobile */
+    .nav a.active:hover {
+        background: linear-gradient(135deg, rgba(0, 200, 83, 0.2) 0%, rgba(0, 200, 83, 0.12) 100%) !important;
+        transform: translateX(10px) !important;
+    }
+
+    .nav a:hover {
+        background: linear-gradient(135deg, rgba(0, 200, 83, 0.08) 0%, rgba(0, 200, 83, 0.02) 100%);
+        color: var(--primary-green) !important;
+        transform: translateX(6px);
+        border-color: rgba(0, 200, 83, 0.2);
+        box-shadow: 0 2px 8px rgba(0, 200, 83, 0.1);
+    }
+
+    .nav a:hover::before {
+        transform: scaleY(0.7);
+    }
+
+    .nav a:active {
+        transform: translateX(3px) scale(0.98);
+    }
+
+    /* User menu on mobile - show inside nav when active */
+    .user-menu {
+        display: none !important;
+    }
+
+    .nav.active::after {
+        content: '';
+        display: block;
+        border-top: 2px solid #e5e7eb;
+        margin: 12px 0;
+        width: 100%;
+    }
+
+    /* Add user menu items to mobile nav */
+    #mainNav.active #guestMenu {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+        padding-top: 12px !important;
+    }
+
+    #mainNav.active #guestMenu .btn {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 14px !important;
+        font-size: 15px !important;
+        margin: 0 !important;
+    }
+
+    #mainNav.active #userInfo {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+        padding-top: 12px !important;
+    }
+
+    #mainNav.active #userInfo .btn {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 14px !important;
+        font-size: 15px !important;
+        margin: 0 !important;
+    }
+
+    /* Mobile menu toggle - uniform styling */
+    .mobile-menu-toggle {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: white !important;
+        border: 2px solid #e5e7eb !important;
+        font-size: 20px !important;
+        color: var(--text-primary) !important;
+        cursor: pointer !important;
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 10px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .mobile-menu-toggle:hover {
+        background: #f0fdf4 !important;
+        border-color: var(--primary-green) !important;
+        color: var(--primary-green) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 16px rgba(0, 200, 83, 0.2) !important;
+    }
+}
+
+/* ============================================================================
+   CARDS & GRIDS MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Hide listings-search bar on mobile - filtering done via mobile filter toggle */
+    .listings-search {
+        display: none !important;
+    }
+
+    /* Hide garage card actions on mobile - body is clickable */
+    .garage-card-actions,
+    .garage-action-btn {
+        display: none !important;
+    }
+
+    /* Better styling for garage service name */
+    .garage-service-name {
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        color: #111827 !important;
+        margin-bottom: 8px !important;
+        line-height: 1.4 !important;
+        letter-spacing: 0.3px !important;
+    }
+
+    /* Car cards */
+    .cars-grid,
+    .listings-grid,
+    .garages-grid,
+    .dealers-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .car-card,
+    .listing-card,
+    .garage-card,
+    .dealer-card {
+        margin-bottom: 12px;
+    }
+
+    .car-card-image {
+        height: 180px !important;
+    }
+
+    .car-card-content {
+        padding: 12px !important;
+    }
+
+    .car-card-title {
+        font-size: 1rem !important;
+    }
+
+    .car-card-price {
+        font-size: 1.15rem !important;
+    }
+
+    /* Card actions */
+    .card-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .card-actions .btn {
+        width: 100%;
+    }
+}
+
+/* ============================================================================
+   CHAT SYSTEM MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .chat-container {
+        height: calc(100dvh - 70px - 10px) !important;
+        max-height: calc(100dvh - 70px - 10px) !important;
+        margin-top: 70px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .chat-sidebar {
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 100%;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 10;
+    }
+
+    .chat-sidebar.active {
+        transform: translateX(0);
+    }
+
+    .chat-main {
+        width: 100% !important;
+    }
+
+    .chat-header {
+        padding: 12px 16px !important;
+    }
+
+    .message-input-container {
+        padding: 12px 16px !important;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    .message-input {
+        font-size: 15px !important;
+    }
+}
+
+/* ============================================================================
+   UTILITIES & HELPERS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Hide on mobile */
+    .hide-mobile {
+        display: none !important;
+    }
+
+    /* Show only on mobile */
+    .show-mobile {
+        display: block !important;
+    }
+
+    /* Text utilities */
+    .text-sm-center {
+        text-align: center !important;
+    }
+
+    .text-sm-left {
+        text-align: left !important;
+    }
+
+    /* Spacing utilities */
+    .mt-sm-3 {
+        margin-top: 1rem !important;
+    }
+
+    .mb-sm-3 {
+        margin-bottom: 1rem !important;
+    }
+
+    .p-sm-2 {
+        padding: 0.5rem !important;
+    }
+
+    /* Full width on mobile */
+    .w-sm-100 {
+        width: 100% !important;
+    }
+}
+
+/* ============================================================================
+   TOUCH-FRIENDLY IMPROVEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Increase touch targets */
+    a, button, .clickable {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    /* Better tap highlight */
+    * {
+        -webkit-tap-highlight-color: rgba(255, 111, 0, 0.2);
+    }
+
+    /* Smooth scrolling */
+    html {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Prevent text size adjustment */
+    body {
+        -webkit-text-size-adjust: 100%;
+        -ms-text-size-adjust: 100%;
+    }
+}
+
+/* ============================================================================
+   ACCESSIBILITY IMPROVEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Focus states more visible on mobile */
+    *:focus {
+        outline: 2px solid var(--primary-orange);
+        outline-offset: 2px;
+    }
+
+    /* Skip to main content link */
+    .skip-to-main {
+        position: absolute;
+        top: -40px;
+        left: 0;
+        background: var(--primary-orange);
+        color: white;
+        padding: 8px 16px;
+        z-index: 10000;
+    }
+
+    .skip-to-main:focus {
+        top: 0;
+    }
+}
+
+/* ============================================================================
+   PROFILE PAGE MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .profile-container {
+        padding: 100px 16px 40px !important;
+    }
+
+    .profile-header {
+        padding: 24px 16px !important;
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 16px !important;
+    }
+
+    .profile-avatar {
+        width: 80px !important;
+        height: 80px !important;
+        font-size: 2rem !important;
+        margin: 0 auto !important;
+    }
+
+    .profile-info h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .profile-info p {
+        font-size: 14px !important;
+    }
+
+    .profile-tabs {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        flex-wrap: nowrap !important;
+    }
+
+    .profile-tab {
+        padding: 12px 16px !important;
+        font-size: 13px !important;
+        min-width: auto !important;
+        white-space: nowrap !important;
+    }
+
+    .profile-content {
+        padding: 16px !important;
+    }
+
+    .profile-section {
+        padding: 16px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .profile-section h2 {
+        font-size: 1.25rem !important;
+    }
+
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .edit-profile-btn {
+        width: 100% !important;
+        margin-top: 12px !important;
+    }
+}
+
+/* ============================================================================
+   REGISTER PAGE MOBILE ENHANCEMENTS  
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .auth-container {
+        padding: 16px !important;
+    }
+
+    .auth-card {
+        padding: 24px 16px !important;
+        border-radius: 12px !important;
+    }
+
+    .auth-header h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .auth-header p {
+        font-size: 13px !important;
+    }
+
+    .step-indicator {
+        gap: 6px !important;
+        margin-bottom: 24px !important;
+    }
+
+    .step-dot {
+        width: 8px !important;
+        height: 8px !important;
+    }
+
+    .form-row {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    .form-group {
+        margin-bottom: 16px !important;
+    }
+
+    .form-group label {
+        font-size: 13px !important;
+    }
+
+    .form-control {
+        padding: 12px !important;
+        font-size: 14px !important;
+    }
+
+    .btn-block {
+        padding: 14px !important;
+        font-size: 14px !important;
+    }
+
+    .account-type-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .account-type-card {
+        padding: 16px !important;
+    }
+}
+
+/* ============================================================================
+   CAR DATABASE PAGE INLINE STYLES MOBILE OVERRIDE
+   ============================================================================ */
+
+@media (max-width: 480px) {
+    /* Hero adjustments - ensure no margin-top */
+    .hero,
+    .garage-hero,
+    .dealers-hero,
+    .car-hire-hero,
+    .hero-section {
+        padding: 50px 16px 40px !important;
+        margin-top: 0 !important;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    /* Hero adjustments for small tablets */
+    .hero,
+    .garage-hero,
+    .dealers-hero,
+    .car-hire-hero,
+    .hero-section {
+        padding: 55px 20px 45px !important;
+        margin-top: 0 !important;
+    }
+}
+
+    .hero h1 {
+        font-size: 1.4rem !important;
+    }
+
+    .hero p {
+        font-size: 0.85rem !important;
+    }
+
+    /* Search container adjustments */
+    .search-container {
+        margin: -40px auto 40px !important;
+        padding: 0 16px !important;
+        position: relative !important;
+        top: 0 !important;
+    }
+
+    .search-card {
+        padding: 20px 16px !important;
+        border-radius: 12px !important;
+    }
+
+    .search-grid {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .search-group {
+        margin-bottom: 12px !important;
+    }
+
+    .search-group label {
+        font-size: 13px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .search-btn {
+        width: 100% !important;
+        padding: 14px !important;
+        font-size: 14px !important;
+        margin-top: 8px !important;
+    }
+
+    /* Results section */
+    .results-container {
+        padding: 0 16px !important;
+    }
+
+    .specs-card {
+        padding: 16px !important;
+        border-radius: 12px !important;
+    }
+
+    .car-image-placeholder {
+        height: 180px !important;
+    }
+
+    .specs-header h2 {
+        font-size: 1.5rem !important;
+    }
+
+    .specs-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .spec-group {
+        padding: 16px !important;
+    }
+
+    .spec-group h3 {
+        font-size: 1.1rem !important;
+    }
+
+    .spec-item {
+        padding: 10px 0 !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+    }
+
+    .spec-label {
+        font-size: 13px !important;
+    }
+
+    .spec-value {
+        font-size: 14px !important;
+        text-align: right !important;
+    }
+
+    /* Popular cars section */
+    .popular-cars {
+        padding: 40px 16px !important;
+    }
+
+    .popular-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .popular-card {
+        padding: 12px !important;
+    }
+
+    .popular-card h3 {
+        font-size: 13px !important;
+    }
+
+    .popular-card p {
+        font-size: 12px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .popular-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .hero h1 {
+        font-size: 1.5rem !important;
+    }
+}
+
+/* ============================================================================
+   DASHBOARD PAGES MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Page Header */
+    .page-header {
+        padding: 100px 16px 24px !important;
+    }
+
+    .page-header-content {
+        text-align: center !important;
+        margin-bottom: 16px !important;
+    }
+
+    .page-header-content h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .page-header-content p {
+        font-size: 14px !important;
+    }
+
+    .page-actions {
+        display: flex !important;
+        justify-content: center !important;
+        width: 100% !important;
+    }
+
+    .page-actions .btn {
+        width: 100% !important;
+        max-width: 300px !important;
+    }
+
+    /* Stats Bar */
+    .stats-bar {
+        padding: 16px !important;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .stat-item {
+        padding: 12px !important;
+        text-align: center !important;
+    }
+
+    .stat-number {
+        font-size: 1.5rem !important;
+    }
+
+    .stat-label {
+        font-size: 12px !important;
+    }
+
+    /* Filter Tabs */
+    .filter-tabs {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        margin: 0 -16px !important;
+        padding: 0 16px 16px !important;
+    }
+
+    .filter-tab {
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+    }
+
+    /* Listings Grid */
+    .listings-section {
+        padding: 16px !important;
+    }
+
+    /* Listing Card Actions */
+    .listing-actions {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .listing-actions .btn {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ============================================================================
+   SHOWROOM PAGE MOBILE ENHANCEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .showroom-header-minimal {
+        padding: 100px 16px 24px !important;
+    }
+
+    .showroom-hero-content {
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 16px !important;
+    }
+
+    .dealer-logo-minimal {
+        width: 60px !important;
+        height: 60px !important;
+        font-size: 24px !important;
+        margin: 0 auto !important;
+    }
+
+    .dealer-header-info {
+        text-align: center !important;
+    }
+
+    .dealer-name-minimal {
+        font-size: 1.5rem !important;
+    }
+
+    .dealer-meta-minimal {
+        flex-direction: column !important;
+        gap: 8px !important;
+        font-size: 13px !important;
+    }
+
+    .dealer-quick-actions {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+
+    .quick-action-btn {
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+        flex: 1 1 auto !important;
+        min-width: 120px !important;
+    }
+
+    /* Showroom filters */
+    .showroom-filters {
+        padding: 16px !important;
+        margin: 0 -16px !important;
+    }
+
+    .showroom-search {
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+
+    .showroom-search input,
+    .showroom-search select,
+    .showroom-search button {
+        width: 100% !important;
+    }
+
+    /* Showroom listings */
+    .showroom-listings {
+        padding: 16px !important;
+    }
+
+    .showroom-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+}
+
+/* ============================================================================
+   CAR HIRE DASHBOARD & COMPANY PAGES
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .car-hire-hero {
+        padding: 100px 16px 40px !important;
+    }
+
+    /* Company Cards */
+    .companies-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .company-card {
+        padding: 16px !important;
+    }
+
+    .company-header {
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 12px !important;
+    }
+
+    .company-logo {
+        width: 60px !important;
+        height: 60px !important;
+        margin: 0 auto !important;
+    }
+
+    .company-info h3 {
+        font-size: 1.1rem !important;
+    }
+
+    .company-actions {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .company-actions .btn {
+        width: 100% !important;
+    }
+
+    /* Fleet Grid */
+    .fleet-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .vehicle-card {
+        padding: 16px !important;
+    }
+
+    .vehicle-specs {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        font-size: 13px !important;
+    }
+
+    .vehicle-spec-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px;
+        background: #f8f9fa;
+        border-radius: 6px;
+    }
+
+    .vehicle-spec-label {
+        font-size: 11px;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .vehicle-spec-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .vehicle-actions {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .vehicle-actions .btn {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .vehicle-specs {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ============================================================================
+   BUSINESS DASHBOARD PAGES (Dealer & Garage)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 100px 16px 40px !important;
+    }
+
+    .dashboard-header {
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 16px !important;
+    }
+
+    .dashboard-title h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .dashboard-actions {
+        width: 100% !important;
+    }
+
+    .dashboard-actions .btn {
+        width: 100% !important;
+    }
+
+    /* Dashboard Stats */
+    .dashboard-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    .stat-card {
+        padding: 16px 12px !important;
+    }
+
+    .stat-value {
+        font-size: 1.5rem !important;
+    }
+
+    .stat-label {
+        font-size: 12px !important;
+    }
+
+    /* Dashboard Grid */
+    .dashboard-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .dashboard-card {
+        padding: 16px !important;
+    }
+
+    .dashboard-card h3 {
+        font-size: 1.1rem !important;
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .quick-action {
+        padding: 16px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .dashboard-stats {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ============================================================================
+   HIDE SERVICES SECTION ON MOBILE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Modern, Sleek Hamburger Menu Toggle */
+    .mobile-menu-toggle {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 10px !important;
+        background: rgba(0, 200, 83, 0.08) !important;
+        border: 1.5px solid rgba(0, 200, 83, 0.2) !important;
+        color: var(--primary-green) !important;
+        cursor: pointer !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        margin-left: auto !important;
+        flex-shrink: 0 !important;
+        position: relative !important;
+        z-index: 10000 !important;
+        box-shadow: 0 2px 8px rgba(0, 200, 83, 0.1) !important;
+    }
+
+    .mobile-menu-toggle:hover {
+        background: rgba(0, 200, 83, 0.12) !important;
+        border-color: var(--primary-green) !important;
+        transform: scale(1.05) !important;
+        box-shadow: 0 4px 12px rgba(0, 200, 83, 0.2) !important;
+    }
+
+    .mobile-menu-toggle:active {
+        transform: scale(0.95) !important;
+        box-shadow: 0 1px 4px rgba(0, 200, 83, 0.15) !important;
+    }
+
+    .mobile-menu-toggle i {
+        font-size: 20px !important;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        position: relative !important;
+        z-index: 1 !important;
+    }
+
+    /* Animate hamburger to X - Fast & Smooth */
+    .mobile-menu-toggle.active i {
+        transform: rotate(180deg) !important;
+    }
+
+    .mobile-menu-toggle.active {
+        background: rgba(244, 67, 54, 0.1) !important;
+        border-color: rgba(244, 67, 54, 0.3) !important;
+        color: var(--error-red) !important;
+        box-shadow: 0 2px 8px rgba(244, 67, 54, 0.15) !important;
+    }
+
+    .mobile-menu-toggle.active:hover {
+        background: rgba(244, 67, 54, 0.15) !important;
+        border-color: var(--error-red) !important;
+    }
+
+    /* User menu adjustments */
+    .user-menu {
+        display: none !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-menu-toggle {
+        display: none !important;
+    }
+
+    .nav {
+        display: flex !important;
+    }
+
+    .user-menu {
+        display: flex !important;
+    }
+}
+
+/* ============================================================================
+   MOBILE FILTER TOGGLE BUTTON - REDESIGNED
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .mobile-filter-toggle {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 10px !important;
+        width: 100% !important;
+        padding: 16px 24px !important;
+        margin: 16px 0 !important;
+        background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%) !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 12px !important;
+        font-weight: 700 !important;
+        font-size: 16px !important;
+        cursor: pointer !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 16px rgba(0, 200, 83, 0.3) !important;
+        position: relative !important;
+        overflow: hidden !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    .mobile-filter-toggle::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .mobile-filter-toggle:hover::before {
+        left: 100%;
+    }
+
+    .mobile-filter-toggle:hover {
+        background: linear-gradient(135deg, var(--primary-green-dark) 0%, #009944 100%) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 24px rgba(0, 200, 83, 0.4) !important;
+    }
+
+    .mobile-filter-toggle:active {
+        transform: scale(0.98) translateY(0) !important;
+        box-shadow: 0 2px 8px rgba(0, 200, 83, 0.3) !important;
+    }
+
+    .mobile-filter-toggle i {
+        font-size: 20px !important;
+        transition: transform 0.3s ease !important;
+        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2)) !important;
+    }
+
+    .mobile-filter-toggle.active i {
+        transform: rotate(180deg) !important;
+    }
+
+    .mobile-filter-toggle.active {
+        background: linear-gradient(135deg, var(--error-red) 0%, #d32f2f 100%) !important;
+        box-shadow: 0 4px 16px rgba(244, 67, 54, 0.4) !important;
+    }
+
+    /* ALL PAGES - Minimal always-visible compact filter container */
+    /* Note: dealers-filters removed - uses mobile-filter-fab instead */
+    .sidebar,
+    .garage-filters-container {
+        display: block !important;
+        position: relative !important;
+        background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%) !important;
+        padding: 10px !important;
+        margin: 0 0 12px 0 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+        max-height: none !important;
+        overflow: visible !important;
+        border: 1px solid #e5e7eb !important;
+    }
+
+    /* INDEX PAGE - Show ALL essential filters including year range on mobile */
+    .sidebar .filter-group:nth-child(n+9) {
+        display: none !important;
+    }
+
+    .sidebar h3,
+    .dealers-filters h3,
+    .garage-filters-container h3 {
+        font-size: 0.8rem !important;
+        margin-bottom: 8px !important;
+        padding-bottom: 6px !important;
+        border-bottom: 1px solid #e5e7eb !important;
+        text-align: center !important;
+        color: #374151 !important;
+        font-weight: 700 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 6px !important;
+    }
+
+    .sidebar h3 i,
+    .dealers-filters h3 i,
+    .garage-filters-container h3 i {
+        color: var(--primary-green) !important;
+        font-size: 0.85rem !important;
+    }
+
+    .sidebar .filter-group,
+    .dealers-filters .filter-group,
+    .garage-filters-container .filter-group,
+    .garage-filter-group {
+        margin-bottom: 8px !important;
+        background: transparent !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .sidebar .filter-label,
+    .dealers-filters .filter-label,
+    .garage-filters-container .filter-label,
+    .garage-filter-label {
+        font-size: 0.7rem !important;
+        margin-bottom: 3px !important;
+        font-weight: 600 !important;
+        color: #6b7280 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.2px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 3px !important;
+    }
+
+    .sidebar .filter-label i,
+    .dealers-filters .filter-label i,
+    .garage-filters-container .filter-label i {
+        color: var(--primary-green) !important;
+        font-size: 0.7rem !important;
+    }
+
+    .sidebar .filter-select,
+    .sidebar .filter-input,
+    .sidebar .search-input,
+    .dealers-filters .filter-select,
+    .dealers-filters .filter-input,
+    .dealers-filters .search-input,
+    .garage-filters-container .filter-select,
+    .garage-filters-container .filter-input,
+    .garage-filters-container .search-input,
+    .garage-filter-input {
+        font-size: 0.8rem !important;
+        padding: 6px 8px !important;
+        border: 1px solid #d1d5db !important;
+        border-radius: 4px !important;
+        width: 100% !important;
+        background: white !important;
+        transition: all 0.2s ease !important;
+        height: 32px !important;
+    }
+
+    .sidebar .filter-select:focus,
+    .sidebar .filter-input:focus,
+    .sidebar .search-input:focus {
+        border-color: var(--primary-green) !important;
+        outline: none !important;
+        box-shadow: 0 0 0 1px rgba(0, 200, 83, 0.1) !important;
+    }
+
+    /* Price range inputs on mobile */
+    .sidebar .price-range {
+        display: flex !important;
+        gap: 4px !important;
+    }
+
+    .sidebar .price-range input,
+    .sidebar .price-range select {
+        flex: 1 !important;
+        font-size: 0.75rem !important;
+        padding: 6px 4px !important;
+    }
+
+    /* Filter actions button styling */
+    .sidebar .filter-actions,
+    .dealers-filters .filter-actions,
+    .garage-filters-container .filter-actions {
+        display: flex !important;
+        gap: 5px !important;
+        margin-top: 10px !important;
+    }
+
+    .sidebar .filter-actions .btn,
+    .dealers-filters .filter-actions .btn,
+    .garage-filters-container .filter-actions .btn {
+        flex: 1 !important;
+        padding: 7px 10px !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        border-radius: 5px !important;
+        transition: all 0.3s ease !important;
+        min-height: 32px !important;
+    }
+
+    /* Mobile filter toggle button - HIDDEN ON INDEX */
+    .mobile-filter-toggle {
+        display: none !important;
+    }
+
+    /* Note: dealers-filters.active removed - uses mobile-filter-tray instead */
+    .garage-filters-container.active,
+    .filter-section.active,
+    .garages-page-container .garage-filters-container.active {
+        display: block !important;
+        max-height: none !important;
+        position: fixed !important;
+        top: 64px !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        z-index: 9998 !important;
+        background: #f8f9fa !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding: 16px 12px 80px !important;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15) !important;
+        animation: slideUp 0.3s ease !important;
+    }
+
+    @keyframes slideUp {
+        from {
+            transform: translateY(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* Simplify filter styling on mobile for other pages */
+    .dealers-filters h3,
+    .garage-filters-container h3 {
+        font-size: 1.1rem !important;
+        padding: 12px !important;
+        margin-bottom: 16px !important;
+        background: white !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+    }
+
+    .dealers-filters .filter-group,
+    .garage-filters-container .filter-group {
+        margin-bottom: 12px !important;
+        background: white !important;
+        padding: 12px !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .dealers-filters .filter-label,
+    .garage-filters-container .filter-label {
+        font-size: 0.85rem !important;
+        margin-bottom: 6px !important;
+        font-weight: 600 !important;
+        color: #374151 !important;
+    }
+
+    .dealers-filters .filter-select,
+    .dealers-filters .filter-input,
+    .dealers-filters .search-input,
+    .garage-filters-container .filter-select,
+    .garage-filters-container .filter-input,
+    .garage-filters-container .search-input {
+        font-size: 0.9rem !important;
+        padding: 10px !important;
+        border: 1px solid #e5e7eb !important;
+        border-radius: 6px !important;
+        width: 100% !important;
+    }
+
+    /* Close button for mobile filters (not for index sidebar or dealers) */
+    /* Note: dealers-filters.active removed - uses mobile-filter-tray instead */
+    .garage-filters-container.active::before,
+    .filter-section.active::before {
+        content: '\f00d';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        width: 40px;
+        height: 40px;
+        background: var(--primary-green);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10000;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        font-size: 18px;
+    }
+
+    /* Filter groups on mobile */
+    .sidebar .filter-group,
+    .dealers-filters .filter-group,
+    .garage-filters-grid .garage-filter-group {
+        margin-bottom: 16px !important;
+    }
+
+    .sidebar .filter-label,
+    .dealers-filters .filter-label,
+    .garage-filter-label {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: #374151 !important;
+        margin-bottom: 8px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+    }
+
+    .sidebar .filter-select,
+    .sidebar .filter-input,
+    .dealers-filters .filter-select,
+    .dealers-filters .filter-input,
+    .garage-filter-input {
+        width: 100% !important;
+        height: 44px !important;
+        padding: 10px 14px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+        border: 2px solid #e5e7eb !important;
+        background: white !important;
+        color: #111827 !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .sidebar .filter-select:focus,
+    .sidebar .filter-input:focus,
+    .dealers-filters .filter-select:focus,
+    .dealers-filters .filter-input:focus,
+    .garage-filter-input:focus {
+        border-color: var(--primary-green) !important;
+        outline: none !important;
+        box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.1) !important;
+    }
+
+    /* Filter actions on mobile */
+    .filter-actions,
+    .garage-filter-actions {
+        position: sticky !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background: white !important;
+        padding: 16px 0 !important;
+        margin-top: 20px !important;
+        border-top: 2px solid #e5e7eb !important;
+        display: flex !important;
+        gap: 12px !important;
+        z-index: 10 !important;
+    }
+
+    .filter-actions .btn,
+    .garage-filter-actions .btn {
+        flex: 1 !important;
+        padding: 10px 12px !important;
+        font-size: 12px !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        min-height: 38px !important;
+    }
+}
+
+/* Hide desktop filter sections on mobile - use mobile-filter-fab instead */
+@media (max-width: 768px) {
+    .dealers-filters,
+    .dealers-filters.scrolled {
+        display: none !important;
+        position: static !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    .garage-filters-container,
+    .garage-filters-container.scrolled,
+    .inventory-filters,
+    .filter-section {
+        display: none !important;
+    }
+
+    /* Also hide active filters display on mobile */
+    .active-filters-container {
+        display: none !important;
+    }
+}
+
+@media (min-width: 769px) {
+    .mobile-filter-toggle {
+        display: none !important;
+    }
+
+    .sidebar,
+    .dealers-filters,
+    .garage-filters-container,
+    .filter-section {
+        display: block !important;
+        position: static !important;
+        max-height: none !important;
+    }
+}
+
+/* ============================================================================
+   SERVICE CARDS GRID MOBILE OPTIMIZATION
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .services-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    .service-card {
+        padding: 20px 16px !important;
+    }
+
+    .service-icon {
+        width: 50px !important;
+        height: 50px !important;
+        font-size: 24px !important;
+        margin: 0 auto 12px !important;
+    }
+
+    .service-card h3 {
+        font-size: 1.1rem !important;
+    }
+
+    .service-card p {
+        font-size: 14px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Services section hidden on all mobile devices */
+}
+
+/* ============================================================================
+   CATEGORY TABS - HIDDEN ON MOBILE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .category-tabs {
+        display: none !important;
+    }
+
+    /* SERVICES SECTION - HIDDEN ON MOBILE */
+    .services-section {
+        display: none !important;
+    }
+
+    /* HERO STATS - Better Mobile Styling */
+    .hero-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+        margin: 24px auto !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+
+    .hero-stat {
+        padding: 18px 12px !important;
+        background: rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 12px !important;
+        text-align: center !important;
+    }
+
+    .hero-stat-number {
+        font-size: 1.5rem !important;
+        font-weight: 700 !important;
+        display: block !important;
+        margin-bottom: 6px !important;
+        color: white !important;
+    }
+
+    .hero-stat-label {
+        font-size: 0.65rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        opacity: 0.95 !important;
+        color: white !important;
+        line-height: 1.3 !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+    }
+
+    .hero-stat {
+        padding: 16px 10px !important;
+    }
+
+    .hero-stat-number {
+        font-size: 1.3rem !important;
+    }
+
+    .hero-stat-label {
+        font-size: 0.6rem !important;
+    }
+}
+
+/* ============================================================================
+   IMPROVED TOUCH TARGETS FOR MOBILE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* All clickable elements should have minimum 44px touch target */
+    a, button, input[type="submit"], input[type="button"], 
+    .btn, .clickable, select, input[type="checkbox"], input[type="radio"] {
+        min-height: 44px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+    }
+
+    /* Checkbox and radio button touch areas */
+    input[type="checkbox"],
+    input[type="radio"] {
+        width: 20px !important;
+        height: 20px !important;
+        min-height: 20px !important;
+        margin: 12px !important;
+    }
+
+    /* Link spacing for easier tapping */
+    .nav a,
+    .footer-section a {
+        padding: 12px 16px !important;
+        display: block !important;
+    }
+}
+
+/* ============================================================================
+   IMAGE OPTIMIZATION FOR MOBILE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    .car-card-image,
+    .dealer-card-image,
+    .garage-card-image,
+    .vehicle-image {
+        height: 200px !important;
+        object-fit: cover !important;
+    }
+
+    /* Image galleries */
+    .image-gallery {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .image-preview-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+}
+
+/* ============================================================================
+   MOBILE-SPECIFIC UTILITIES
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Stack flex items on mobile */
+    .mobile-stack {
+        flex-direction: column !important;
+    }
+
+    /* Center text on mobile */
+    .mobile-center {
+        text-align: center !important;
+    }
+
+    /* Full width on mobile */
+    .mobile-full {
+        width: 100% !important;
+    }
+
+    /* Hide on mobile */
+    .mobile-hide {
+        display: none !important;
+    }
+
+    /* Show only on mobile */
+    .mobile-only {
+        display: block !important;
+    }
+
+    /* Mobile spacing utilities */
+    .mobile-mt-1 { margin-top: 8px !important; }
+    .mobile-mt-2 { margin-top: 16px !important; }
+    .mobile-mt-3 { margin-top: 24px !important; }
+    .mobile-mb-1 { margin-bottom: 8px !important; }
+    .mobile-mb-2 { margin-bottom: 16px !important; }
+    .mobile-mb-3 { margin-bottom: 24px !important; }
+    .mobile-p-1 { padding: 8px !important; }
+    .mobile-p-2 { padding: 16px !important; }
+    .mobile-p-3 { padding: 24px !important; }
+}
+
+/* Show desktop elements only on desktop */
+@media (min-width: 769px) {
+    .mobile-only {
+        display: none !important;
+    }
+}
+
+/* ============================================================================
+   PREVENT ZOOM ON INPUT FOCUS (iOS Safari)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="time"],
+    textarea,
+    select {
+        font-size: 16px !important; /* Prevent zoom on iOS */
+    }
+}
+
+/* ============================================================================
+   ADDITIONAL MOBILE CARD IMPROVEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* All card grids should stack on mobile */
+    .cards-grid,
+    .results-grid,
+    .items-grid,
+    .listings-container,
+    .dealers-grid,
+    .garages-grid,
+    .companies-grid,
+    .fleet-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+        padding: 0 !important;
+    }
+
+    /* All card types */
+    .card,
+    .dealer-card,
+    .garage-card,
+    .company-card,
+    .vehicle-card,
+    .listing-card {
+        margin: 0 0 16px 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Card images should have consistent height */
+    .card-image,
+    .dealer-card-image,
+    .garage-card-image,
+    .company-card-image,
+    .vehicle-card-image,
+    .listing-image {
+        height: 200px !important;
+        width: 100% !important;
+        object-fit: cover !important;
+    }
+
+    /* Card content padding */
+    .card-content,
+    .card-body,
+    .dealer-card-content,
+    .garage-card-content,
+    .company-card-content {
+        padding: 16px !important;
+    }
+
+    /* Card titles */
+    .card-title,
+    .dealer-name,
+    .garage-name,
+    .company-name,
+    .vehicle-name {
+        font-size: 1.1rem !important;
+        line-height: 1.4 !important;
+        margin-bottom: 8px !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+    }
+
+    /* Card descriptions */
+    .card-description,
+    .dealer-description,
+    .garage-description,
+    .company-description {
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+        margin-bottom: 12px !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 3 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    /* Card meta information */
+    .card-meta,
+    .dealer-meta,
+    .garage-meta,
+    .company-meta {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        font-size: 13px !important;
+        color: #6b7280 !important;
+    }
+
+    .card-meta-item,
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+
+    /* Price/Rate displays */
+    .price,
+    .rate,
+    .daily-rate,
+    .car-price {
+        font-size: 1.3rem !important;
+        font-weight: 700 !important;
+        color: #00c853 !important;
+        margin: 8px 0 !important;
+    }
+
+    /* Badge/Tag elements */
+    .badge,
+    .tag,
+    .status-badge,
+    .featured-badge {
+        padding: 4px 10px !important;
+        font-size: 11px !important;
+        border-radius: 12px !important;
+        white-space: nowrap !important;
+    }
+
+    /* Card action buttons */
+    .card-actions,
+    .action-buttons {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        margin-top: 12px !important;
+    }
+
+    .card-actions .btn,
+    .card-actions button,
+    .action-buttons .btn,
+    .action-buttons button {
+        width: 100% !important;
+        justify-content: center !important;
+        padding: 10px 16px !important;
+        font-size: 14px !important;
+    }
+
+    /* Rating displays */
+    .rating,
+    .dealer-rating,
+    .garage-rating {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 13px;
+        color: #f59e0b;
+    }
+
+    .rating-stars {
+        display: flex;
+        gap: 2px;
+    }
+
+    .rating-count {
+        color: #6b7280;
+        font-size: 12px;
+        margin-left: 4px;
+    }
+}
+
+/* ============================================================================
+   HERO SECTION MOBILE IMPROVEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Hero - MINIMIZED to prevent overlapping on mobile */
+    .hero,
+    .hero-section,
+    .garage-hero,
+    .dealers-hero,
+    .car-hire-hero {
+        padding: 70px 12px 20px !important;
+        text-align: center !important;
+        margin-top: 0 !important;
+        display: block !important;
+        min-height: auto !important;
+    }
+
+    .hero h1 {
+        font-size: 1.2rem !important;
+        line-height: 1.3 !important;
+        margin-bottom: 8px !important;
+        font-weight: 700 !important;
+    }
+
+    .hero p,
+    .hero-subtitle {
+        font-size: 0.75rem !important;
+        line-height: 1.4 !important;
+        margin-bottom: 12px !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+    }
+
+    /* Minimal hero buttons on mobile */
+    .hero .btn,
+    .hero-section .btn,
+    .hero .cta-button,
+    .hero-section .cta-button {
+        padding: 6px 12px !important;
+        font-size: 0.7rem !important;
+        min-height: 32px !important;
+        border-radius: 6px !important;
+    }
+
+    /* Hero CTA button group - compact */
+    .hero .cta-buttons,
+    .hero-section .cta-buttons {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 8px !important;
+        max-width: 100% !important;
+        margin: 0 auto !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
+    }
+
+    .hero .cta-buttons .btn,
+    .hero-section .cta-buttons .btn {
+        flex: 0 1 auto !important;
+        min-width: 100px !important;
+    }
+
+    /* Hide hero stats on mobile to save space */
+    .hero-stats {
+        display: none !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero,
+    .hero-section,
+    .garage-hero,
+    .dealers-hero,
+    .car-hire-hero {
+        padding: 65px 10px 16px !important;
+        margin-top: 0 !important;
+    }
+
+    .hero h1 {
+        font-size: 1.1rem !important;
+        margin-bottom: 6px !important;
+    }
+
+    .hero p,
+    .hero-subtitle {
+        font-size: 0.7rem !important;
+        -webkit-line-clamp: 1 !important;
+        margin-bottom: 8px !important;
+    }
+
+    .hero .btn,
+    .hero-section .btn {
+        padding: 5px 10px !important;
+        font-size: 0.65rem !important;
+        min-height: 30px !important;
+    }
+}
+
+/* ============================================================================
+   FOOTER MOBILE SIMPLIFICATION
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .footer {
+        padding: 30px 0 20px !important;
+        padding-bottom: 20px !important;
+        margin-bottom: 0 !important;
+    }
+
+    .footer-content {
+        display: grid !important;
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 16px !important;
+    }
+
+    .footer-section {
+        padding: 0 !important;
+        margin-bottom: 0 !important;
+    }
+
+    .footer-section h4 {
+        font-size: 1rem !important;
+        margin-bottom: 10px !important;
+        padding-bottom: 8px !important;
+        border-bottom: 1px solid #e5e7eb !important;
+    }
+
+    .footer-section p {
+        font-size: 0.85rem !important;
+        line-height: 1.5 !important;
+        margin: 8px 0 !important;
+        text-align: left !important;
+    }
+
+    .footer-section ul {
+        margin: 0 !important;
+        padding: 0 !important;
+        list-style: none !important;
+    }
+
+    .footer-section ul li {
+        margin-bottom: 6px !important;
+    }
+
+    .footer-section ul li a,
+    .footer-section a {
+        font-size: 0.85rem !important;
+        padding: 6px 0 !important;
+        display: inline-block !important;
+    }
+
+    .social-links {
+        display: flex !important;
+        gap: 12px !important;
+        margin-top: 12px !important;
+    }
+
+    .social-links a {
+        width: 36px !important;
+        height: 36px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: var(--primary-green, #00c853) !important;
+        color: white !important;
+        border-radius: 50% !important;
+        font-size: 16px !important;
+        padding: 0 !important;
+    }
+
+    .footer-bottom {
+        margin-top: 24px !important;
+        padding-top: 16px !important;
+        border-top: 1px solid #e5e7eb !important;
+    }
+
+    .footer-bottom p {
+        font-size: 0.75rem !important;
+        line-height: 1.4 !important;
+        text-align: center !important;
+        margin: 6px 0 !important;
+    }
+}
+
+/* ============================================================================
+   FILTER SECTION MOBILE IMPROVEMENTS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Filter bar/section */
+    .filter-section,
+    .filter-bar-container {
+        padding: 16px !important;
+        margin-bottom: 16px !important;
+    }
+
+    /* Filter bar itself */
+    .filter-bar,
+    .filters {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        width: 100% !important;
+    }
+
+    .filter-bar select,
+    .filter-bar input,
+    .filters select,
+    .filters input {
+        width: 100% !important;
+        height: 42px !important;
+        padding: 10px 14px !important;
+        font-size: 14px !important;
+        border-radius: 8px !important;
+    }
+
+    .filter-bar button,
+    .filters button {
+        width: 100% !important;
+        height: 42px !important;
+        padding: 10px 16px !important;
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        border-radius: 8px !important;
+        margin-top: 4px !important;
+    }
+
+    /* Results count */
+    .results-count,
+    #resultsCount {
+        font-size: 13px !important;
+        color: #6b7280 !important;
+        padding: 8px 16px !important;
+        text-align: center !important;
+    }
+}
+
+/* ============================================================================
+   LOADING STATES MOBILE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .loading,
+    .loader,
+    .loading-spinner {
+        padding: 40px 16px !important;
+        text-align: center !important;
+    }
+
+    .loading p,
+    .loader p {
+        font-size: 14px !important;
+        color: #6b7280 !important;
+        margin-top: 12px !important;
+    }
+
+    .loading i,
+    .loader i {
+        font-size: 32px !important;
+        color: #00c853 !important;
+    }
+}
+
+/* ============================================================================
+   NO RESULTS / EMPTY STATE MOBILE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .no-results,
+    .empty-state {
+        padding: 40px 20px !important;
+        text-align: center !important;
+    }
+
+    .no-results h3,
+    .empty-state h3 {
+        font-size: 1.25rem !important;
+        margin-bottom: 12px !important;
+    }
+
+    .no-results p,
+    .empty-state p {
+        font-size: 14px !important;
+        color: #6b7280 !important;
+        line-height: 1.6 !important;
+        margin-bottom: 16px !important;
+    }
+
+    .no-results .btn,
+    .empty-state .btn {
+        width: 100% !important;
+        max-width: 300px !important;
+        margin: 0 auto !important;
+    }
+}
+
+/* ============================================================================
+   GLOBAL MAP CARDS & CONTACT INFO CARDS - MOBILE FRIENDLY (ALL PAGES)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* All map card elements on any page */
+    .map-card,
+    .dealer-map-card,
+    .garage-map-card,
+    .location-map-card,
+    [class*="map-card"],
+    .map-container {
+        padding: 16px !important;
+        border-radius: 12px !important;
+        margin-bottom: 16px !important;
+        background: white !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .map-card h3,
+    .dealer-map-card h3,
+    .garage-map-card h3,
+    .location-map-card h3,
+    [class*="map-card"] h3 {
+        font-size: 16px !important;
+        margin-bottom: 12px !important;
+        font-weight: 600 !important;
+        color: #333 !important;
+    }
+
+    /* Map iframes and divs */
+    #map,
+    .map,
+    [id*="map"],
+    iframe[src*="google.com/maps"],
+    iframe[src*="maps"] {
+        width: 100% !important;
+        height: 250px !important;
+        border-radius: 8px !important;
+        border: none !important;
+        max-width: 100% !important;
+    }
+
+    /* All contact info card elements on any page */
+    .contact-card,
+    .dealer-contact-card,
+    .garage-contact-card,
+    .contact-info-card,
+    [class*="contact-card"],
+    .business-contact {
+        padding: 16px !important;
+        border-radius: 12px !important;
+        margin-bottom: 16px !important;
+        background: white !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .contact-card h3,
+    .dealer-contact-card h3,
+    .garage-contact-card h3,
+    .contact-info-card h3,
+    [class*="contact-card"] h3 {
+        font-size: 16px !important;
+        margin-bottom: 12px !important;
+        font-weight: 600 !important;
+        color: #333 !important;
+    }
+
+    /* Contact info lists - 2-column grid on mobile for horizontal layout */
+    .contact-info-list,
+    .contact-details,
+    [class*="contact-info"] {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+    }
+
+    /* Individual contact items - compact for 2-column grid */
+    .contact-info-item,
+    .contact-detail,
+    .contact-row {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        gap: 6px !important;
+        padding: 8px 6px !important;
+        background: #f8f9fa !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .contact-info-item:active,
+    .contact-detail:active {
+        background: #e9ecef !important;
+        transform: scale(0.98) !important;
+    }
+
+    .contact-info-item i,
+    .contact-detail i {
+        font-size: 16px !important;
+        color: var(--primary-green, #00c853) !important;
+        width: 18px !important;
+        text-align: center !important;
+        margin-top: 2px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .contact-info-item div,
+    .contact-detail div {
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+
+    .contact-info-item strong,
+    .contact-detail strong,
+    .contact-label {
+        display: block !important;
+        font-size: 10px !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        color: #6b7280 !important;
+        margin-bottom: 4px !important;
+        font-weight: 600 !important;
+    }
+
+    .contact-info-item p,
+    .contact-detail p,
+    .contact-value {
+        margin: 0 !important;
+        font-size: 14px !important;
+        color: #111827 !important;
+        font-weight: 500 !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        line-height: 1.4 !important;
+    }
+
+    .contact-info-item a,
+    .contact-detail a {
+        color: var(--primary-green, #00c853) !important;
+        text-decoration: none !important;
+        font-weight: 600 !important;
+        word-break: break-all !important;
+        font-size: 14px !important;
+    }
+
+    .contact-info-item a:active {
+        color: #00a843 !important;
+    }
+
+    /* Phone and email links - make them more tappable */
+    a[href^="tel:"],
+    a[href^="mailto:"] {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        padding: 2px 0 !important;
+        min-height: 44px !important;
+        align-items: center !important;
+    }
+
+    /* Social media sections */
+    .social-section,
+    .dealer-social-section,
+    [class*="social"] {
+        padding-top: 16px !important;
+        margin-top: 16px !important;
+        border-top: 1px solid #e5e7eb !important;
+    }
+
+    .social-section h4,
+    .dealer-social-section h4 {
+        font-size: 14px !important;
+        margin-bottom: 10px !important;
+        font-weight: 600 !important;
+    }
+
+    .social-icons,
+    .social-icons-clean,
+    .social-links {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+    }
+
+    .social-icons a,
+    .social-icons-clean a,
+    .social-links a {
+        width: 40px !important;
+        height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 50% !important;
+        font-size: 16px !important;
+        color: white !important;
+        transition: all 0.2s ease !important;
+        flex-shrink: 0 !important;
+    }
+
+    .social-icons a:active,
+    .social-icons-clean a:active,
+    .social-links a:active {
+        transform: scale(0.9) !important;
+    }
+
+    /* Location/Address display */
+    .location-display,
+    .address-display,
+    [class*="location"],
+    [class*="address"] {
+        display: flex !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+        padding: 12px !important;
+        background: #f8f9fa !important;
+        border-radius: 8px !important;
+        margin: 12px 0 !important;
+    }
+
+    .location-display i,
+    .address-display i {
+        color: var(--primary-green, #00c853) !important;
+        font-size: 16px !important;
+        margin-top: 2px !important;
+    }
+
+    .location-display p,
+    .address-display p {
+        margin: 0 !important;
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+        color: #374151 !important;
+    }
+
+    /* Ensure proper spacing in info sections */
+    .dealer-info-section,
+    .garage-info-section,
+    .contact-section,
+    [class*="info-section"] {
+        padding: 40px 16px !important;
+        background: #f8f9fa !important;
+    }
+
+    .dealer-info-grid,
+    .info-grid,
+    .contact-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+}

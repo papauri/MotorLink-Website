@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Account - MotorLink Malawi</title>
+    <meta name="description" content="Create your MotorLink account to start selling cars, find garages, or list your services.">
+    <!-- Suppress browser extension console errors -->
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/login.css">
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+
+    <style>
+        /* Registration Page Specific Styles */
+        .register-container {
+            min-height: calc(100vh - 80px);
+            padding: var(--space-xl) var(--space-md);
+            background: var(--bg-light);
+        }
+
+        .register-card {
+            background: var(--bg-white);
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-lg);
+            padding: var(--space-xl);
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            border: 1px solid var(--border-light);
+            animation: slideUp 0.5s ease-out;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-xl);
+            padding-bottom: var(--space-lg);
+            border-bottom: 2px solid var(--border-light);
+        }
+
+        .step-dot {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--bg-gray);
+            color: var(--text-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            position: relative;
+            transition: var(--transition);
+        }
+
+        .step-dot.active {
+            background: var(--primary-green);
+            color: var(--text-white);
+            transform: scale(1.1);
+        }
+
+        .step-dot.completed {
+            background: var(--success-green);
+            color: var(--text-white);
+        }
+
+        .step-dot::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            width: 40px;
+            height: 2px;
+            background: var(--border-light);
+            transform: translateY(-50%);
+        }
+
+        .step-dot:last-child::after {
+            display: none;
+        }
+
+        .step-dot.active::after,
+        .step-dot.completed::after {
+            background: var(--primary-green);
+        }
+
+        .form-step {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .form-step.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--space-sm);
+        }
+
+        .step-description {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: var(--space-lg);
+        }
+
+        .form-navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: var(--space-xl);
+            padding-top: var(--space-lg);
+            border-top: 1px solid var(--border-light);
+        }
+
+        .form-navigation .btn {
+            min-width: 120px;
+        }
+
+        .user-type-cards {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+
+        @media (min-width: 480px) {
+            .user-type-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .user-type-card {
+            border: 2px solid var(--border-light);
+            border-radius: var(--border-radius);
+            padding: var(--space-lg);
+            cursor: pointer;
+            transition: var(--transition);
+            text-align: center;
+            background: var(--bg-white);
+        }
+
+        .user-type-card:hover {
+            border-color: var(--primary-green);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .user-type-card.selected {
+            border-color: var(--primary-green);
+            background: var(--primary-green-bg);
+        }
+
+        .user-type-card.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            position: relative;
+        }
+
+        .user-type-card.disabled::after {
+            content: 'Premium';
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: var(--accent-orange);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .user-type-card i {
+            font-size: 32px;
+            color: var(--primary-green);
+            margin-bottom: var(--space-sm);
+        }
+
+        .user-type-card.disabled i {
+            color: var(--text-tertiary);
+        }
+
+        .user-type-card h4 {
+            margin: var(--space-sm) 0;
+            font-size: 16px;
+            color: var(--text-primary);
+        }
+
+        .user-type-card p {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .password-strength {
+            margin-top: var(--space-sm);
+        }
+
+        .strength-bar {
+            height: 4px;
+            border-radius: 2px;
+            background: var(--bg-gray);
+            overflow: hidden;
+            margin-top: var(--space-xs);
+        }
+
+        .strength-fill {
+            height: 100%;
+            width: 0%;
+            transition: var(--transition);
+            border-radius: 2px;
+        }
+
+        .strength-fill.weak {
+            width: 33%;
+            background: var(--error-red);
+        }
+
+        .strength-fill.medium {
+            width: 66%;
+            background: var(--warning-orange);
+        }
+
+        .strength-fill.strong {
+            width: 100%;
+            background: var(--success-green);
+        }
+
+        .strength-text {
+            font-size: 12px;
+            margin-top: var(--space-xs);
+            color: var(--text-tertiary);
+        }
+
+        .success-message {
+            text-align: center;
+            padding: var(--space-xl);
+        }
+
+        .success-message i {
+            font-size: 64px;
+            color: var(--success-green);
+            margin-bottom: var(--space-lg);
+        }
+
+        .success-message h3 {
+            font-size: 24px;
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+        }
+
+        .success-message .info-box {
+            background: var(--bg-light);
+            border-left: 4px solid var(--primary-green);
+            padding: var(--space-lg);
+            border-radius: var(--border-radius);
+            text-align: left;
+            margin: var(--space-lg) 0;
+        }
+
+        .success-message .info-box ol {
+            margin-left: var(--space-lg);
+            line-height: 2;
+        }
+
+        .success-message .info-box li {
+            margin-bottom: var(--space-sm);
+        }
+
+        .success-actions {
+            display: flex;
+            gap: var(--space-md);
+            justify-content: center;
+            margin-top: var(--space-xl);
+            flex-wrap: wrap;
+        }
+
+        .input-group-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--space-md);
+        }
+
+        @media (min-width: 480px) {
+            .input-group-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .error-message {
+            display: none;
+            color: var(--error-red);
+            font-size: 12px;
+            margin-top: var(--space-xs);
+            align-items: center;
+            gap: var(--space-xs);
+        }
+
+        .error-message.show {
+            display: flex;
+        }
+
+        .form-control.error {
+            border-color: var(--error-red);
+        }
+
+        .form-control.success {
+            border-color: var(--success-green);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: flex-start;
+            gap: var(--space-sm);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: var(--primary-green);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .checkbox-group span {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .checkbox-group a {
+            color: var(--primary-green);
+            text-decoration: none;
+        }
+
+        .checkbox-group a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-container">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                
+                <nav class="nav" id="mainNav">
+                    <a href="index.html">Home</a>
+                    <a href="car-database.html">Know Your Car</a>
+                    <a href="garages.html">Garages</a>
+                    <a href="dealers.html">Dealers</a>
+                    <a href="car-hire.html">Car Hire</a>
+                    <a href="sell.html">Sell Car</a>
+                </nav>
+                
+                <div class="user-menu">
+                    <a href="login.html" class="btn btn-primary btn-sm">
+                        <i class="fas fa-sign-in-alt"></i> Login
+                    </a>
+                </div>
+                
+                <button class="mobile-menu-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Registration Container -->
+    <div class="register-container">
+        <div class="register-card">
+            <!-- Welcome Message -->
+            <div class="welcome-message">
+                <i class="fas fa-user-plus"></i>
+                <h3>Join MotorLink Malawi</h3>
+                <p>Create your account to start buying, selling, and connecting with the automotive community</p>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step-dot active" data-step="1">1</div>
+                <div class="step-dot" data-step="2">2</div>
+                <div class="step-dot" data-step="3">3</div>
+            </div>
+
+            <!-- Success Message (Hidden by default) -->
+            <div id="successMessage" class="success-message" style="display: none;">
+                <i class="fas fa-envelope-circle-check"></i>
+                <h3>Registration Submitted Successfully!</h3>
+                <div class="info-box">
+                    <p style="margin-bottom: 12px; font-weight: 600;"><strong>What happens next?</strong></p>
+                    <ol>
+                        <li><strong>Email Verification:</strong> We've sent a verification email to your registered email address. Please check your inbox (and spam folder) and click the verification link.</li>
+                        <li><strong>Automatic Login:</strong> Once you click the verification link, your account will be activated and you'll be automatically logged in.</li>
+                        <li><strong>Start Using MotorLink:</strong> You can immediately start using all features - browse cars, list vehicles, and connect with buyers and sellers!</li>
+                    </ol>
+                </div>
+                <p style="margin-top: 20px; color: var(--text-secondary);">
+                    <i class="fas fa-info-circle"></i> 
+                    Didn't receive the email? Check your spam folder or 
+                    <a href="login.html" style="color: var(--primary-green); text-decoration: underline;">contact support</a>.
+                </p>
+                <div class="success-actions">
+                    <button type="button" class="btn btn-secondary" onclick="window.location.href='index.html'">
+                        <i class="fas fa-home"></i> Go to Homepage
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="window.location.href='login.html'">
+                        <i class="fas fa-sign-in-alt"></i> Go to Login
+                    </button>
+                </div>
+            </div>
+
+            <!-- Registration Form -->
+            <form id="registerForm" style="display: block;">
+                <!-- Step 1: Account Type & Basic Info -->
+                <div class="form-step active" data-step="1">
+                    <h2 class="step-title">Account Information</h2>
+                    <p class="step-description">Choose your account type and provide basic information</p>
+
+                    <!-- Account Type Selection -->
+                    <div class="form-group">
+                        <label class="form-label">Account Type</label>
+                        <div class="user-type-cards">
+                            <div class="user-type-card selected" data-type="individual">
+                                <i class="fas fa-user"></i>
+                                <h4>Individual</h4>
+                                <p>For personal use</p>
+                            </div>
+                            <div class="user-type-card disabled" data-type="dealer" title="For businesses, click here to register">
+                                <i class="fas fa-store"></i>
+                                <h4>Dealer</h4>
+                                <p><a href="onboarding/onboarding.html">Register as a business</a></p>
+                            </div>
+                            <div class="user-type-card disabled" data-type="garage" title="For businesses, click here to register">
+                                <i class="fas fa-wrench"></i>
+                                <h4>Garage</h4>
+                                <p><a href="onboarding/onboarding.html">Register as a business</a></p>
+                            </div>
+                            <div class="user-type-card disabled" data-type="car_hire" title="For businesses, click here to register">
+                                <i class="fas fa-car-side"></i>
+                                <h4>Car Hire</h4>
+                                <p><a href="onboarding/onboarding.html">Register as a business</a></p>
+                            </div>
+                        </div>
+                        <input type="hidden" name="user_type" id="userType" value="individual" required>
+                    </div>
+
+                    <!-- Business Onboarding Link -->
+                    <div class="info-box" style="margin-top: 20px; background: #f0f9ff; padding: 16px; border-left: 4px solid var(--primary-green); border-radius: 8px;">
+                        <p style="margin: 0 0 8px 0; font-weight: 600; color: var(--text-primary);">
+                            <i class="fas fa-building" style="margin-right: 8px; color: var(--primary-green);"></i>
+                            Business Owner?
+                        </p>
+                        <p style="margin: 0; font-size: 14px; color: var(--text-secondary);">
+                            If you're a car dealer, garage, or car hire company, use our 
+                            <a href="onboarding/onboarding.html" style="color: var(--primary-green); font-weight: 600; text-decoration: underline;">Business Onboarding Portal</a> 
+                            for a specialized registration process.
+                        </p>
+                    </div>
+
+                    <!-- Full Name -->
+                    <div class="form-group">
+                        <label class="form-label" for="fullName">Full Name *</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="text" 
+                                id="fullName"
+                                name="full_name" 
+                                class="form-control" 
+                                placeholder="Enter your full name"
+                                required
+                                autocomplete="name"
+                            >
+                            <i class="fas fa-user input-icon"></i>
+                        </div>
+                        <div class="error-message" id="fullNameError"></div>
+                    </div>
+
+                    <!-- Username -->
+                    <div class="form-group">
+                        <label class="form-label" for="username">Username *</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="text" 
+                                id="username"
+                                name="username" 
+                                class="form-control" 
+                                placeholder="Choose a username"
+                                required
+                                autocomplete="username"
+                                pattern="[a-zA-Z0-9_]{3,50}"
+                            >
+                            <i class="fas fa-at input-icon"></i>
+                        </div>
+                        <div class="error-message" id="usernameError"></div>
+                        <small style="color: var(--text-tertiary); font-size: 12px;">3-50 characters, letters, numbers, and underscores only</small>
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label class="form-label" for="email">Email Address *</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="email" 
+                                id="email"
+                                name="email" 
+                                class="form-control" 
+                                placeholder="Enter your email address"
+                                required
+                                autocomplete="email"
+                            >
+                            <i class="fas fa-envelope input-icon"></i>
+                        </div>
+                        <div class="error-message" id="emailError"></div>
+                    </div>
+
+                    <!-- Phone -->
+                    <div class="form-group">
+                        <label class="form-label" for="phone">Phone Number *</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="tel" 
+                                id="phone"
+                                name="phone" 
+                                class="form-control" 
+                                placeholder="+265 991 234 567"
+                                required
+                                autocomplete="tel"
+                            >
+                            <i class="fas fa-phone input-icon"></i>
+                        </div>
+                        <div class="error-message" id="phoneError"></div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Location & Additional Info -->
+                <div class="form-step" data-step="2">
+                    <h2 class="step-title">Location & Details</h2>
+                    <p class="step-description">Tell us where you're located</p>
+
+                    <!-- City -->
+                    <div class="form-group">
+                        <label class="form-label" for="city">City *</label>
+                        <div class="input-wrapper">
+                            <select 
+                                id="city"
+                                name="city" 
+                                class="form-control" 
+                                required
+                            >
+                                <option value="">Select your city</option>
+                                <option value="Blantyre">Blantyre</option>
+                                <option value="Lilongwe">Lilongwe</option>
+                                <option value="Mzuzu">Mzuzu</option>
+                                <option value="Zomba">Zomba</option>
+                                <option value="Kasungu">Kasungu</option>
+                                <option value="Mangochi">Mangochi</option>
+                                <option value="Karonga">Karonga</option>
+                                <option value="Salima">Salima</option>
+                                <option value="Nkhotakota">Nkhotakota</option>
+                                <option value="Liwonde">Liwonde</option>
+                                <option value="Nsanje">Nsanje</option>
+                                <option value="Rumphi">Rumphi</option>
+                                <option value="Mzimba">Mzimba</option>
+                                <option value="Balaka">Balaka</option>
+                                <option value="Mchinji">Mchinji</option>
+                                <option value="Dedza">Dedza</option>
+                                <option value="Ntcheu">Ntcheu</option>
+                                <option value="Dowa">Dowa</option>
+                                <option value="Ntchisi">Ntchisi</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <i class="fas fa-map-marker-alt input-icon"></i>
+                        </div>
+                        <div class="error-message" id="cityError"></div>
+                    </div>
+
+                    <!-- Address (Optional) -->
+                    <div class="form-group">
+                        <label class="form-label" for="address">Address (Optional)</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="text" 
+                                id="address"
+                                name="address" 
+                                class="form-control" 
+                                placeholder="Enter your address"
+                                autocomplete="street-address"
+                            >
+                            <i class="fas fa-home input-icon"></i>
+                        </div>
+                    </div>
+
+                    <!-- WhatsApp (Optional) -->
+                    <div class="form-group">
+                        <label class="form-label" for="whatsapp">WhatsApp Number (Optional)</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="tel" 
+                                id="whatsapp"
+                                name="whatsapp" 
+                                class="form-control" 
+                                placeholder="+265 991 234 567"
+                                autocomplete="tel"
+                            >
+                            <i class="fab fa-whatsapp input-icon"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Password & Terms -->
+                <div class="form-step" data-step="3">
+                    <h2 class="step-title">Security & Terms</h2>
+                    <p class="step-description">Create a secure password and accept our terms</p>
+
+                    <!-- Password -->
+                    <div class="form-group">
+                        <label class="form-label" for="password">Password *</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="password" 
+                                id="password"
+                                name="password" 
+                                class="form-control" 
+                                placeholder="Create a strong password"
+                                required
+                                autocomplete="new-password"
+                                minlength="6"
+                            >
+                            <i class="fas fa-lock input-icon"></i>
+                            <button type="button" class="password-toggle" id="passwordToggle">
+                                <i class="fas fa-eye" id="passwordToggleIcon"></i>
+                            </button>
+                        </div>
+                        <div class="password-strength">
+                            <div class="strength-bar">
+                                <div class="strength-fill" id="strengthFill"></div>
+                            </div>
+                            <div class="strength-text" id="strengthText">Password strength</div>
+                        </div>
+                        <div class="error-message" id="passwordError"></div>
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="form-group">
+                        <label class="form-label" for="confirmPassword">Confirm Password *</label>
+                        <div class="input-wrapper">
+                            <input 
+                                type="password" 
+                                id="confirmPassword"
+                                name="confirm_password" 
+                                class="form-control" 
+                                placeholder="Confirm your password"
+                                required
+                                autocomplete="new-password"
+                                minlength="6"
+                            >
+                            <i class="fas fa-lock input-icon"></i>
+                            <button type="button" class="password-toggle" id="confirmPasswordToggle">
+                                <i class="fas fa-eye" id="confirmPasswordToggleIcon"></i>
+                            </button>
+                        </div>
+                        <div class="error-message" id="confirmPasswordError"></div>
+                    </div>
+
+                    <!-- Terms & Conditions -->
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="agreeTerms" name="agree_terms" required>
+                            <span>I agree to the <a href="terms.html" target="_blank">Terms of Service</a> and <a href="privacy.html" target="_blank">Privacy Policy</a> *</span>
+                        </label>
+                        <div class="error-message" id="termsError"></div>
+                    </div>
+
+                    <!-- Marketing (Optional) -->
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="agreeMarketing" name="agree_marketing">
+                            <span>I would like to receive promotional emails and updates about MotorLink services</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="form-navigation">
+                    <button type="button" id="prevBtn" class="btn btn-secondary" style="display: none;">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <div style="flex: 1;"></div>
+                    <button type="submit" id="nextBtn" class="btn btn-primary">
+                        <span id="nextBtnText">Next</span>
+                        <i class="fas fa-arrow-right" id="nextBtnIcon"></i>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Login Link -->
+            <div class="auth-links" id="authLinks">
+                <p>Already have an account? <a href="login.html">Login here</a></p>
+                <p style="margin-top: 12px; font-size: 13px; color: var(--text-tertiary);">
+                    <i class="fas fa-shield-alt" style="margin-right: 4px;"></i>
+                    Your data is protected with enterprise-grade security
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container"></div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="js/footer-loader.js"></script>
+    <script src="js/phone-formatter.js"></script>
+    <script src="js/username-checker.js"></script>
+    <script src="js/register.js"></script>
+    <script src="js/cookie-consent.js"></script>
+    <script src="js/page-transitions.js"></script>
+</body>
+</html>

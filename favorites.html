@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saved Cars - MotorLink Malawi</title>
+    <meta name="description" content="View your saved cars on MotorLink Malawi">
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/favorites.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-container">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                <nav class="nav" id="mainNav">
+                    <a href="index.html">Home</a>
+                    <a href="garages.html">Garages</a>
+                    <a href="dealers.html">Dealers</a>
+                    <a href="car-hire.html">Car Hire</a>
+                    <a href="car-database.html">Know Your Car</a>
+                    <a href="sell.html">Sell Car</a>
+                </nav>
+                <div class="user-menu" id="userMenu">
+                    <div id="userInfo" style="display: none;">
+                        <a href="profile.html" class="user-avatar-btn" title="My Profile" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </a>
+                        <button onclick="logout()" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    <div id="guestMenu">
+                        <a href="login.html" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="register.html" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+                <button class="mobile-menu-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Saved Cars</h1>
+            <p class="hero-subtitle">Your favorite cars all in one place, ready when you are.</p>
+            
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="hero-stat-number" id="totalFavorites">0</div>
+                    <div class="hero-stat-label">Saved Cars</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Favorites Section -->
+    <section class="favorites-section">
+        <div class="container">
+            <!-- Saved Cars Grid -->
+            <div class="favorites-grid" id="favoritesGrid">
+                <!-- Loading State -->
+                <div class="loading-state" id="loadingState">
+                    <div class="loading-spinner"></div>
+                    <p>Loading your saved cars...</p>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state hidden" id="emptyState">
+                <i class="fas fa-heart"></i>
+                <h3>No Saved Cars Yet</h3>
+                <p>Start browsing and save cars you're interested in!</p>
+                <a href="index.html" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Browse Cars
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recommendations Section -->
+    <section class="recommendations-section" id="recommendationsSection" style="display: none; padding: 40px 0; background: #f8f9fa;">
+        <div class="container">
+            <div class="section-header" style="margin-bottom: 24px;">
+                <h2 style="font-size: 1.5rem; font-weight: 700; color: #1f2937; margin: 0;">
+                    <i class="fas fa-magic" style="color: #00c853; margin-right: 8px;"></i>
+                    Recommended For You
+                </h2>
+                <p style="color: #6b7280; margin-top: 8px;">Based on your saved cars, you might also like these</p>
+            </div>
+            <div class="recommendations-grid" id="recommendationsGrid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+                <!-- Recommendations will be loaded here -->
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container"></div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="js/footer-loader.js"></script>
+    <script src="script.js"></script>
+    <script src="js/favorites.js"></script>
+
+    <script src="js/page-transitions.js"></script>
+</body>
+</html>

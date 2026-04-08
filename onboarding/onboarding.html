@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MotorLink Malawi - Business Onboarding</title>
+    <!-- Suppress browser extension console errors -->
+    <script src="../js/suppress-extension-errors.js"></script>
+    <link rel="stylesheet" href="onboarding.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/mobile-enhancements.css">
+    <link rel="stylesheet" href="../css/mobile-page-indicator.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                <i class="fas fa-car"></i>
+                <div>
+                    <h1>MotorLink Malawi</h1>
+                    <p class="subtitle">Business Onboarding Portal</p>
+                </div>
+            </div>
+            <div class="header-info">
+                <div class="info-item">
+                    <i class="fas fa-users"></i>
+                    <span>Customer Service Portal</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <div class="progress-bar">
+                <div class="progress-step active" data-step="1">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Business Type</div>
+                </div>
+                <div class="progress-step" data-step="2">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Basic Info</div>
+                </div>
+                <div class="progress-step" data-step="3">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Contact Details</div>
+                </div>
+                <div class="progress-step" data-step="4">
+                    <div class="step-number">4</div>
+                    <div class="step-label">Services & Features</div>
+                </div>
+                <div class="progress-step" data-step="5">
+                    <div class="step-number">5</div>
+                    <div class="step-label">Review & Submit</div>
+                </div>
+            </div>
+
+            <form id="onboardingForm">
+                <!-- Step 1: Business Type -->
+                <div class="form-step active" data-step="1">
+                    <h2><i class="fas fa-building"></i> Select Business Type</h2>
+                    <p class="step-description">Choose the type of business you want to onboard <span style="color: #666; font-size: 0.9em;">• ~10 minutes total</span></p>
+                    
+                    <div class="business-type-options">
+                        <div class="business-option" data-type="car_hire">
+                            <div class="option-icon">
+                                <i class="fas fa-key"></i>
+                            </div>
+                            <div class="option-content">
+                                <h3>Car Hire Company</h3>
+                                <p>Vehicle rental and hire services</p>
+                                <ul>
+                                    <li>Daily, weekly, monthly rentals</li>
+                                    <li>Self-drive and chauffeur services</li>
+                                    <li>Tourist and corporate packages</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="business-option" data-type="garage">
+                            <div class="option-icon">
+                                <i class="fas fa-tools"></i>
+                            </div>
+                            <div class="option-content">
+                                <h3>Garage / Workshop</h3>
+                                <p>Vehicle repair and maintenance services</p>
+                                <ul>
+                                    <li>Mechanical repairs</li>
+                                    <li>Body work and painting</li>
+                                    <li>Emergency recovery services</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="business-option" data-type="dealer">
+                            <div class="option-icon">
+                                <i class="fas fa-handshake"></i>
+                            </div>
+                            <div class="option-content">
+                                <h3>Car Dealer</h3>
+                                <p>Vehicle sales and dealership</p>
+                                <ul>
+                                    <li>New and used car sales</li>
+                                    <li>Vehicle import services</li>
+                                    <li>Financing and trade-ins</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="businessType" name="business_type" required>
+                    <div id="step1Message" class="field-message" style="display: none; color: var(--danger-red); margin-top: 15px;">
+                        Please select a business type to continue
+                    </div>
+                </div>
+
+                <!-- Step 2: Basic Information -->
+                <div class="form-step" data-step="2">
+                    <h2><i class="fas fa-info-circle"></i> Basic Business Information</h2>
+                    <p class="step-description">Enter the fundamental details about the business</p>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="businessName">
+                                <i class="fas fa-signature"></i>
+                                Business Name *
+                            </label>
+                            <input type="text" id="businessName" name="business_name" required
+                                   autocomplete="organization"
+                                   placeholder="e.g., Malawi Premium Rentals">
+                            <div class="field-info">Official registered business name</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ownerName">
+                                <i class="fas fa-user"></i>
+                                Owner/Manager Name *
+                            </label>
+                            <input type="text" id="ownerName" name="owner_name" required
+                                   autocomplete="name"
+                                   placeholder="e.g., John Banda">
+                        </div>
+                    </div>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="yearsEstablished">
+                                <i class="fas fa-calendar"></i>
+                                Years in Business
+                            </label>
+                            <input type="number" id="yearsEstablished" name="years_established"
+                                   min="0" max="100" placeholder="e.g., 5">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="website">
+                                <i class="fas fa-globe"></i>
+                                Website
+                            </label>
+                            <input type="url" id="website" name="website"
+                                   placeholder="https://example.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="businessRegistration">
+                                <i class="fas fa-certificate"></i>
+                                Business Registration Number
+                            </label>
+                            <input type="text" id="businessRegistration" name="business_registration"
+                                   placeholder="e.g., BR/12345/2020">
+                            <div class="field-info">Official business registration number if available</div>
+                        </div>
+                    </div>
+
+                    <!-- Owner Information -->
+                    <div class="form-group" style="margin-top: 30px; padding-top: 30px; border-top: 2px solid #e0e0e0;">
+                        <h3 style="margin-bottom: 15px; color: #333;">
+                            <i class="fas fa-user-tie"></i> Owner/Manager Information
+                        </h3>
+                        <p class="step-description" style="margin-bottom: 20px;">
+                            For verification purposes
+                        </p>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="ownerId">
+                                <i class="fas fa-id-badge"></i>
+                                Owner's ID/Passport Number
+                                <i class="fas fa-question-circle tooltip-icon" data-tooltip="Your National ID or Passport number for identity verification. This information is kept confidential and secure."></i>
+                            </label>
+                            <input type="text" id="ownerId" name="owner_id_number"
+                                   placeholder="e.g., National ID or Passport">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ownerDob">
+                                <i class="fas fa-birthday-cake"></i>
+                                Owner's Date of Birth
+                            </label>
+                            <input type="date" id="ownerDob" name="owner_dob"
+                                   max="2006-12-31">
+                            <div class="field-info">Must be 18 years or older</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">
+                            <i class="fas fa-file-alt"></i>
+                            Business Description
+                        </label>
+                        <textarea id="description" name="description" rows="4" 
+                                  placeholder="Describe the business services, specialties, and unique selling points..."></textarea>
+                        <div class="field-info">This will be displayed on the business profile</div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Contact Details -->
+                <div class="form-step" data-step="3">
+                    <h2><i class="fas fa-address-book"></i> Contact Information</h2>
+                    <p class="step-description">How customers can reach this business</p>
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="email">
+                                <i class="fas fa-envelope"></i>
+                                Email Address *
+                            </label>
+                            <input type="email" id="email" name="email" required
+                                   autocomplete="email"
+                                   placeholder="contact@business.com">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="phone">
+                                <i class="fas fa-phone"></i>
+                                Phone Number *
+                            </label>
+                            <input type="tel" id="phone" name="phone" required
+                                   autocomplete="tel"
+                                   placeholder="+265 991 123 456">
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="whatsapp">
+                                <i class="fab fa-whatsapp"></i>
+                                WhatsApp Number
+                            </label>
+                            <input type="tel" id="whatsapp" name="whatsapp"
+                                   autocomplete="tel"
+                                   placeholder="+265 991 123 456">
+                        </div>
+
+                        <div class="form-group" id="recoveryNumberGroup" style="display: none;">
+                            <label for="recoveryNumber">
+                                <i class="fas fa-truck-pickup"></i>
+                                Recovery Number
+                            </label>
+                            <input type="tel" id="recoveryNumber" name="recovery_number"
+                                   placeholder="+265 992 123 456">
+                            <div class="field-info">For emergency vehicle recovery (garages only)</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="address">
+                            <i class="fas fa-map-marker-alt"></i>
+                            Business Address *
+                        </label>
+                        <textarea id="address" name="address" rows="2" required
+                                  placeholder="Full physical address including area and city..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location">
+                            <i class="fas fa-location-crosshairs"></i>
+                            Location *
+                            <i class="fas fa-question-circle tooltip-icon" data-tooltip="Select the main city or town where your business operates. This helps customers find you easily."></i>
+                        </label>
+                        <select id="location" name="location_id" required>
+                            <option value="">Select City/Town</option>
+                        </select>
+                        <div class="field-info">Primary service location</div>
+                    </div>
+
+
+                    <!-- Social Media Links -->
+                    <div class="form-group" style="margin-top: 30px; padding-top: 30px; border-top: 2px solid #e0e0e0;">
+                        <h3 style="margin-bottom: 15px; color: #333;">
+                            <i class="fas fa-share-alt"></i> Social Media & Online Presence (Optional)
+                        </h3>
+                        <p class="step-description" style="margin-bottom: 20px;">
+                            Add social media links to help customers find and connect with the business
+                        </p>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="facebookUrl">
+                                <i class="fab fa-facebook"></i>
+                                Facebook Page URL
+                            </label>
+                            <input type="url" id="facebookUrl" name="facebook_url"
+                                   placeholder="https://facebook.com/yourbusiness">
+                            <div class="field-info">Business Facebook page URL</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="instagramUrl">
+                                <i class="fab fa-instagram"></i>
+                                Instagram URL
+                            </label>
+                            <input type="url" id="instagramUrl" name="instagram_url"
+                                   placeholder="https://instagram.com/yourbusiness">
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="twitterUrl">
+                                <i class="fab fa-twitter"></i>
+                                Twitter/X URL
+                            </label>
+                            <input type="url" id="twitterUrl" name="twitter_url"
+                                   placeholder="https://twitter.com/yourbusiness">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="linkedinUrl">
+                                <i class="fab fa-linkedin"></i>
+                                LinkedIn URL
+                            </label>
+                            <input type="url" id="linkedinUrl" name="linkedin_url"
+                                   placeholder="https://linkedin.com/company/yourbusiness">
+                        </div>
+                    </div>
+
+
+                    <div class="form-group" style="margin-top: 30px; padding-top: 30px; border-top: 2px solid #e0e0e0;">
+                        <h3 style="margin-bottom: 15px; color: #333;">
+                            <i class="fas fa-user-lock"></i> Login Account Details
+                        </h3>
+                        <p class="step-description" style="margin-bottom: 20px;">
+                            Create login credentials for the business manager to access their dashboard
+                        </p>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="username">
+                                <i class="fas fa-user"></i>
+                                Username *
+                            </label>
+                            <input type="text" id="username" name="username" required
+                                   autocomplete="username"
+                                   placeholder="Choose a unique username" pattern="[a-zA-Z0-9_]{4,20}"
+                                   minlength="4" maxlength="20">
+                            <div class="field-info">4-20 characters, letters, numbers and underscore only</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="password">
+                                <i class="fas fa-lock"></i>
+                                Password *
+                            </label>
+                            <input type="password" id="password" name="password" required
+                                   autocomplete="new-password"
+                                   placeholder="Create a strong password" minlength="6">
+                            <div class="field-info">Minimum 6 characters</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Services & Features -->
+                <div class="form-step" data-step="4">
+                    <h2><i class="fas fa-cogs"></i> Services & Features</h2>
+                    <p class="step-description">Specify the services and special features</p>
+                    
+                    <!-- Car Hire Specific Fields -->
+                    <div id="car_hireFields" class="business-specific-fields">
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-car-side"></i>
+                                Vehicle Types Available
+                            </label>
+                            <div class="checkbox-grid" id="vehicleTypesContainer"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-concierge-bell"></i>
+                                Services Offered
+                            </label>
+                            <div class="checkbox-grid">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="services" value="Self Drive">
+                                    <span class="checkmark"></span>
+                                    Self Drive
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="services" value="With Driver">
+                                    <span class="checkmark"></span>
+                                    With Driver
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="services" value="Airport Pickup">
+                                    <span class="checkmark"></span>
+                                    Airport Pickup
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="services" value="Long Distance">
+                                    <span class="checkmark"></span>
+                                    Long Distance
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="services" value="Wedding Cars">
+                                    <span class="checkmark"></span>
+                                    Wedding Cars
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="services" value="Corporate Rental">
+                                    <span class="checkmark"></span>
+                                    Corporate Rental
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-star"></i>
+                                Special Services
+                            </label>
+                            <div class="checkbox-grid">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="special_services" value="VIP Service">
+                                    <span class="checkmark"></span>
+                                    VIP Service
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="special_services" value="Tourist Packages">
+                                    <span class="checkmark"></span>
+                                    Tourist Packages
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="special_services" value="24/7 Service">
+                                    <span class="checkmark"></span>
+                                    24/7 Service
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="dailyRate">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    Daily Rate From (MWK)
+                                </label>
+                                <input type="number" id="dailyRate" name="daily_rate_from"
+                                       placeholder="25000" min="0">
+                                <div class="field-info">Starting price per day</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="weeklyRate">
+                                    <i class="fas fa-money-bill-wave"></i>
+                                    Weekly Rate From (MWK)
+                                </label>
+                                <input type="number" id="weeklyRate" name="weekly_rate_from"
+                                       placeholder="150000" min="0">
+                                <div class="field-info">Starting price per week</div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="monthlyRate">
+                                <i class="fas fa-money-bill-wave"></i>
+                                Monthly Rate From (MWK)
+                            </label>
+                            <input type="number" id="monthlyRate" name="monthly_rate_from"
+                                   placeholder="500000" min="0">
+                            <div class="field-info">Starting price per month</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="businessHoursCarHire">
+                                <i class="fas fa-clock"></i>
+                                Business Hours
+                            </label>
+                            <textarea id="businessHoursCarHire" name="business_hours" rows="3"
+                                      placeholder="Mon-Fri: 8:00 AM - 6:00 PM&#10;Sat: 9:00 AM - 3:00 PM&#10;Sun: Closed"></textarea>
+                            <div class="field-info">When customers can visit or contact the business</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Garage Specific Fields -->
+                    <div id="garageFields" class="business-specific-fields">
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-tools"></i>
+                                Services Offered
+                            </label>
+                            <div class="checkbox-grid" id="servicesContainer"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-ambulance"></i>
+                                Emergency Services
+                            </label>
+                            <div class="checkbox-grid">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="emergency_services" value="Breakdown Recovery">
+                                    <span class="checkmark"></span>
+                                    Breakdown Recovery
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="emergency_services" value="Towing">
+                                    <span class="checkmark"></span>
+                                    Towing
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="emergency_services" value="Tire Replacement">
+                                    <span class="checkmark"></span>
+                                    Tire Replacement
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="emergency_services" value="Jump Start">
+                                    <span class="checkmark"></span>
+                                    Jump Start
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="emergency_services" value="Fuel Delivery">
+                                    <span class="checkmark"></span>
+                                    Fuel Delivery
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="emergency_services" value="Lockout Service">
+                                    <span class="checkmark"></span>
+                                    Lockout Service
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-car"></i>
+                                Specializes in Car Brands
+                            </label>
+                            <div class="checkbox-grid" id="carBrandsContainer"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="operatingHours">
+                                <i class="fas fa-clock"></i>
+                                Operating Hours
+                            </label>
+                            <textarea id="operatingHours" name="operating_hours" rows="3" 
+                                      placeholder="Mon-Fri: 7:30 AM - 6:00 PM&#10;Sat: 8:00 AM - 4:00 PM&#10;Sun: Emergency Only"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Dealer Specific Fields -->
+                    <div id="dealerFields" class="business-specific-fields">
+                        <div class="form-group">
+                            <label>
+                                <i class="fas fa-star"></i>
+                                Specialization
+                            </label>
+                            <div class="checkbox-grid" id="dealerSpecializationContainer"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="businessHours">
+                                <i class="fas fa-clock"></i>
+                                Business Hours
+                            </label>
+                            <textarea id="businessHours" name="business_hours" rows="3" 
+                                      placeholder="Mon-Fri: 8:00 AM - 5:00 PM&#10;Sat: 9:00 AM - 1:00 PM&#10;Sun: Closed"></textarea>
+                        </div>
+                    </div>
+                    
+                    <!-- Common Business Features -->
+                    <div class="form-group">
+                        <label>
+                            <i class="fas fa-award"></i>
+                            Business Features
+                        </label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label feature-checkbox">
+                                <input type="checkbox" name="verified" value="1">
+                                <span class="checkmark"></span>
+                                <div>
+                                    <strong>Verified Business</strong>
+                                    <small>Mark as verified for trust badge</small>
+                                </div>
+                            </label>
+                            <label class="checkbox-label feature-checkbox">
+                                <input type="checkbox" name="featured" value="1">
+                                <span class="checkmark"></span>
+                                <div>
+                                    <strong>Featured Listing</strong>
+                                    <small>Highlight in featured sections</small>
+                                </div>
+                            </label>
+                            <label class="checkbox-label feature-checkbox" id="certifiedCheckbox" style="display: none;">
+                                <input type="checkbox" name="certified" value="1">
+                                <span class="checkmark"></span>
+                                <div>
+                                    <strong>Certified Garage</strong>
+                                    <small>Official certification badge</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 5: Review & Submit -->
+                <div class="form-step" data-step="5">
+                    <h2><i class="fas fa-clipboard-check"></i> Review & Submit</h2>
+                    <p class="step-description">Verify all information before submitting</p>
+                    
+                    <div class="review-section">
+                        <div class="review-category">
+                            <h3><i class="fas fa-building"></i> Business Details</h3>
+                            <div class="review-item">
+                                <strong>Business Type:</strong>
+                                <span id="reviewBusinessType"></span>
+                            </div>
+                            <div class="review-item">
+                                <strong>Business Name:</strong>
+                                <span id="reviewBusinessName"></span>
+                            </div>
+                            <div class="review-item">
+                                <strong>Owner/Manager:</strong>
+                                <span id="reviewOwnerName"></span>
+                            </div>
+                            <div class="review-item">
+                                <strong>Years in Business:</strong>
+                                <span id="reviewYearsEstablished"></span>
+                            </div>
+                            <div class="review-item">
+                                <strong>Description:</strong>
+                                <span id="reviewDescription"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="review-category">
+                            <h3><i class="fas fa-address-book"></i> Contact Information</h3>
+                            <div class="review-item">
+                                <strong>Email:</strong>
+                                <span id="reviewEmail"></span>
+                            </div>
+                            <div class="review-item">
+                                <strong>Phone:</strong>
+                                <span id="reviewPhone"></span>
+                            </div>
+                            <div class="review-item">
+                                <strong>WhatsApp:</strong>
+                                <span id="reviewWhatsapp"></span>
+                            </div>
+                            <div class="review-item" id="reviewRecoveryNumberItem" style="display: none;">
+                                <strong>Recovery Number:</strong>
+                                <span id="reviewRecoveryNumber"></span>
+                            </div>
+                            <div class="review-item">
+                                <strong>Address:</strong>
+                                <span id="reviewAddress"></span>
+                            </div>
+                            <div class="review-item">
+                                <strong>Location:</strong>
+                                <span id="reviewLocation"></span>
+                            </div>
+                        </div>
+
+                        <div class="review-category">
+                            <h3><i class="fas fa-share-alt"></i> Social Media</h3>
+                            <div class="review-item" id="reviewFacebookItem" style="display: none;">
+                                <strong>Facebook:</strong>
+                                <span id="reviewFacebook"></span>
+                            </div>
+                            <div class="review-item" id="reviewInstagramItem" style="display: none;">
+                                <strong>Instagram:</strong>
+                                <span id="reviewInstagram"></span>
+                            </div>
+                            <div class="review-item" id="reviewTwitterItem" style="display: none;">
+                                <strong>Twitter/X:</strong>
+                                <span id="reviewTwitter"></span>
+                            </div>
+                            <div class="review-item" id="reviewLinkedinItem" style="display: none;">
+                                <strong>LinkedIn:</strong>
+                                <span id="reviewLinkedin"></span>
+                            </div>
+                            <div class="review-item" id="reviewNoSocialMedia">
+                                <em>No social media links provided</em>
+                            </div>
+                        </div>
+
+                        <div class="review-category">
+                            <h3><i class="fas fa-cogs"></i> Services & Features</h3>
+                            <div id="reviewServices"></div>
+                            <div class="review-item">
+                                <strong>Verified Business:</strong>
+                                <span id="reviewVerified">No</span>
+                            </div>
+                            <div class="review-item">
+                                <strong>Featured Listing:</strong>
+                                <span id="reviewFeatured">No</span>
+                            </div>
+                            <div class="review-item" id="reviewCertifiedItem" style="display: none;">
+                                <strong>Certified Garage:</strong>
+                                <span id="reviewCertified">No</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="duplicate-check-section">
+                        <div class="alert alert-info">
+                            <i class="fas fa-search"></i>
+                            <div>
+                                <strong>Duplicate Check</strong>
+                                <p>Check if a similar business already exists in our system</p>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-warning" id="checkDuplicateBtn">
+                            <i class="fas fa-search"></i> Check for Duplicates
+                        </button>
+                        <div id="duplicateResult" style="display: none;"></div>
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="confirmDetails" required>
+                            <span class="checkmark"></span>
+                            I confirm that all information provided is accurate and verified
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="form-navigation">
+                    <button type="button" class="btn btn-secondary" id="prevBtn">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <div class="step-indicator">
+                        Step <span id="currentStepNumber">1</span> of 5
+                    </div>
+                    <button type="button" class="btn btn-primary" id="nextBtn" disabled>
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <button type="submit" class="btn btn-success" id="submitBtn">
+                        <i class="fas fa-check"></i> Submit Business
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="successModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header success">
+                    <i class="fas fa-check-circle"></i>
+                    <h2>Business Successfully Onboarded!</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="success-details">
+                        <div class="success-item">
+                            <strong>Business Name:</strong>
+                            <span id="successBusinessName"></span>
+                        </div>
+                        <div class="success-item">
+                            <strong>Business ID:</strong>
+                            <span id="successBusinessId"></span>
+                        </div>
+                        <div class="success-item">
+                            <strong>Reference:</strong>
+                            <span id="successReference"></span>
+                        </div>
+                        <div class="success-item">
+                            <strong>Status:</strong>
+                            <span class="status-badge pending">Pending Approval</span>
+                        </div>
+                    </div>
+
+                    <!-- User Account Section -->
+                    <div class="success-details" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e0e0e0;">
+                        <h4 style="margin-bottom: 10px; color: #333;">
+                            <i class="fas fa-user-check"></i> Login Account Created
+                        </h4>
+                        <div class="success-item">
+                            <strong>User ID:</strong>
+                            <span id="successUserId"></span>
+                        </div>
+                        <div class="success-item">
+                            <strong>Username:</strong>
+                            <span id="successUsername"></span>
+                        </div>
+                        <div class="success-item">
+                            <strong>Account Status:</strong>
+                            <span class="status-badge pending">Pending Approval</span>
+                        </div>
+                    </div>
+
+                    <div class="success-actions">
+                        <p><i class="fas fa-info-circle"></i> The business and user account have been created with <strong>Pending Approval</strong> status. Once an admin approves the business, the login account will be activated automatically.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" id="newBusinessBtn">
+                        <i class="fas fa-plus"></i> Add Another Business
+                    </button>
+                    <button class="btn btn-secondary" id="closeBtn">
+                        <i class="fas fa-times"></i> Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Duplicate Found Modal -->
+        <div id="duplicateModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h2>Similar Business Found</h2>
+                </div>
+                <div class="modal-body">
+                    <div class="duplicate-details">
+                        <p>A business with similar details already exists in our system:</p>
+                        <div class="duplicate-business">
+                            <strong id="duplicateBusinessName"></strong>
+                            <div>Email: <span id="duplicateEmail"></span></div>
+                            <div>Phone: <span id="duplicatePhone"></span></div>
+                        </div>
+                        <p class="warning-text">Please verify if this is the same business or a different one.</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" id="cancelSubmitBtn">
+                        <i class="fas fa-times"></i> Cancel Submission
+                    </button>
+                    <button class="btn btn-primary" id="continueSubmitBtn">
+                        <i class="fas fa-check"></i> Continue Anyway
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../config.js"></script>
+    <script src="../js/phone-formatter.js"></script>
+    <script src="onboarding.js"></script>
+    <script>
+        // Add keyboard navigation - Enter key to advance
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey && document.activeElement.tagName !== 'TEXTAREA') {
+                const nextBtn = document.getElementById('nextBtn');
+                const submitBtn = document.getElementById('submitBtn');
+                
+                if (nextBtn && nextBtn.style.display !== 'none') {
+                    e.preventDefault();
+                    nextBtn.click();
+                } else if (submitBtn && submitBtn.style.display !== 'none') {
+                    e.preventDefault();
+                    submitBtn.click();
+                }
+            }
+        });
+    </script>
+
+
+    <script src="../js/page-transitions.js"></script>
+</body>
+</html>

@@ -1,0 +1,832 @@
+/* ============================================================================
+   ENHANCED STYLING FOR INDEX PAGE - Filter Sidebar & Car Listings
+   ============================================================================ */
+
+/* Enhanced Filter Sidebar - Modern & Impressive */
+.sidebar {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fffe 100%);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 4px 16px rgba(0, 200, 83, 0.08);
+    border: 1px solid rgba(0, 200, 83, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-green), #00e676, var(--primary-green));
+    background-size: 200% 100%;
+    animation: shimmerFilter 3s linear infinite;
+}
+
+@keyframes shimmerFilter {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+.sidebar h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sidebar h3 i {
+    color: var(--primary-green);
+    font-size: 1rem;
+}
+
+/* Filter Groups - Enhanced Spacing */
+.filter-group {
+    margin-bottom: 20px;
+}
+
+.filter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-label i {
+    color: var(--primary-green);
+    font-size: 0.75rem;
+}
+
+/* Enhanced Filter Select */
+.filter-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid rgba(0, 200, 83, 0.15);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    background: white;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.filter-select:hover {
+    border-color: rgba(0, 200, 83, 0.3);
+    box-shadow: 0 2px 8px rgba(0, 200, 83, 0.08);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(0, 200, 83, 0.1);
+}
+
+/* Enhanced Car Listings Grid */
+.listings-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+@media (min-width: 640px) {
+    .listings-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .listings-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1280px) {
+    .listings-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Enhanced Car Cards - Professional & Modern */
+.car-card,
+.listing-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 200, 83, 0.08);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.car-card::before,
+.listing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary-green), #00e676, var(--primary-green));
+    background-size: 200% 100%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.car-card:hover,
+.listing-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 12px 28px rgba(0, 200, 83, 0.15);
+    border-color: var(--primary-green);
+}
+
+.car-card:hover::before,
+.listing-card:hover::before {
+    opacity: 1;
+    animation: shimmerCard 2s linear infinite;
+}
+
+@keyframes shimmerCard {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Car Image Container - Enhanced with Carousel Support */
+.car-image,
+.listing-image {
+    width: 100%;
+    height: 220px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    position: relative;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+}
+
+/* Image Carousel Container */
+.car-image-carousel {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+}
+
+.car-image-carousel:active {
+    cursor: grabbing;
+}
+
+/* Carousel Slides Container */
+.car-image-slides {
+    display: flex;
+    height: 100%;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Individual Slide */
+.car-image-slide {
+    min-width: 100%;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.car-image-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+}
+
+/* Simple image (no carousel) */
+.car-image img:not(.car-image-slide img),
+.listing-image img:not(.car-image-slide img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.car-card:hover .car-image img,
+.listing-card:hover .listing-image img {
+    transform: scale(1.08);
+}
+
+/* Carousel Navigation Arrows - Sleek & Modern */
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    font-size: 14px;
+}
+
+.car-card:hover .carousel-nav {
+    opacity: 1;
+}
+
+.carousel-nav.prev {
+    left: 10px;
+}
+
+.carousel-nav.next {
+    right: 10px;
+}
+
+.carousel-nav:hover {
+    background: rgba(0, 200, 83, 0.95);
+    border-color: rgba(0, 200, 83, 0.5);
+    transform: translateY(-50%) scale(1.1);
+    box-shadow: 0 4px 16px rgba(0, 200, 83, 0.4);
+}
+
+.carousel-nav:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+/* Carousel Dots - Beautiful & Smooth */
+.carousel-dots {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.carousel-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.carousel-dot:hover {
+    background: rgba(255, 255, 255, 0.8);
+    transform: scale(1.2);
+}
+
+.carousel-dot.active {
+    background: var(--primary-green);
+    width: 24px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 200, 83, 0.5);
+}
+
+/* Image Count Badge - Top Right */
+.image-count {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 5;
+}
+
+.image-count i {
+    font-size: 0.7rem;
+}
+
+/* Listing Type Badges - Beautiful & Distinct */
+.listing-type-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 15;
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.listing-type-badge.featured {
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    color: #1a1a1a;
+    border-color: rgba(255, 215, 0, 0.5);
+    box-shadow: 0 4px 16px rgba(255, 215, 0, 0.5);
+}
+
+.listing-type-badge.premium {
+    background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+    color: white;
+    border-color: rgba(156, 39, 176, 0.5);
+    box-shadow: 0 4px 16px rgba(156, 39, 176, 0.5);
+}
+
+/* Legacy support */
+.featured-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+    color: #1a1a1a;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 16px rgba(255, 215, 0, 0.5);
+    z-index: 15;
+    border: 1.5px solid rgba(255, 215, 0, 0.5);
+}
+
+/* Car Info Section - Professional Typography */
+.car-info,
+.listing-info {
+    padding: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.car-title,
+.listing-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Enhanced Price Section */
+.car-price-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.car-price,
+.listing-price {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--primary-green);
+    letter-spacing: -0.02em;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.car-price .currency {
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0.8;
+}
+
+.car-price .amount {
+    font-size: 1.3rem;
+}
+
+.negotiable-badge {
+    background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+    color: white;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+}
+
+.car-details,
+.listing-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 12px;
+    background: rgba(0, 200, 83, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 200, 83, 0.08);
+}
+
+.car-detail,
+.car-detail-item,
+.listing-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.car-detail i,
+.car-detail-item i,
+.listing-detail-item i {
+    color: var(--primary-green);
+    font-size: 0.75rem;
+    width: 14px;
+    text-align: center;
+}
+
+/* Car Meta - Views & Time */
+.car-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    margin-top: auto;
+}
+
+.car-meta span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.car-meta i {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.car-location,
+.listing-location {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: auto;
+}
+
+.car-location i,
+.listing-location i {
+    color: var(--primary-green);
+    font-size: 0.75rem;
+}
+
+/* View Button - Sleek & Prominent */
+.view-btn,
+.listing-btn {
+    background: var(--primary-green);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 12px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.view-btn:hover,
+.listing-btn:hover {
+    background: #00a843;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 200, 83, 0.3);
+}
+
+/* Category Tabs - Enhanced */
+.category-tabs {
+    background: white;
+    border-bottom: 2px solid rgba(0, 200, 83, 0.1);
+    padding: 16px 0;
+    margin-bottom: 32px;
+    position: sticky;
+    top: 64px;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.category-container {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 0 16px;
+}
+
+.category-container::-webkit-scrollbar {
+    display: none;
+}
+
+.category-tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1.5px solid rgba(0, 200, 83, 0.2);
+    background: white;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.category-tab:hover {
+    background: rgba(0, 200, 83, 0.05);
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+.category-tab.active {
+    background: var(--primary-green);
+    border-color: var(--primary-green);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 200, 83, 0.25);
+}
+
+.category-tab i {
+    margin-right: 6px;
+    font-size: 0.8rem;
+}
+
+/* Mobile-Specific Carousel Enhancements */
+@media (max-width: 768px) {
+    .car-image,
+    .listing-image {
+        height: 200px;
+    }
+    
+    /* Always show dots on mobile for touch navigation */
+    .carousel-dots {
+        opacity: 1;
+    }
+    
+    /* Hide arrows on mobile (swipe instead) */
+    .carousel-nav {
+        display: none;
+    }
+    
+    /* Slightly larger dots for easier touch */
+    .carousel-dot {
+        width: 10px;
+        height: 10px;
+    }
+    
+    .carousel-dot.active {
+        width: 28px;
+    }
+}
+
+/* Desktop Enhancements */
+@media (min-width: 769px) {
+    .car-image,
+    .listing-image {
+        height: 240px;
+    }
+    
+    /* Show arrows on desktop hover */
+    .car-card:hover .carousel-nav {
+        opacity: 1;
+    }
+}
+
+/* Smooth Animations for Image Loading */
+.car-image-slide img {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0.3;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Loading State for Images */
+.car-image-slide img[src=""],
+.car-image-slide img:not([src]) {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+/* Enhanced View Button on Cards */
+.car-card .view-btn,
+.car-card .listing-btn {
+    background: linear-gradient(135deg, var(--primary-green) 0%, #00a843 100%);
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    text-decoration: none;
+    display: block;
+    box-shadow: 0 2px 8px rgba(0, 200, 83, 0.2);
+}
+
+.car-card .view-btn:hover,
+.car-card .listing-btn:hover {
+    background: linear-gradient(135deg, #00a843 0%, #008c3a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 200, 83, 0.35);
+}
+
+/* Prevent text selection during swipe */
+.car-image-carousel * {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+}
+
+/* Better Loading State */
+.listings-grid .loading {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    gap: 12px;
+}
+
+.listings-grid .loading i {
+    font-size: 2rem;
+    color: var(--primary-green);
+}
+
+.listings-grid .loading span {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Custom Car Loading Animation */
+.car-loader {
+    position: relative;
+    width: 120px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.car-loader-body {
+    position: relative;
+    width: 80px;
+    height: 30px;
+    background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+    border-radius: 8px 8px 4px 4px;
+    animation: carBounce 1s ease-in-out infinite;
+}
+
+.car-loader-body::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 15px;
+    width: 35px;
+    height: 20px;
+    background: linear-gradient(135deg, #66bb6a 0%, #4caf50 100%);
+    border-radius: 6px 6px 0 0;
+}
+
+.car-loader-body::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    width: 60px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.car-loader-wheel {
+    position: absolute;
+    bottom: -8px;
+    width: 16px;
+    height: 16px;
+    background: #333;
+    border-radius: 50%;
+    border: 3px solid #666;
+    animation: wheelSpin 0.6s linear infinite;
+}
+
+.car-loader-wheel:first-of-type {
+    left: 8px;
+}
+
+.car-loader-wheel:last-of-type {
+    right: 8px;
+}
+
+.car-loader-road {
+    position: absolute;
+    bottom: -12px;
+    width: 200px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent 0%, #ddd 50%, transparent 100%);
+    animation: roadMove 1.5s linear infinite;
+}
+
+@keyframes wheelSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes carBounce {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-4px); }
+}
+
+@keyframes roadMove {
+    0% { transform: translateX(-50px); opacity: 0; }
+    50% { opacity: 1; }
+    100% { transform: translateX(50px); opacity: 0; }
+}
+
+/* Skeleton Loader for Images (optional enhancement) */
+@keyframes shimmerLoading {
+    0% {
+        background-position: -468px 0;
+    }
+    100% {
+        background-position: 468px 0;
+    }
+}
+
+.car-image-slide img.loading {
+    background: linear-gradient(
+        90deg,
+        #f0f0f0 0px,
+        #f8f8f8 40px,
+        #f0f0f0 80px
+    );
+    background-size: 600px;
+    animation: shimmerLoading 1.5s infinite;
+}
+
+/* Make carousel arrows visible on desktop for discoverability */
+@media (min-width: 769px) {
+    .carousel-nav {
+        opacity: 0.7 !important;
+    }
+    
+    .car-card:hover .carousel-nav,
+    .listing-card:hover .carousel-nav {
+        opacity: 1 !important;
+    }
+}

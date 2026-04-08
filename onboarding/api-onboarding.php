@@ -1,0 +1,1531 @@
+<?php
+/**
+ * MotorLink Malawi - Business Onboarding API
+ * Complete fixed version for database connectivity
+ */
+
+// ============================================================================
+// CONFIGURATION & INITIALIZATION
+// ============================================================================
+
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/onboarding_errors.log');
+
+// Create logs directory if it doesn't exist
+if (!is_dir(__DIR__ . '/logs')) {
+    mkdir(__DIR__ . '/logs', 0755, true);
+}
+
+// Headers for CORS and JSON responses
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
+
+// Handle preflight OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
+// Database Configuration
+// Auto-detect environment: Production vs UAT (User Acceptance Testing)
+//
+// PRODUCTION: Running on promanaged-it.com server -> Use localhost (DB on same server)
+// UAT: Running locally on developer laptop -> Use remote DB (promanaged-it.com)
+//
+// Detection: Check if the server hostname matches the production server
+$serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+// Production: Any non-localhost hostname (flexible for any domain)
+$isLocalhost = in_array($serverHost, ['localhost', '127.0.0.1']) || 
+               strpos($serverHost, 'localhost:') === 0 || 
+               strpos($serverHost, '127.0.0.1:') === 0 ||
+               preg_match('/^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/', $serverHost);
+$isProduction = !$isLocalhost && !empty($serverHost);
+
+// Database host: localhost on production, remote for UAT/local development
+define('DB_HOST', $isProduction ? 'localhost' : 'promanaged-it.com');
+define('DB_USER', 'p601229');
+define('DB_PASS', '2:p2WpmX[0YTs7');
+define('DB_NAME', 'p601229_motorlinkmalawi_db');
+define('SITE_NAME', 'MotorLink Malawi');
+define('SITE_URL', 'https://promanaged-it.com/motorlink');
+
+// Start session if not already started
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+/**
+ * Database Connection
+ */
+class Database {
+    private static $instance = null;
+    private $connection;
+    
+    private function __construct() {
+        try {
+            $this->connection = new PDO(
+                "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+                DB_USER,
+                DB_PASS,
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false
+                ]
+            );
+        } catch(PDOException $e) {
+            error_log("Database connection failed: " . $e->getMessage());
+            throw new Exception("Database connection failed: " . $e->getMessage());
+        }
+    }
+    
+    public static function getInstance() {
+        if (self::$instance === null) {
+            self::$instance = new Database();
+        }
+        return self::$instance;
+    }
+    
+    public function getConnection() {
+        return $this->connection;
+    }
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Send error response and exit
+ */
+function sendError($message, $code = 500) {
+    http_response_code($code);
+    echo json_encode([
+        'success' => false, 
+        'message' => $message, 
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    exit;
+}
+
+/**
+ * Send success response and exit
+ */
+function sendSuccess($data = [], $code = 200) {
+    http_response_code($code);
+    echo json_encode(array_merge([
+        'success' => true,
+        'timestamp' => date('Y-m-d H:i:s')
+    ], $data), JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+/**
+ * Get database connection
+ */
+function getDB() {
+    static $pdo = null;
+    if ($pdo !== null) return $pdo;
+    
+    try {
+        $pdo = Database::getInstance()->getConnection();
+        return $pdo;
+    } catch (Exception $e) {
+        sendError('Database connection failed: ' . $e->getMessage(), 500);
+    }
+}
+
+/**
+ * Validation helper functions
+ */
+function validateEmail($email) {
+    if (empty($email)) {
+        return ['valid' => false, 'message' => 'Email is required'];
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return ['valid' => false, 'message' => 'Invalid email format'];
+    }
+    if (strlen($email) > 255) {
+        return ['valid' => false, 'message' => 'Email is too long (max 255 characters)'];
+    }
+    return ['valid' => true];
+}
+
+function validatePhone($phone) {
+    if (empty($phone)) {
+        return ['valid' => false, 'message' => 'Phone number is required'];
+    }
+    // Remove common formatting characters
+    $cleaned = preg_replace('/[\s\-\(\)\+]/', '', $phone);
+    // Check if it contains only digits and is reasonable length (7-15 digits)
+    if (!preg_match('/^\d{7,15}$/', $cleaned)) {
+        return ['valid' => false, 'message' => 'Invalid phone number format. Use 7-15 digits'];
+    }
+    return ['valid' => true];
+}
+
+function validatePassword($password) {
+    if (empty($password)) {
+        return ['valid' => false, 'message' => 'Password is required'];
+    }
+    if (strlen($password) < 6) {
+        return ['valid' => false, 'message' => 'Password must be at least 6 characters long'];
+    }
+    if (strlen($password) > 128) {
+        return ['valid' => false, 'message' => 'Password is too long (max 128 characters)'];
+    }
+    return ['valid' => true];
+}
+
+function validateUsername($username) {
+    if (empty($username)) {
+        return ['valid' => false, 'message' => 'Username is required'];
+    }
+    if (strlen($username) < 3) {
+        return ['valid' => false, 'message' => 'Username must be at least 3 characters long'];
+    }
+    if (strlen($username) > 50) {
+        return ['valid' => false, 'message' => 'Username is too long (max 50 characters)'];
+    }
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $username)) {
+        return ['valid' => false, 'message' => 'Username can only contain letters, numbers, and underscores'];
+    }
+    return ['valid' => true];
+}
+
+function validateURL($url, $fieldName = 'URL') {
+    if (empty($url)) {
+        return ['valid' => true]; // URLs are optional
+    }
+    if (strlen($url) > 500) {
+        return ['valid' => false, 'message' => "$fieldName is too long (max 500 characters)"];
+    }
+    // Check if it's a valid URL format
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        return ['valid' => false, 'message' => "Invalid $fieldName format. Please include http:// or https://"];
+    }
+    return ['valid' => true];
+}
+
+function validateBusinessName($name, $fieldName = 'Business name') {
+    if (empty($name)) {
+        return ['valid' => false, 'message' => "$fieldName is required"];
+    }
+    if (strlen($name) < 2) {
+        return ['valid' => false, 'message' => "$fieldName must be at least 2 characters long"];
+    }
+    if (strlen($name) > 255) {
+        return ['valid' => false, 'message' => "$fieldName is too long (max 255 characters)"];
+    }
+    return ['valid' => true];
+}
+
+/**
+ * Check if business already exists (by name, email, or phone)
+ */
+function businessExists($db, $type, $businessName, $email, $phone) {
+    try {
+        $table = '';
+        $nameField = '';
+        
+        switch ($type) {
+            case 'car_hire':
+                $table = 'car_hire_companies';
+                $nameField = 'business_name';
+                break;
+            case 'garage':
+                $table = 'garages';
+                $nameField = 'name';
+                break;
+            case 'dealer':
+                $table = 'car_dealers';
+                $nameField = 'business_name';
+                break;
+            default:
+                return false;
+        }
+        
+        // Check in business table (including pending_approval)
+        $stmt = $db->prepare("
+            SELECT id, $nameField as name, email, phone 
+            FROM $table 
+            WHERE ($nameField = ? OR email = ? OR phone = ?)
+            AND status IN ('active', 'pending_approval')
+            LIMIT 1
+        ");
+        
+        $stmt->execute([$businessName, $email, $phone]);
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($existing) {
+            return $existing;
+        }
+        
+        // Also check in users table for duplicates
+        $stmt = $db->prepare("
+            SELECT id, business_name, email, phone 
+            FROM users 
+            WHERE (business_name = ? OR LOWER(email) = LOWER(?) OR phone = ?)
+            AND user_type = ?
+            AND status IN ('active', 'pending', 'pending_approval')
+            LIMIT 1
+        ");
+        
+        $stmt->execute([$businessName, $email, $phone, $type]);
+        $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        return $existingUser ?: false;
+        
+    } catch (Exception $e) {
+        error_log("Business exists check error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Log API activity
+ */
+function logActivity($message) {
+    $logFile = __DIR__ . '/logs/onboarding_activity.log';
+    $timestamp = date('Y-m-d H:i:s');
+    $logMessage = "[$timestamp] $message\n";
+    file_put_contents($logFile, $logMessage, FILE_APPEND | LOCK_EX);
+}
+
+// ============================================================================
+// API ROUTING & MAIN EXECUTION
+// ============================================================================
+
+try {
+    $db = getDB();
+    $action = $_GET['action'] ?? $_POST['action'] ?? '';
+    
+    logActivity("API call: $action from " . ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+    
+    if (empty($action)) {
+        sendError('No action specified', 400);
+    }
+    
+    // Route to appropriate handler
+    switch ($action) {
+        case 'locations': 
+            getLocations($db); 
+            break;
+        case 'check_business': 
+            checkBusinessExists($db); 
+            break;
+        case 'check_email_phone': 
+            checkEmailOrPhoneExists($db); 
+            break;
+        case 'check_business_name': 
+            checkBusinessNameExists($db); 
+            break;
+        case 'add_car_hire': 
+            addCarHireCompany($db); 
+            break;
+        case 'add_garage': 
+            addGarage($db); 
+            break;
+        case 'add_dealer': 
+            addCarDealer($db); 
+            break;
+        case 'get_makes': 
+            getMakes($db); 
+            break;
+        case 'get_services': 
+            getServices($db); 
+            break;
+        case 'get_vehicle_types': 
+            getVehicleTypes($db); 
+            break;
+        default:
+            sendError('Invalid action: ' . $action, 400);
+    }
+} catch (Exception $e) {
+    error_log("Onboarding API Fatal Error: " . $e->getMessage());
+    logActivity("FATAL ERROR: " . $e->getMessage());
+    sendError('Internal server error: ' . $e->getMessage(), 500);
+}
+
+// ============================================================================
+// API HANDLERS
+// ============================================================================
+
+/**
+ * Get all active locations
+ */
+function getLocations($db) {
+    try {
+        $stmt = $db->query("
+            SELECT id, name, region, district 
+            FROM locations 
+            WHERE is_active = 1 
+            ORDER BY region ASC, name ASC
+        ");
+        $locations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        logActivity("Loaded " . count($locations) . " locations");
+        sendSuccess(['locations' => $locations]);
+        
+    } catch (Exception $e) {
+        error_log("getLocations error: " . $e->getMessage());
+        sendError('Failed to load locations', 500);
+    }
+}
+
+/**
+ * Check if business already exists
+ */
+function checkBusinessExists($db) {
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$input) {
+        $input = $_POST;
+    }
+    
+    $type = $input['type'] ?? '';
+    $businessName = $input['business_name'] ?? '';
+    $email = $input['email'] ?? '';
+    $phone = $input['phone'] ?? '';
+    
+    if (empty($type) || empty($businessName) || empty($email) || empty($phone)) {
+        sendError('Type, business name, email, and phone are required', 400);
+    }
+    
+    try {
+        $existing = businessExists($db, $type, $businessName, $email, $phone);
+        
+        // Check if email belongs to an existing user (for second business check)
+        $isSecondBusiness = false;
+        if ($existing) {
+            $userStmt = $db->prepare("
+                SELECT id, email, user_type, business_id 
+                FROM users 
+                WHERE LOWER(email) = LOWER(?)
+                AND status IN ('active', 'pending', 'pending_approval')
+                LIMIT 1
+            ");
+            $userStmt->execute([$email]);
+            $existingUser = $userStmt->fetch(PDO::FETCH_ASSOC);
+            
+            // If email matches an existing user, it might be a second business
+            if ($existingUser) {
+                $isSecondBusiness = true;
+            }
+        }
+        
+        if ($existing) {
+            logActivity("Duplicate found for $type: " . $businessName);
+            sendSuccess([
+                'exists' => true,
+                'business' => $existing,
+                'is_second_business' => $isSecondBusiness,
+                'message' => 'A business with similar details already exists in our system.'
+            ]);
+        } else {
+            logActivity("No duplicate found for $type: " . $businessName);
+            sendSuccess([
+                'exists' => false, 
+                'message' => 'No duplicate business found.'
+            ]);
+        }
+        
+    } catch (Exception $e) {
+        error_log("Check business exists error: " . $e->getMessage());
+        sendError('Failed to check business existence', 500);
+    }
+}
+
+/**
+ * Check if email or phone already exists (for real-time validation)
+ */
+function checkEmailOrPhoneExists($db) {
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$input) {
+        $input = $_POST;
+    }
+    
+    $email = $input['email'] ?? '';
+    $phone = $input['phone'] ?? '';
+    $type = $input['type'] ?? '';
+    
+    if (empty($email) && empty($phone)) {
+        sendError('Email or phone is required', 400);
+    }
+    
+    try {
+        $results = [
+            'email_exists' => false,
+            'phone_exists' => false,
+            'email_belongs_to_user' => false,
+            'phone_belongs_to_user' => false
+        ];
+        
+        // Check email in users table
+        if (!empty($email)) {
+            $stmt = $db->prepare("
+                SELECT id, email, user_type, business_id 
+                FROM users 
+                WHERE LOWER(email) = LOWER(?)
+                AND status IN ('active', 'pending', 'pending_approval')
+                LIMIT 1
+            ");
+            $stmt->execute([$email]);
+            $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existingUser) {
+                $results['email_exists'] = true;
+                $results['email_belongs_to_user'] = true;
+            }
+            
+            // Also check in business tables
+            if (!$results['email_exists']) {
+                $tables = ['car_hire_companies', 'garages', 'car_dealers'];
+                foreach ($tables as $table) {
+                    $emailField = ($table === 'garages') ? 'email' : 'email';
+                    $stmt = $db->prepare("
+                        SELECT id, email 
+                        FROM $table 
+                        WHERE LOWER(email) = LOWER(?)
+                        AND status IN ('active', 'pending_approval')
+                        LIMIT 1
+                    ");
+                    $stmt->execute([$email]);
+                    if ($stmt->fetch()) {
+                        $results['email_exists'] = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Check phone in users table
+        if (!empty($phone)) {
+            $stmt = $db->prepare("
+                SELECT id, phone, user_type, business_id 
+                FROM users 
+                WHERE phone = ?
+                AND status IN ('active', 'pending', 'pending_approval')
+                LIMIT 1
+            ");
+            $stmt->execute([$phone]);
+            $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existingUser) {
+                $results['phone_exists'] = true;
+                $results['phone_belongs_to_user'] = true;
+            }
+            
+            // Also check in business tables
+            if (!$results['phone_exists']) {
+                $tables = ['car_hire_companies', 'garages', 'car_dealers'];
+                foreach ($tables as $table) {
+                    $stmt = $db->prepare("
+                        SELECT id, phone 
+                        FROM $table 
+                        WHERE phone = ?
+                        AND status IN ('active', 'pending_approval')
+                        LIMIT 1
+                    ");
+                    $stmt->execute([$phone]);
+                    if ($stmt->fetch()) {
+                        $results['phone_exists'] = true;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        sendSuccess($results);
+        
+    } catch (Exception $e) {
+        error_log("Check email/phone exists error: " . $e->getMessage());
+        sendError('Failed to check email/phone existence', 500);
+    }
+}
+
+/**
+ * Check if business name already exists (for real-time validation)
+ */
+function checkBusinessNameExists($db) {
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$input) {
+        $input = $_POST;
+    }
+    
+    $businessName = $input['business_name'] ?? '';
+    $type = $input['type'] ?? '';
+    
+    if (empty($businessName) || empty($type)) {
+        sendError('Business name and type are required', 400);
+    }
+    
+    try {
+        $results = [
+            'exists' => false,
+            'is_second_business' => false
+        ];
+        
+        // Determine table and name field based on type
+        $table = '';
+        $nameField = '';
+        
+        switch ($type) {
+            case 'car_hire':
+                $table = 'car_hire_companies';
+                $nameField = 'business_name';
+                break;
+            case 'garage':
+                $table = 'garages';
+                $nameField = 'name';
+                break;
+            case 'dealer':
+                $table = 'car_dealers';
+                $nameField = 'business_name';
+                break;
+            default:
+                sendError('Invalid business type', 400);
+        }
+        
+        // Check in business table (including pending_approval)
+        $stmt = $db->prepare("
+            SELECT id, $nameField as name, email, phone, user_id
+            FROM $table 
+            WHERE $nameField = ?
+            AND status IN ('active', 'pending_approval')
+            LIMIT 1
+        ");
+        $stmt->execute([$businessName]);
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($existing) {
+            $results['exists'] = true;
+            
+            // Check if this business belongs to a user (might be second business)
+            if (!empty($existing['user_id'])) {
+                $userStmt = $db->prepare("
+                    SELECT id, email, user_type, business_id 
+                    FROM users 
+                    WHERE id = ?
+                    AND status IN ('active', 'pending', 'pending_approval')
+                    LIMIT 1
+                ");
+                $userStmt->execute([$existing['user_id']]);
+                $existingUser = $userStmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($existingUser) {
+                    $results['is_second_business'] = true;
+                }
+            }
+        }
+        
+        // Also check in users table for business_name
+        if (!$results['exists']) {
+            $stmt = $db->prepare("
+                SELECT id, business_name, email, phone 
+                FROM users 
+                WHERE business_name = ?
+                AND user_type = ?
+                AND status IN ('active', 'pending', 'pending_approval')
+                LIMIT 1
+            ");
+            $stmt->execute([$businessName, $type]);
+            $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existingUser) {
+                $results['exists'] = true;
+                $results['is_second_business'] = true; // If in users table, likely same user
+            }
+        }
+        
+        sendSuccess($results);
+        
+    } catch (Exception $e) {
+        error_log("Check business name exists error: " . $e->getMessage());
+        sendError('Failed to check business name existence', 500);
+    }
+}
+
+/**
+ * Get car makes for specialization
+ */
+function getMakes($db) {
+    try {
+        $stmt = $db->query("
+            SELECT id, name 
+            FROM car_makes 
+            WHERE is_active = 1 
+            ORDER BY name ASC
+        ");
+        $makes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        sendSuccess(['makes' => $makes]);
+    } catch (Exception $e) {
+        error_log("getMakes error: " . $e->getMessage());
+        // Return empty array instead of error for better UX
+        sendSuccess(['makes' => []]);
+    }
+}
+
+/**
+ * Get common services for garages
+ */
+function getServices($db) {
+    $services = [
+        "Engine Repair", "Brake Service", "Oil Change", "AC Repair", "Transmission Service",
+        "Electrical Repair", "Body Work", "Painting", "Dent Removal", "Glass Replacement",
+        "Tire Service", "Battery Replacement", "Computer Diagnostics", "Hybrid Service", "Performance Tuning"
+    ];
+    
+    sendSuccess(['services' => $services]);
+}
+
+/**
+ * Get vehicle types for car hire
+ */
+function getVehicleTypes($db) {
+    $types = [
+        "Economy", "Compact", "Sedan", "SUV", "Pickup", "Luxury",
+        "Sports Car", "Van", "Minibus", "4WD", "Executive", "Limousine"
+    ];
+    
+    sendSuccess(['vehicle_types' => $types]);
+}
+
+/**
+ * Add a new car hire company
+ */
+function addCarHireCompany($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendError('POST method required', 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    if (!$input) {
+        $input = $_POST;
+    }
+
+    // Debug: Log received data
+    logActivity("=== ADD CAR HIRE DEBUG ===");
+    logActivity("Received fields: " . implode(', ', array_keys($input)));
+    logActivity("Username received: " . ($input['username'] ?? 'NOT SET'));
+    logActivity("Password received: " . (isset($input['password']) ? 'YES (length: ' . strlen($input['password']) . ')' : 'NOT SET'));
+    logActivity("Email received: " . ($input['email'] ?? 'NOT SET'));
+    logActivity("Business name received: " . ($input['business_name'] ?? 'NOT SET'));
+
+    // Validate required fields (including login credentials)
+    $required = ['business_name', 'owner_name', 'email', 'phone', 'address', 'location_id', 'username', 'password'];
+    $missing = [];
+    foreach ($required as $field) {
+        if (empty($input[$field])) {
+            $missing[] = $field;
+        }
+    }
+
+    if (!empty($missing)) {
+        logActivity("Missing required fields: " . implode(', ', $missing));
+        sendError("Missing required fields: " . implode(', ', $missing), 400);
+    }
+
+    // Comprehensive validation
+    $validation = validateBusinessName($input['business_name'], 'Business name');
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validateEmail($input['email']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validatePhone($input['phone']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validateUsername($input['username']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validatePassword($input['password']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    // Validate optional URLs
+    if (!empty($input['website'])) {
+        $validation = validateURL($input['website'], 'Website URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['facebook_url'])) {
+        $validation = validateURL($input['facebook_url'], 'Facebook URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['instagram_url'])) {
+        $validation = validateURL($input['instagram_url'], 'Instagram URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['twitter_url'])) {
+        $validation = validateURL($input['twitter_url'], 'Twitter URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['linkedin_url'])) {
+        $validation = validateURL($input['linkedin_url'], 'LinkedIn URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    // Validate WhatsApp if provided
+    if (!empty($input['whatsapp'])) {
+        $validation = validatePhone($input['whatsapp']);
+        if (!$validation['valid']) {
+            sendError('Invalid WhatsApp number format. ' . $validation['message'], 400);
+        }
+    }
+
+    try {
+        // Check if business already exists (including pending_approval)
+        $existing = businessExists($db, 'car_hire', $input['business_name'], $input['email'], $input['phone']);
+        if ($existing) {
+            $existingName = $existing['name'] ?? $existing['business_name'] ?? 'Unknown';
+            sendError('A car hire company with similar details already exists. Business: ' . $existingName, 409);
+        }
+
+        // Check if username already exists (case-insensitive) - check all statuses
+        $stmt = $db->prepare("SELECT id, username FROM users WHERE LOWER(username) = LOWER(?)");
+        $stmt->execute([$input['username']]);
+        $existingUser = $stmt->fetch();
+        if ($existingUser) {
+            sendError('Username "' . $existingUser['username'] . '" already exists. Please choose a different username.', 409);
+        }
+
+        // Check if email already exists in users table (case-insensitive) - check all statuses
+        $stmt = $db->prepare("SELECT id, email FROM users WHERE LOWER(email) = LOWER(?)");
+        $stmt->execute([$input['email']]);
+        $existingEmail = $stmt->fetch();
+        if ($existingEmail) {
+            sendError('Email "' . $existingEmail['email'] . '" is already registered. Please use a different email or login with existing account.', 409);
+        }
+
+        // Check if phone number already exists in users table - check all statuses
+        $stmt = $db->prepare("SELECT id, phone, business_name FROM users WHERE phone = ? AND user_type IN ('car_hire', 'garage', 'dealer')");
+        $stmt->execute([$input['phone']]);
+        $existingPhone = $stmt->fetch();
+        if ($existingPhone) {
+            $businessInfo = $existingPhone['business_name'] ? ' (Business: ' . $existingPhone['business_name'] . ')' : '';
+            sendError('Phone number "' . $input['phone'] . '" is already registered' . $businessInfo . '. Please use a different phone number.', 409);
+        }
+
+        // Check if business name already exists in business table (including pending_approval)
+        $stmt = $db->prepare("SELECT id, business_name FROM car_hire_companies WHERE business_name = ? AND status IN ('active', 'pending_approval') LIMIT 1");
+        $stmt->execute([$input['business_name']]);
+        $existingBusiness = $stmt->fetch();
+        if ($existingBusiness) {
+            sendError('A car hire company with the name "' . $input['business_name'] . '" already exists. Please choose a different business name.', 409);
+        }
+
+        // Start transaction to ensure atomicity and prevent ID skipping
+        $db->beginTransaction();
+        
+        try {
+            // Create user account first (simple, like admin)
+            $passwordHash = password_hash($input['password'], PASSWORD_DEFAULT);
+
+            $city = null;
+            if (!empty($input['location_id'])) {
+                $locStmt = $db->prepare("SELECT name FROM locations WHERE id = ?");
+                $locStmt->execute([$input['location_id']]);
+                $location = $locStmt->fetch(PDO::FETCH_ASSOC);
+                $city = $location['name'] ?? null;
+            }
+
+            $stmt = $db->prepare("
+                INSERT INTO users (username, email, password_hash, full_name, phone, whatsapp, address, city,
+                                 user_type, status, business_name, business_registration, national_id, date_of_birth,
+                                 created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'car_hire', 'pending', ?, ?, ?, ?, NOW(), NOW())
+            ");
+
+            $stmt->execute([
+                $input['username'],
+                $input['email'],
+                $passwordHash,
+                $input['owner_name'],
+                $input['phone'],
+                $input['whatsapp'] ?? null,
+                $input['address'],
+                $city,
+                $input['business_name'],
+                $input['business_registration'] ?? null,
+                $input['owner_id_number'] ?? null,
+                $input['owner_dob'] ?? null
+            ]);
+
+            $userId = $db->lastInsertId();
+
+            if (!$userId || $userId <= 0) {
+                throw new Exception('Failed to get user ID after insert');
+            }
+            
+            // Verify user was actually created
+            $verifyStmt = $db->prepare("SELECT id, username, email FROM users WHERE id = ?");
+            $verifyStmt->execute([$userId]);
+            $verifiedUser = $verifyStmt->fetch();
+            
+            if (!$verifiedUser) {
+                throw new Exception('User was not found in database after insert');
+            }
+            
+        } catch (Exception $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            throw new Exception('User creation failed: ' . $e->getMessage());
+        }
+
+        // Create car hire company and link to user
+        $stmt = $db->prepare("
+            INSERT INTO car_hire_companies (user_id, business_name, owner_name, email, phone, whatsapp, address, location_id,
+                                           vehicle_types, services, special_services, daily_rate_from, weekly_rate_from, monthly_rate_from,
+                                           years_established, business_hours, website, facebook_url, instagram_url, twitter_url, linkedin_url,
+                                           description, verified, featured, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval', NOW(), NOW())
+        ");
+
+        $stmt->execute([
+            $userId,
+            $input['business_name'],
+            $input['owner_name'],
+            $input['email'],
+            $input['phone'],
+            $input['whatsapp'] ?? null,
+            $input['address'],
+            $input['location_id'],
+            !empty($input['vehicle_types']) ? json_encode($input['vehicle_types']) : null,
+            !empty($input['services']) ? json_encode($input['services']) : null,
+            !empty($input['special_services']) ? json_encode($input['special_services']) : null,
+            $input['daily_rate_from'] ?? null,
+            $input['weekly_rate_from'] ?? null,
+            $input['monthly_rate_from'] ?? null,
+            $input['years_established'] ?? null,
+            $input['business_hours'] ?? null,
+            $input['website'] ?? null,
+            $input['facebook_url'] ?? null,
+            $input['instagram_url'] ?? null,
+            $input['twitter_url'] ?? null,
+            $input['linkedin_url'] ?? null,
+            $input['description'] ?? null,
+            $input['verified'] ?? 0,
+            $input['featured'] ?? 0
+        ]);
+
+        $companyId = $db->lastInsertId();
+        
+        if (!$companyId || $companyId <= 0) {
+            throw new Exception('Failed to get company ID after insert');
+        }
+
+        // Link user to business
+        $stmt = $db->prepare("UPDATE users SET business_id = ? WHERE id = ?");
+        $stmt->execute([$companyId, $userId]);
+        
+        // Commit transaction - both user and business are now in database
+        $db->commit();
+        
+        // Log successful creation
+        logActivity("Car hire company created successfully: Company ID=$companyId, User ID=$userId, Business={$input['business_name']}");
+
+        sendSuccess([
+            'api_version' => 'v2_with_user_creation',
+            'message' => 'Car hire company successfully onboarded! Status: Pending Approval. Login account created.',
+            'company_id' => $companyId,
+            'user_id' => $userId,
+            'username' => $input['username'],
+            'business_name' => $input['business_name'],
+            'owner_name' => $input['owner_name'],
+            'email' => $input['email'],
+            'phone' => $input['phone'],
+            'business_status' => 'pending_approval',
+            'user_status' => 'pending',
+            'status' => 'pending_approval',
+            'reference' => 'CH' . str_pad($companyId, 5, '0', STR_PAD_LEFT)
+        ]);
+
+    } catch (Exception $e) {
+        // Rollback transaction if still active
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log("addCarHireCompany error: " . $e->getMessage());
+        logActivity("ERROR adding car hire company: " . $e->getMessage());
+        sendError('Failed to add car hire company: ' . $e->getMessage(), 500);
+    }
+}
+
+/**
+ * Add a new garage
+ */
+function addGarage($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendError('POST method required', 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    if (!$input) {
+        $input = $_POST;
+    }
+
+    // Debug: Log received data
+    logActivity("=== ADD GARAGE DEBUG ===");
+    logActivity("Received fields: " . implode(', ', array_keys($input)));
+    logActivity("Username received: " . ($input['username'] ?? 'NOT SET'));
+    logActivity("Password received: " . (isset($input['password']) ? 'YES (length: ' . strlen($input['password']) . ')' : 'NOT SET'));
+    logActivity("Email received: " . ($input['email'] ?? 'NOT SET'));
+    logActivity("Business name received: " . ($input['name'] ?? 'NOT SET'));
+
+    // Validate required fields (including login credentials)
+    $required = ['name', 'owner_name', 'email', 'phone', 'address', 'location_id', 'username', 'password'];
+    $missing = [];
+    foreach ($required as $field) {
+        if (empty($input[$field])) {
+            $missing[] = $field;
+        }
+    }
+
+    if (!empty($missing)) {
+        logActivity("Missing required fields: " . implode(', ', $missing));
+        sendError("Missing required fields: " . implode(', ', $missing), 400);
+    }
+
+    // Comprehensive validation
+    $validation = validateBusinessName($input['name'], 'Garage name');
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validateEmail($input['email']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validatePhone($input['phone']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validateUsername($input['username']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validatePassword($input['password']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    // Validate optional URLs
+    if (!empty($input['website'])) {
+        $validation = validateURL($input['website'], 'Website URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['facebook_url'])) {
+        $validation = validateURL($input['facebook_url'], 'Facebook URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['instagram_url'])) {
+        $validation = validateURL($input['instagram_url'], 'Instagram URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['twitter_url'])) {
+        $validation = validateURL($input['twitter_url'], 'Twitter URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['linkedin_url'])) {
+        $validation = validateURL($input['linkedin_url'], 'LinkedIn URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    // Validate WhatsApp if provided
+    if (!empty($input['whatsapp'])) {
+        $validation = validatePhone($input['whatsapp']);
+        if (!$validation['valid']) {
+            sendError('Invalid WhatsApp number format. ' . $validation['message'], 400);
+        }
+    }
+
+    // Validate recovery number if provided
+    if (!empty($input['recovery_number'])) {
+        $validation = validatePhone($input['recovery_number']);
+        if (!$validation['valid']) {
+            sendError('Invalid recovery number format. ' . $validation['message'], 400);
+        }
+    }
+
+    try {
+        // Check if business already exists (including pending_approval)
+        $existing = businessExists($db, 'garage', $input['name'], $input['email'], $input['phone']);
+        if ($existing) {
+            $existingName = $existing['name'] ?? $existing['business_name'] ?? 'Unknown';
+            sendError('A garage with similar details already exists. Business: ' . $existingName, 409);
+        }
+
+        // Check if username already exists (case-insensitive) - check all statuses
+        $stmt = $db->prepare("SELECT id, username FROM users WHERE LOWER(username) = LOWER(?)");
+        $stmt->execute([$input['username']]);
+        $existingUser = $stmt->fetch();
+        if ($existingUser) {
+            sendError('Username "' . $existingUser['username'] . '" already exists. Please choose a different username.', 409);
+        }
+
+        // Check if email already exists in users table (case-insensitive) - check all statuses
+        $stmt = $db->prepare("SELECT id, email FROM users WHERE LOWER(email) = LOWER(?)");
+        $stmt->execute([$input['email']]);
+        $existingEmail = $stmt->fetch();
+        if ($existingEmail) {
+            sendError('Email "' . $existingEmail['email'] . '" is already registered. Please use a different email or login with existing account.', 409);
+        }
+
+        // Check if phone number already exists in users table - check all statuses
+        $stmt = $db->prepare("SELECT id, phone, business_name FROM users WHERE phone = ? AND user_type IN ('car_hire', 'garage', 'dealer')");
+        $stmt->execute([$input['phone']]);
+        $existingPhone = $stmt->fetch();
+        if ($existingPhone) {
+            $businessInfo = $existingPhone['business_name'] ? ' (Business: ' . $existingPhone['business_name'] . ')' : '';
+            sendError('Phone number "' . $input['phone'] . '" is already registered' . $businessInfo . '. Please use a different phone number.', 409);
+        }
+
+        // Check if garage name already exists in business table (including pending_approval)
+        $stmt = $db->prepare("SELECT id, name FROM garages WHERE name = ? AND status IN ('active', 'pending_approval') LIMIT 1");
+        $stmt->execute([$input['name']]);
+        $existingBusiness = $stmt->fetch();
+        if ($existingBusiness) {
+            sendError('A garage with the name "' . $input['name'] . '" already exists. Please choose a different garage name.', 409);
+        }
+
+        // Start transaction to ensure atomicity and prevent ID skipping
+        $db->beginTransaction();
+        
+        try {
+            // Create user account first
+            $passwordHash = password_hash($input['password'], PASSWORD_DEFAULT);
+
+            $city = null;
+            if (!empty($input['location_id'])) {
+                $locStmt = $db->prepare("SELECT name FROM locations WHERE id = ?");
+                $locStmt->execute([$input['location_id']]);
+                $location = $locStmt->fetch(PDO::FETCH_ASSOC);
+                $city = $location['name'] ?? null;
+            }
+
+            $stmt = $db->prepare("
+                INSERT INTO users (username, email, password_hash, full_name, phone, whatsapp, address, city,
+                                 user_type, status, business_name, business_registration, national_id, date_of_birth,
+                                 created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'garage', 'pending', ?, ?, ?, ?, NOW(), NOW())
+            ");
+
+            $stmt->execute([
+                $input['username'],
+                $input['email'],
+                $passwordHash,
+                $input['owner_name'],
+                $input['phone'],
+                $input['whatsapp'] ?? null,
+                $input['address'],
+                $city,
+                $input['name'],  // business_name for garages
+                $input['business_registration'] ?? null,
+                $input['owner_id_number'] ?? null,
+                $input['owner_dob'] ?? null
+            ]);
+
+            $userId = $db->lastInsertId();
+
+            if (!$userId || $userId <= 0) {
+                throw new Exception('Failed to get user ID after insert');
+            }
+            
+            // Verify user was actually created
+            $verifyStmt = $db->prepare("SELECT id, username, email FROM users WHERE id = ?");
+            $verifyStmt->execute([$userId]);
+            $verifiedUser = $verifyStmt->fetch();
+            
+            if (!$verifiedUser) {
+                throw new Exception('User was not found in database after insert');
+            }
+            
+        } catch (Exception $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            throw new Exception('User creation failed: ' . $e->getMessage());
+        }
+
+        // Create garage and link to user
+        $stmt = $db->prepare("
+            INSERT INTO garages (user_id, name, owner_name, email, phone, whatsapp, recovery_number, address, location_id,
+                               services, emergency_services, specialization, specializes_in_cars, years_experience,
+                               operating_hours, website, facebook_url, instagram_url, twitter_url, linkedin_url,
+                               description, verified, certified, featured, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval', NOW(), NOW())
+        ");
+
+        $stmt->execute([
+            $userId,
+            $input['name'],
+            $input['owner_name'],
+            $input['email'],
+            $input['phone'],
+            $input['whatsapp'] ?? null,
+            $input['recovery_number'] ?? null,
+            $input['address'],
+            $input['location_id'],
+            !empty($input['services']) ? json_encode($input['services']) : null,
+            !empty($input['emergency_services']) ? json_encode($input['emergency_services']) : null,
+            !empty($input['specialization']) ? json_encode($input['specialization']) : null,
+            !empty($input['specializes_in_cars']) ? json_encode($input['specializes_in_cars']) : null,
+            $input['years_established'] ?? $input['years_experience'] ?? null,
+            $input['operating_hours'] ?? null,
+            $input['website'] ?? null,
+            $input['facebook_url'] ?? null,
+            $input['instagram_url'] ?? null,
+            $input['twitter_url'] ?? null,
+            $input['linkedin_url'] ?? null,
+            $input['description'] ?? null,
+            $input['verified'] ?? 0,
+            $input['certified'] ?? 0,
+            $input['featured'] ?? 0
+        ]);
+
+        $garageId = $db->lastInsertId();
+
+        // Link user to business
+        $stmt = $db->prepare("UPDATE users SET business_id = ? WHERE id = ?");
+        $stmt->execute([$garageId, $userId]);
+
+        sendSuccess([
+            'api_version' => 'v2_with_user_creation',
+            'message' => 'Garage successfully onboarded! Status: Pending Approval. Login account created.',
+            'garage_id' => $garageId,
+            'user_id' => $userId,
+            'username' => $input['username'],
+            'business_name' => $input['name'],
+            'owner_name' => $input['owner_name'],
+            'email' => $input['email'],
+            'phone' => $input['phone'],
+            'business_status' => 'pending_approval',
+            'user_status' => 'pending',
+            'status' => 'pending_approval',
+            'reference' => 'GR' . str_pad($garageId, 5, '0', STR_PAD_LEFT)
+        ]);
+
+    } catch (Exception $e) {
+        // Rollback transaction if still active
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log("addGarage error: " . $e->getMessage());
+        logActivity("ERROR adding garage: " . $e->getMessage());
+        sendError('Failed to add garage: ' . $e->getMessage(), 500);
+    }
+}
+
+/**
+ * Add a new car dealer
+ */
+function addCarDealer($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendError('POST method required', 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+
+    if (!$input) {
+        $input = $_POST;
+    }
+
+    // Debug: Log received data
+    logActivity("=== ADD DEALER DEBUG ===");
+    logActivity("Received fields: " . implode(', ', array_keys($input)));
+    logActivity("Username received: " . ($input['username'] ?? 'NOT SET'));
+    logActivity("Password received: " . (isset($input['password']) ? 'YES (length: ' . strlen($input['password']) . ')' : 'NOT SET'));
+    logActivity("Email received: " . ($input['email'] ?? 'NOT SET'));
+    logActivity("Business name received: " . ($input['business_name'] ?? 'NOT SET'));
+
+    // Validate required fields (including login credentials)
+    $required = ['business_name', 'owner_name', 'email', 'phone', 'address', 'location_id', 'username', 'password'];
+    $missing = [];
+    foreach ($required as $field) {
+        if (empty($input[$field])) {
+            $missing[] = $field;
+        }
+    }
+
+    if (!empty($missing)) {
+        logActivity("Missing required fields: " . implode(', ', $missing));
+        sendError("Missing required fields: " . implode(', ', $missing), 400);
+    }
+
+    // Comprehensive validation
+    $validation = validateBusinessName($input['business_name'], 'Business name');
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validateEmail($input['email']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validatePhone($input['phone']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validateUsername($input['username']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    $validation = validatePassword($input['password']);
+    if (!$validation['valid']) {
+        sendError($validation['message'], 400);
+    }
+
+    // Validate optional URLs
+    if (!empty($input['website'])) {
+        $validation = validateURL($input['website'], 'Website URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['facebook_url'])) {
+        $validation = validateURL($input['facebook_url'], 'Facebook URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['instagram_url'])) {
+        $validation = validateURL($input['instagram_url'], 'Instagram URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['twitter_url'])) {
+        $validation = validateURL($input['twitter_url'], 'Twitter URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    if (!empty($input['linkedin_url'])) {
+        $validation = validateURL($input['linkedin_url'], 'LinkedIn URL');
+        if (!$validation['valid']) {
+            sendError($validation['message'], 400);
+        }
+    }
+
+    // Validate WhatsApp if provided
+    if (!empty($input['whatsapp'])) {
+        $validation = validatePhone($input['whatsapp']);
+        if (!$validation['valid']) {
+            sendError('Invalid WhatsApp number format. ' . $validation['message'], 400);
+        }
+    }
+
+    try {
+        // Check if business already exists (including pending_approval)
+        $existing = businessExists($db, 'dealer', $input['business_name'], $input['email'], $input['phone']);
+        if ($existing) {
+            $existingName = $existing['business_name'] ?? $existing['name'] ?? 'Unknown';
+            sendError('A car dealer with similar details already exists. Business: ' . $existingName, 409);
+        }
+
+        // Check if username already exists (case-insensitive) - check all statuses
+        $stmt = $db->prepare("SELECT id, username FROM users WHERE LOWER(username) = LOWER(?)");
+        $stmt->execute([$input['username']]);
+        $existingUser = $stmt->fetch();
+        if ($existingUser) {
+            sendError('Username "' . $existingUser['username'] . '" already exists. Please choose a different username.', 409);
+        }
+
+        // Check if email already exists in users table (case-insensitive) - check all statuses
+        $stmt = $db->prepare("SELECT id, email FROM users WHERE LOWER(email) = LOWER(?)");
+        $stmt->execute([$input['email']]);
+        $existingEmail = $stmt->fetch();
+        if ($existingEmail) {
+            sendError('Email "' . $existingEmail['email'] . '" is already registered. Please use a different email or login with existing account.', 409);
+        }
+
+        // Check if phone number already exists in users table - check all statuses
+        $stmt = $db->prepare("SELECT id, phone, business_name FROM users WHERE phone = ? AND user_type IN ('car_hire', 'garage', 'dealer')");
+        $stmt->execute([$input['phone']]);
+        $existingPhone = $stmt->fetch();
+        if ($existingPhone) {
+            $businessInfo = $existingPhone['business_name'] ? ' (Business: ' . $existingPhone['business_name'] . ')' : '';
+            sendError('Phone number "' . $input['phone'] . '" is already registered' . $businessInfo . '. Please use a different phone number.', 409);
+        }
+
+        // Check if business name already exists in business table (including pending_approval)
+        $stmt = $db->prepare("SELECT id, business_name FROM car_dealers WHERE business_name = ? AND status IN ('active', 'pending_approval') LIMIT 1");
+        $stmt->execute([$input['business_name']]);
+        $existingBusiness = $stmt->fetch();
+        if ($existingBusiness) {
+            sendError('A car dealer with the name "' . $input['business_name'] . '" already exists. Please choose a different business name.', 409);
+        }
+
+        // Create user account first
+        $passwordHash = password_hash($input['password'], PASSWORD_DEFAULT);
+
+        $city = null;
+        if (!empty($input['location_id'])) {
+            $locStmt = $db->prepare("SELECT name FROM locations WHERE id = ?");
+            $locStmt->execute([$input['location_id']]);
+            $location = $locStmt->fetch(PDO::FETCH_ASSOC);
+            $city = $location['name'] ?? null;
+        }
+
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO users (username, email, password_hash, full_name, phone, whatsapp, address, city,
+                                 user_type, status, business_name, business_registration, national_id, date_of_birth,
+                                 created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'dealer', 'pending', ?, ?, ?, ?, NOW(), NOW())
+            ");
+
+            $stmt->execute([
+                $input['username'],
+                $input['email'],
+                $passwordHash,
+                $input['owner_name'],
+                $input['phone'],
+                $input['whatsapp'] ?? null,
+                $input['address'],
+                $city,
+                $input['business_name'],
+                $input['business_registration'] ?? null,
+                $input['owner_id_number'] ?? null,
+                $input['owner_dob'] ?? null
+            ]);
+
+            $userId = $db->lastInsertId();
+
+            if (!$userId) {
+                throw new Exception('Failed to get user ID after insert');
+            }
+        } catch (Exception $e) {
+            throw new Exception('User creation failed: ' . $e->getMessage());
+        }
+
+        // Create dealer and link to user
+        $stmt = $db->prepare("
+            INSERT INTO car_dealers (user_id, business_name, owner_name, email, phone, whatsapp, address, location_id,
+                                   specialization, years_established, business_hours, website, facebook_url, instagram_url, twitter_url, linkedin_url,
+                                   description, verified, featured, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval', NOW(), NOW())
+        ");
+
+        $stmt->execute([
+            $userId,
+            $input['business_name'],
+            $input['owner_name'],
+            $input['email'],
+            $input['phone'],
+            $input['whatsapp'] ?? null,
+            $input['address'],
+            $input['location_id'],
+            !empty($input['specialization']) ? json_encode($input['specialization']) : null,
+            $input['years_established'] ?? null,
+            $input['business_hours'] ?? null,
+            $input['website'] ?? null,
+            $input['facebook_url'] ?? null,
+            $input['instagram_url'] ?? null,
+            $input['twitter_url'] ?? null,
+            $input['linkedin_url'] ?? null,
+            $input['description'] ?? null,
+            $input['verified'] ?? 0,
+            $input['featured'] ?? 0
+        ]);
+
+        $dealerId = $db->lastInsertId();
+        
+        if (!$dealerId || $dealerId <= 0) {
+            throw new Exception('Failed to get dealer ID after insert');
+        }
+
+        // Link user to business
+        $stmt = $db->prepare("UPDATE users SET business_id = ? WHERE id = ?");
+        $stmt->execute([$dealerId, $userId]);
+        
+        // Commit transaction - both user and business are now in database
+        $db->commit();
+        
+        // Log successful creation
+        logActivity("Car dealer created successfully: Dealer ID=$dealerId, User ID=$userId, Business={$input['business_name']}");
+
+        sendSuccess([
+            'api_version' => 'v2_with_user_creation',
+            'message' => 'Car dealer successfully onboarded! Status: Pending Approval. Login account created.',
+            'dealer_id' => $dealerId,
+            'user_id' => $userId,
+            'username' => $input['username'],
+            'business_name' => $input['business_name'],
+            'owner_name' => $input['owner_name'],
+            'email' => $input['email'],
+            'phone' => $input['phone'],
+            'business_status' => 'pending_approval',
+            'user_status' => 'pending',
+            'status' => 'pending_approval',
+            'reference' => 'DL' . str_pad($dealerId, 5, '0', STR_PAD_LEFT)
+        ]);
+
+    } catch (Exception $e) {
+        // Rollback transaction if still active
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log("addCarDealer error: " . $e->getMessage());
+        logActivity("ERROR adding car dealer: " . $e->getMessage());
+        sendError('Failed to add car dealer: ' . $e->getMessage(), 500);
+    }
+}
+
+?>

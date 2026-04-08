@@ -1,0 +1,320 @@
+/**
+ * Uniform Card Layouts for MotorLink
+ * Shared styles for services and contact cards across all pages
+ * (Dealers, Garages, Car Hire Companies, Showrooms, etc.)
+ */
+
+/* ============================================================================
+   Services & Contact Section - Base Layout
+   ============================================================================ */
+
+.services-contact-section,
+.dealer-services-contact-section,
+.garage-services-contact-section {
+    padding: 50px 0;
+    background: white;
+}
+
+.services-contact-grid,
+.dealer-services-contact-grid,
+.garage-services-contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 40px;
+}
+
+/* ============================================================================
+   Services & Contact Cards - Base Styling
+   ============================================================================ */
+
+.services-card,
+.contact-card,
+.dealer-services-card,
+.dealer-contact-card,
+.garage-services-card,
+.garage-contact-card {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e8e8e8;
+    transition: all 0.3s ease;
+}
+
+.services-card:hover,
+.contact-card:hover,
+.dealer-services-card:hover,
+.dealer-contact-card:hover,
+.garage-services-card:hover,
+.garage-contact-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.services-card h3,
+.contact-card h3,
+.dealer-services-card h3,
+.dealer-contact-card h3,
+.garage-services-card h3,
+.garage-contact-card h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #00a843;
+    margin: 0 0 24px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* ============================================================================
+   Services List - Horizontal Grid Layout
+   ============================================================================ */
+
+.services-list,
+.dealer-services-list,
+.garage-services-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px 20px;
+    margin-bottom: 20px;
+}
+
+.service-item,
+.dealer-service-item,
+.garage-service-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+}
+
+.service-item i,
+.dealer-service-item i,
+.garage-service-item i {
+    color: #00c853;
+    font-size: 16px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.service-item.special i,
+.dealer-service-item.special i,
+.garage-service-item.special i {
+    color: #ff6f00;
+}
+
+.service-item span,
+.dealer-service-item span,
+.garage-service-item span {
+    font-size: 0.95rem;
+    color: #424242;
+    line-height: 1.5;
+}
+
+.special-services h4,
+.dealer-special-services h4,
+.garage-special-services h4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #ff6f00;
+    margin: 16px 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ============================================================================
+   Contact Info List - Horizontal Grid Layout
+   ============================================================================ */
+
+.contact-info-list,
+.dealer-contact-info-list,
+.garage-contact-info-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.contact-info-item,
+.dealer-contact-info-item,
+.garage-contact-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.contact-info-item:hover,
+.dealer-contact-info-item:hover,
+.garage-contact-info-item:hover {
+    background: #e8f5e9;
+    transform: translateY(-2px);
+}
+
+.contact-icon,
+.dealer-contact-icon,
+.garage-contact-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #00c853 0%, #00a843 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.contact-icon.whatsapp,
+.dealer-contact-icon.whatsapp,
+.garage-contact-icon.whatsapp {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+}
+
+.contact-icon.email,
+.dealer-contact-icon.email,
+.garage-contact-icon.email {
+    background: linear-gradient(135deg, #159a5b 0%, #0f7f4c 100%);
+}
+
+.contact-icon.location,
+.dealer-contact-icon.location,
+.garage-contact-icon.location {
+    background: linear-gradient(135deg, #1b8f63 0%, #166b4c 100%);
+}
+
+.contact-icon.web,
+.dealer-contact-icon.web,
+.garage-contact-icon.web {
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+}
+
+.contact-details,
+.dealer-contact-details,
+.garage-contact-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.contact-details label,
+.dealer-contact-details label,
+.garage-contact-details label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #757575;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.contact-details a,
+.contact-details p,
+.dealer-contact-details a,
+.dealer-contact-details p,
+.garage-contact-details a,
+.garage-contact-details p {
+    font-size: 0.95rem;
+    color: #212121;
+    font-weight: 500;
+    text-decoration: none;
+    word-break: break-word;
+    margin: 0;
+    display: block;
+}
+
+.contact-details a:hover,
+.dealer-contact-details a:hover,
+.garage-contact-details a:hover {
+    color: #00c853;
+}
+
+/* ============================================================================
+   Tablet Adjustments (768px - 1024px)
+   ============================================================================ */
+
+@media (max-width: 1024px) {
+    .services-list,
+    .dealer-services-list,
+    .garage-services-list {
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 10px 16px;
+    }
+    
+    .contact-info-list,
+    .dealer-contact-info-list,
+    .garage-contact-info-list {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+    }
+}
+
+/* ============================================================================
+   Mobile Responsive (Below 768px)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .services-contact-grid,
+    .dealer-services-contact-grid,
+    .garage-services-contact-grid {
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+    
+    .services-card,
+    .contact-card,
+    .dealer-services-card,
+    .dealer-contact-card,
+    .garage-services-card,
+    .garage-contact-card {
+        padding: 20px;
+    }
+    
+    .services-list,
+    .dealer-services-list,
+    .garage-services-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .contact-info-list,
+    .dealer-contact-info-list,
+    .garage-contact-info-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .contact-info-item,
+    .dealer-contact-info-item,
+    .garage-contact-info-item {
+        padding: 14px;
+    }
+}
+
+/* ============================================================================
+   Very Small Mobile (Below 480px)
+   ============================================================================ */
+
+@media (max-width: 480px) {
+    .services-card h3,
+    .contact-card h3,
+    .dealer-services-card h3,
+    .dealer-contact-card h3,
+    .garage-services-card h3,
+    .garage-contact-card h3 {
+        font-size: 1.2rem;
+    }
+    
+    .contact-icon,
+    .dealer-contact-icon,
+    .garage-contact-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+}

@@ -1,0 +1,2246 @@
+/* MotorLink Malawi - Common Foundation Styles */
+/* This file contains ONLY the essential shared styles needed by all pages */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Global Input Overflow Protection */
+input, select, textarea {
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+html, body {
+    overflow-x: hidden;
+}
+
+:root {
+    /* Professional Color System */
+    --primary-color: #00c853;  /* Main primary color - used throughout site */
+    --primary-green: #00c853;
+    --primary-green-dark: #00a843;
+    --primary-green-light: #4caf50;
+    --primary-green-bg: rgba(0, 200, 83, 0.08);
+
+    --secondary-blue: #1976d2;
+    --secondary-blue-light: #2196f3;
+    --secondary-blue-bg: rgba(25, 118, 210, 0.08);
+
+    --accent-orange: #ff6f00;
+    --accent-orange-bg: rgba(255, 111, 0, 0.08);
+    --accent-purple: #9C27B0;
+    
+    --success-green: #4caf50;
+    --warning-orange: #ff9800;
+    --error-red: #f44336;
+
+    /* Text Colors */
+    --text-primary: #212121;
+    --text-secondary: #424242;
+    --text-tertiary: #757575;
+    --text-muted: #9e9e9e;
+    --text-white: #ffffff;
+
+    /* Background Colors */
+    --bg-white: #ffffff;
+    --bg-light: #f8f9fa;
+    --bg-gray: #f5f5f5;
+    --bg-dark: #212121;
+
+    /* Professional Gradients */
+    --gradient-primary: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);
+    --gradient-blue: linear-gradient(135deg, var(--secondary-blue) 0%, var(--secondary-blue-light) 100%);
+    --gradient-orange: linear-gradient(135deg, var(--accent-orange) 0%, #ff8f00 100%);
+
+    /* Borders & Effects */
+    --border-light: #e0e0e0;
+    --border-medium: #bdbdbd;
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+
+    /* Professional Shadows */
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.16);
+    --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.20);
+
+    /* Spacing */
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-2xl: 48px;
+    --space-3xl: 64px;
+
+    /* Transitions */
+    --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s ease-out;
+
+    /* Premium UI tokens */
+    --premium-bg: #0f172a;
+    --premium-surface: #ffffff;
+    --premium-border: #d9e2ec;
+    --premium-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+    --premium-shadow-hover: 0 20px 38px rgba(15, 23, 42, 0.16);
+    --premium-hero-gradient: linear-gradient(135deg, #00c853 0%, #00a843 50%, #008c3a 100%);
+    --premium-hero-overlay: radial-gradient(circle at 12% 18%, rgba(255, 255, 255, 0.2) 0%, transparent 42%), radial-gradient(circle at 84% 82%, rgba(255, 255, 255, 0.12) 0%, transparent 48%);
+}
+
+/* Base Styles */
+html {
+    font-size: 16px;
+    scroll-behavior: smooth;
+    height: 100%;
+    min-height: 100vh;
+}
+
+.hidden {
+    display: none !important;
+}
+
+body {
+    font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, sans-serif;
+    line-height: 1.6;
+    color: var(--text-primary);
+    background: var(--bg-light);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    padding-top: 70px; /* Add space for fixed header */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding-bottom: 0;
+}
+
+/* Ensure main content area can grow to fill space */
+body > main,
+body > .main-content,
+body > .container:not(.footer .container),
+body > div:not(.footer):not(.header) {
+    flex: 1 0 auto; /* Grow to fill available space */
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 var(--space-sm);
+    }
+}
+
+/* Header - Modern Fixed Design */
+.header {
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-light);
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 10000 !important;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.header-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 70px;
+    gap: 8px;
+    flex-wrap: nowrap;
+}
+
+@media (min-width: 768px) {
+    .header-container {
+        gap: 12px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .header-container {
+        gap: 16px;
+    }
+}
+
+/* Tablet-specific header adjustments (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .header-container {
+        height: 70px;
+        gap: 5px;
+        padding: 0 10px;
+        flex-wrap: nowrap;
+        overflow: hidden;
+    }
+    
+    .logo {
+        font-size: 20px;
+        flex-shrink: 0;
+        min-width: auto;
+        max-width: 130px;
+        letter-spacing: -0.3px;
+    }
+    
+    .logo i {
+        font-size: 18px;
+    }
+    
+    .nav {
+        display: flex !important;
+        gap: 4px;
+        flex-wrap: nowrap;
+        flex-shrink: 1;
+        min-width: 0;
+        overflow: hidden;
+        padding: 0;
+        box-shadow: none;
+        max-height: none;
+        overflow-y: visible;
+        flex: 1 1 auto;
+        justify-content: flex-start;
+        max-width: none;
+    }
+    
+    .nav a {
+        font-size: 12px;
+        padding: 6px 7px;
+        white-space: nowrap;
+        flex-shrink: 0;
+        display: flex !important;
+        align-items: center;
+    }
+    
+    /* Dashboard link styling for tablets - ensure it fits */
+    .nav .dashboard-link {
+        font-size: 11px !important;
+        padding: 6px 9px !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        border-radius: 5px !important;
+        font-weight: 600 !important;
+        letter-spacing: 0 !important;
+    }
+    
+    .nav .dashboard-link i {
+        font-size: 11px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .nav .dashboard-link span {
+        white-space: nowrap;
+    }
+    
+    .user-menu {
+        flex-shrink: 0;
+        min-width: fit-content;
+        gap: 4px;
+    }
+    
+    /* User menu buttons - make them more compact */
+    .user-menu .btn {
+        padding: 6px 8px !important;
+        font-size: 11px !important;
+        white-space: nowrap !important;
+        min-height: auto !important;
+    }
+    
+    .user-menu .btn i {
+        font-size: 11px !important;
+    }
+    
+    /* User avatar button - compact */
+    .user-avatar-btn {
+        width: 34px !important;
+        height: 34px !important;
+        min-width: 34px !important;
+        font-size: 13px !important;
+    }
+    
+    /* Ensure header items don't overflow but allow nav to shrink if needed */
+    .header-container > * {
+        min-width: 0;
+    }
+    
+    /* Prevent any wrapping - force single line */
+    .header-container {
+        overflow: hidden;
+    }
+    
+    .header-container .logo {
+        flex-shrink: 0;
+    }
+    
+    .header-container .nav {
+        flex-shrink: 1;
+        min-width: 0;
+        overflow: hidden;
+    }
+    
+    .header-container .user-menu {
+        flex-shrink: 0;
+    }
+    
+    /* Ensure nav items don't wrap */
+    .nav a,
+    .nav .dashboard-link {
+        flex-shrink: 0;
+    }
+    
+    /* Even more compact for smaller tablets */
+    @media (max-width: 850px) {
+        .header-container {
+            gap: 4px;
+            padding: 0 8px;
+        }
+        
+        .logo {
+            font-size: 19px;
+            max-width: 120px;
+        }
+        
+        .logo i {
+            font-size: 17px;
+        }
+        
+        .nav {
+            gap: 3px;
+        }
+        
+        .nav a {
+            font-size: 11.5px;
+            padding: 6px 6px;
+        }
+        
+        .nav .dashboard-link {
+            font-size: 10.5px !important;
+            padding: 6px 8px !important;
+        }
+        
+        .user-menu {
+            gap: 3px;
+        }
+        
+        .user-menu .btn {
+            padding: 6px 7px !important;
+            font-size: 10.5px !important;
+        }
+    }
+}
+
+/* Smaller tablets and portrait tablets - use mobile menu (768px - 950px width) */
+@media (min-width: 768px) and (max-width: 950px) {
+    /* Show mobile menu toggle */
+    .mobile-menu-toggle {
+        display: flex !important;
+    }
+    
+    /* Hide regular nav */
+    .nav {
+        display: none !important;
+    }
+    
+    /* Show nav in mobile menu format when toggle is active */
+    .nav.mobile-active,
+    .nav.active {
+        display: flex !important;
+        position: fixed;
+        top: 70px;
+        left: 0;
+        right: 0;
+        background: white;
+        flex-direction: column;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        z-index: 9999;
+        max-height: calc(100vh - 70px);
+        overflow-y: auto;
+        gap: 0;
+    }
+    
+    .nav.mobile-active a,
+    .nav.active a {
+        padding: 14px 16px;
+        border-bottom: 1px solid #e5e7eb;
+        font-size: 15px;
+        width: 100%;
+        justify-content: flex-start;
+    }
+    
+    .nav.mobile-active a:last-child,
+    .nav.active a:last-child {
+        border-bottom: none;
+    }
+    
+    /* Hide user menu in header, will be in mobile nav */
+    .user-menu {
+        display: none !important;
+    }
+    
+    /* Ensure mobile clones are visible in mobile menu when active */
+    .nav.active #guestMenuMobile,
+    .nav.active #userInfoMobile {
+        display: flex !important;
+        flex-direction: column;
+        gap: 8px;
+        padding: 16px 0;
+        border-top: 2px solid rgba(0, 0, 0, 0.05);
+        border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+        margin: 16px 0;
+    }
+    
+    .nav.active #guestMenuMobile .btn,
+    .nav.active #userInfoMobile .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Ensure logo doesn't take too much space */
+    .logo {
+        font-size: 22px;
+        flex-shrink: 0;
+    }
+    
+    .logo i {
+        font-size: 20px;
+    }
+}
+
+.logo {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--primary-green);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    letter-spacing: -0.5px;
+    transition: all 0.2s ease;
+}
+
+.logo:hover {
+    opacity: 0.85;
+}
+
+.logo i {
+    font-size: 20px;
+}
+
+@media (min-width: 768px) {
+    .logo {
+        font-size: 26px;
+    }
+
+    .logo i {
+        font-size: 24px;
+    }
+}
+
+/* Mobile Navigation - Handled by mobile-enhancements.css */
+
+@media (min-width: 768px) {
+    .nav {
+        display: flex !important;
+        position: static;
+        flex-direction: row;
+        gap: 10px;
+        padding: 0;
+        box-shadow: none;
+        max-height: none;
+        overflow-y: visible;
+        flex-wrap: nowrap;
+    }
+}
+
+@media (min-width: 900px) {
+    .nav {
+        gap: 14px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .nav {
+        gap: 18px;
+    }
+}
+
+.nav a {
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 15px;
+    padding: var(--space-md) 0;
+    border-bottom: 1px solid var(--border-light);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    position: relative;
+}
+
+@media (min-width: 768px) {
+    .nav a {
+        font-size: 12.5px;
+        font-weight: 600;
+        padding: 7px 8px;
+        border-bottom: none;
+        border-radius: 6px;
+        letter-spacing: 0px;
+        position: relative;
+        overflow: hidden;
+        white-space: nowrap;
+    }
+}
+
+/* Tablet-specific nav link adjustments (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .nav a {
+        font-size: 13.5px;
+        padding: 8px 10px;
+        letter-spacing: 0px;
+    }
+}
+
+@media (min-width: 900px) {
+    .nav a {
+        font-size: 13px;
+        padding: 7px 10px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .nav a {
+        font-size: 14px;
+        padding: 8px 12px;
+        letter-spacing: 0.1px;
+    }
+}
+
+    /* Cool gradient hover effect */
+    .nav a::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, var(--primary-green-bg) 0%, rgba(0, 200, 83, 0.12) 100%);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: -1;
+        border-radius: 6px;
+    }
+
+    .nav a:hover::before {
+        transform: scaleX(1);
+    }
+
+    .nav a:hover {
+        color: var(--primary-green);
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 200, 83, 0.12);
+    }
+
+    .nav a.active {
+        color: var(--primary-green) !important;
+        background: rgba(0, 200, 83, 0.08) !important;
+        border-bottom: 3px solid var(--primary-green) !important;
+        font-weight: 600 !important;
+        position: relative;
+    }
+
+    .nav a.active::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40%;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, var(--primary-green), transparent);
+        border-radius: 2px 2px 0 0;
+    }
+
+    .nav a.active:hover {
+        transform: translateY(-1px);
+        background: rgba(0, 200, 83, 0.12) !important;
+        box-shadow: 0 2px 8px rgba(0, 200, 83, 0.15) !important;
+    }
+
+
+.nav a:hover {
+    color: var(--primary-green);
+}
+
+.nav a:last-child {
+    border-bottom: none;
+}
+
+/* User Menu - Floating Pill Design */
+.user-menu {
+    display: none;
+    gap: 8px;
+    align-items: center;
+}
+
+.user-menu #guestMenu,
+.user-menu #userInfo {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+@media (min-width: 480px) {
+    .user-menu {
+        display: flex;
+    }
+}
+
+@media (min-width: 900px) {
+    .user-menu {
+        gap: 10px;
+    }
+
+    .user-menu #guestMenu,
+    .user-menu #userInfo {
+        gap: 10px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .user-menu {
+        gap: 12px;
+    }
+
+    .user-menu #guestMenu,
+    .user-menu #userInfo {
+        gap: 12px;
+    }
+}
+
+/* AUTOMOTIVE-THEMED MENU TOGGLE - Premium Dashboard Button */
+.mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(145deg, #2d2d2d 0%, #1a1a1a 50%, #2d2d2d 100%);
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #00ff88;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.3),
+        0 2px 6px rgba(0, 255, 136, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Brushed metal texture */
+.mobile-menu-toggle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 1px,
+            rgba(255, 255, 255, 0.02) 1px,
+            rgba(255, 255, 255, 0.02) 2px
+        );
+    pointer-events: none;
+    border-radius: 10px;
+}
+
+/* Subtle glow effect */
+.mobile-menu-toggle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 80%;
+    height: 80%;
+    background: radial-gradient(circle, rgba(0, 255, 136, 0.1) 0%, transparent 70%);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.mobile-menu-toggle:hover::after {
+    opacity: 1;
+}
+
+.mobile-menu-toggle:active {
+    transform: scale(0.95);
+    box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.2),
+        0 1px 3px rgba(0, 255, 136, 0.1),
+        inset 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-menu-toggle i {
+    font-size: 18px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 0 3px rgba(0, 255, 136, 0.4));
+}
+
+.mobile-menu-toggle.active i {
+    transform: rotate(90deg);
+    filter: drop-shadow(0 0 6px rgba(0, 255, 136, 0.7));
+}
+
+/* Pulse animation when active */
+.mobile-menu-toggle.active {
+    animation: menu-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes menu-pulse {
+    0%, 100% {
+        box-shadow:
+            0 4px 12px rgba(0, 0, 0, 0.3),
+            0 2px 6px rgba(0, 255, 136, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    50% {
+        box-shadow:
+            0 4px 12px rgba(0, 0, 0, 0.3),
+            0 2px 6px rgba(0, 255, 136, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1),
+            0 0 12px rgba(0, 255, 136, 0.3);
+    }
+}
+
+/* Desktop: Hide mobile menu toggle and all mobile clones */
+@media (min-width: 951px) {
+    .mobile-menu-toggle {
+        display: none !important;
+    }
+    
+    /* Hide all mobile menu clones on desktop - they should never be visible */
+    .nav #guestMenuMobile,
+    .nav #userInfoMobile,
+    .nav .mobile-dashboard-links,
+    .nav .mobile-dash-link,
+    .nav .logout-link {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
+    /* Ensure regular nav is visible on desktop */
+    .nav {
+        display: flex !important;
+    }
+    
+    /* Ensure user menu is visible on desktop */
+    .user-menu {
+        display: flex !important;
+    }
+}
+
+/* Mobile: Hide mobile clones when nav is NOT active */
+@media (max-width: 950px) {
+    .nav:not(.active) #guestMenuMobile,
+    .nav:not(.active) #userInfoMobile,
+    .nav:not(.active) .mobile-dashboard-links {
+        display: none !important;
+    }
+}
+
+/* Buttons - Sleek Modern Professional Styling */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 7px 14px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+    min-height: 32px;
+    letter-spacing: 0.2px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.btn:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    transform: translateY(-1px);
+}
+
+.btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.btn-primary {
+    background: var(--primary-green);
+    color: var(--text-white);
+    border-color: var(--primary-green);
+}
+
+.btn-primary:hover {
+    background: var(--primary-green-dark);
+    border-color: var(--primary-green-dark);
+}
+
+.btn-outline-primary {
+    background: transparent;
+    color: var(--primary-green);
+    border-color: var(--primary-green);
+    box-shadow: none;
+}
+
+.btn-outline-primary:hover {
+    background: var(--primary-green);
+    color: var(--text-white);
+    box-shadow: 0 2px 8px rgba(0, 200, 83, 0.2);
+}
+
+.btn-sm {
+    padding: 7px 14px;
+    font-size: 12px;
+    min-height: 32px;
+    border-radius: 6px;
+    gap: 5px;
+    line-height: 1.2;
+}
+
+.btn-lg {
+    padding: 8px 16px;
+    font-size: 13px;
+    min-height: 36px;
+    border-radius: 6px;
+}
+
+/* Header Login/Register Buttons - Floating Pill Design (Innovative & Sleek) */
+/* Override all button size classes for user-menu buttons */
+.user-menu .btn,
+.user-menu .btn-sm,
+.user-menu .btn-outline-primary,
+.user-menu .btn-primary {
+    border-radius: 20px !important;
+    padding: 6px 12px !important;
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    min-height: 30px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative;
+    overflow: hidden;
+    white-space: nowrap !important;
+}
+
+@media (min-width: 900px) {
+    .user-menu .btn,
+    .user-menu .btn-sm,
+    .user-menu .btn-outline-primary,
+    .user-menu .btn-primary {
+        padding: 6px 14px !important;
+        font-size: 11px !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .user-menu .btn,
+    .user-menu .btn-sm,
+    .user-menu .btn-outline-primary,
+    .user-menu .btn-primary {
+        padding: 7px 16px !important;
+        font-size: 11px !important;
+        min-height: 32px !important;
+    }
+}
+
+.user-menu .btn::before,
+.user-menu .btn-sm::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+    transition: left 0.5s ease;
+    z-index: 0;
+}
+
+.user-menu .btn:hover::before,
+.user-menu .btn-sm:hover::before {
+    left: 100%;
+}
+
+.user-menu .btn i,
+.user-menu .btn-sm i {
+    font-size: 11px;
+    margin-right: 5px;
+    position: relative;
+    z-index: 1;
+}
+
+.user-menu .btn-outline-primary {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1.5px solid rgba(0, 200, 83, 0.3) !important;
+    color: var(--primary-green) !important;
+    backdrop-filter: blur(10px);
+}
+
+.user-menu .btn-outline-primary:hover {
+    background: rgba(0, 200, 83, 0.08) !important;
+    border-color: var(--primary-green) !important;
+    box-shadow: 0 4px 16px rgba(0, 200, 83, 0.25) !important;
+    transform: translateY(-2px) !important;
+}
+
+.user-menu .btn-primary {
+    background: linear-gradient(135deg, var(--primary-green) 0%, #00a843 100%) !important;
+    border: none !important;
+    color: white !important;
+    box-shadow: 0 4px 12px rgba(0, 200, 83, 0.35) !important;
+}
+
+.user-menu .btn-primary:hover {
+    background: linear-gradient(135deg, #00a843 0%, #008c3a 100%) !important;
+    box-shadow: 0 6px 20px rgba(0, 200, 83, 0.45) !important;
+    transform: translateY(-2px) scale(1.02) !important;
+}
+
+/* Loading & States */
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-3xl) var(--space-md);
+    color: var(--text-tertiary);
+}
+
+.loading i {
+    font-size: 24px;
+    margin-bottom: var(--space-md);
+    color: var(--primary-green);
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.no-results {
+    text-align: center;
+    padding: var(--space-3xl) var(--space-md);
+    color: var(--text-tertiary);
+}
+
+.no-results i {
+    font-size: 40px;
+    margin-bottom: var(--space-lg);
+    color: var(--border-medium);
+}
+
+/* Footer - Uniform Across All Pages */
+/* Ensure footer sticks to bottom with no white space */
+body > .footer,
+footer.footer {
+    background: var(--bg-dark);
+    color: var(--text-white);
+    margin-top: auto; /* Push footer to bottom */
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+    width: 100%;
+    flex-shrink: 0; /* Prevent footer from shrinking */
+}
+
+/* Ensure no white space after footer */
+body > .footer:last-child,
+footer.footer:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Ensure footer container has no bottom margin */
+.footer .container {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.footer-content {
+    padding: var(--space-2xl) 0 var(--space-xl);
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
+}
+
+@media (max-width: 479px) {
+    .footer-content {
+        padding: 24px 0 16px;
+        gap: 12px;
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .footer-section h4 {
+        font-size: 12px;
+        margin-bottom: 8px;
+    }
+    
+    .footer-section p {
+        font-size: 11px;
+        line-height: 1.4;
+        margin-bottom: 6px;
+    }
+    
+    .footer-section h5 {
+        font-size: 11px;
+        margin-top: 10px;
+        margin-bottom: 5px;
+    }
+    
+    .footer-section ul li {
+        margin-bottom: 4px;
+    }
+    
+    .footer-section a {
+        font-size: 11px;
+        padding: 3px 0;
+    }
+}
+
+@media (min-width: 480px) {
+    .footer-content {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-lg);
+    }
+}
+
+@media (min-width: 768px) {
+    .footer-content {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--space-xl);
+    }
+}
+
+.footer-section {
+    text-align: center;
+}
+
+@media (min-width: 480px) {
+    .footer-section {
+        text-align: left;
+    }
+}
+
+.footer-section h4 {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: var(--space-md);
+    color: var(--primary-green);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+@media (max-width: 479px) {
+    .footer-section h4 {
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+}
+
+@media (min-width: 480px) {
+    .footer-section h4 {
+        justify-content: flex-start;
+    }
+}
+
+.footer-section p {
+    color: #ccc;
+    line-height: 1.6;
+    margin-bottom: var(--space-md);
+    font-size: 14px;
+}
+
+@media (max-width: 479px) {
+    .footer-section p {
+        font-size: 12px;
+        line-height: 1.5;
+        margin-bottom: 10px;
+    }
+}
+
+.footer-section ul {
+    list-style: none;
+    padding: 0;
+}
+
+.footer-section ul li {
+    margin-bottom: var(--space-sm);
+}
+
+@media (max-width: 479px) {
+    .footer-section ul li {
+        margin-bottom: 6px;
+    }
+}
+
+.footer-section a {
+    color: #ccc;
+    text-decoration: none;
+    transition: var(--transition);
+    font-weight: 500;
+    font-size: 14px;
+    display: block;
+    padding: var(--space-xs) 0;
+}
+
+@media (max-width: 479px) {
+    .footer-section a {
+        font-size: 12px;
+        padding: 4px 0;
+    }
+}
+
+.footer-section a:hover {
+    color: var(--primary-green);
+    transform: translateX(4px);
+}
+
+.footer-bottom {
+    border-top: 1px solid #444;
+    padding: var(--space-lg) 0;
+    padding-bottom: var(--space-lg);
+    margin-bottom: 0 !important;
+    text-align: center;
+    color: #ccc;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+@media (max-width: 479px) {
+    .footer-bottom {
+        padding: 16px 0;
+        font-size: 11px;
+    }
+    
+    .footer-bottom p {
+        margin-bottom: 8px;
+    }
+}
+
+.social-links {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    justify-content: center;
+}
+
+@media (max-width: 479px) {
+    .social-links {
+        gap: 6px;
+        margin-top: 10px;
+    }
+}
+
+@media (min-width: 480px) {
+    .social-links {
+        justify-content: flex-start;
+    }
+}
+
+.social-links a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #333;
+    border-radius: 50%;
+    color: #ccc;
+    transition: var(--transition);
+    font-size: 16px;
+}
+
+@media (max-width: 479px) {
+    .social-links a {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+}
+
+.social-links a:hover {
+    background: var(--primary-green);
+    color: var(--text-white);
+    transform: translateY(-2px);
+}
+
+/* ========================================
+   HERO SECTION - Uniform Across All Pages
+   Modern Premium Design
+======================================== */
+.hero,
+.garage-hero,
+.dealers-hero,
+.car-hire-hero {
+    background: var(--premium-hero-gradient);
+    color: var(--text-white);
+    padding: 40px 0 35px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
+    margin-top: 0;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (min-width: 768px) {
+    .hero,
+    .garage-hero,
+    .dealers-hero,
+    .car-hire-hero {
+        min-height: 320px;
+        padding: 50px 0 40px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .hero,
+    .garage-hero,
+    .dealers-hero,
+    .car-hire-hero {
+        min-height: 360px;
+        padding: 55px 0 45px;
+    }
+}
+
+/* Simple static geometric box shapes - Sleek & Professional */
+.hero::before,
+.garage-hero::before,
+.dealers-hero::before,
+.car-hire-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        var(--premium-hero-overlay),
+        /* Simple geometric box shapes - static */
+        linear-gradient(135deg, rgba(255,255,255,0.04) 30%, transparent 31%, transparent 69%, rgba(255,255,255,0.03) 70%),
+        linear-gradient(45deg, rgba(255,255,255,0.03) 25%, transparent 26%, transparent 74%, rgba(255,255,255,0.02) 75%),
+        /* Radial accents */
+        radial-gradient(ellipse at 20% 80%, rgba(255,255,255,0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255,255,255,0.04) 0%, transparent 50%);
+    background-size: 
+        100% 100%,
+        300px 300px,
+        250px 250px,
+        100% 100%,
+        100% 100%;
+    background-position:
+        0% 0%, 20% 20%, 0% 0%, 100% 0%;
+    pointer-events: none;
+}
+
+/* Simple static box shapes & geometric patterns */
+.hero::after,
+.garage-hero::after,
+.dealers-hero::after,
+.car-hire-hero::after {
+    content: '';
+    position: absolute;
+    top: -5%;
+    left: -3%;
+    right: -3%;
+    bottom: -5%;
+    background:
+        /* Simple static box shapes */
+        linear-gradient(135deg, rgba(255,255,255,0.03) 35%, transparent 36%, transparent 64%, rgba(255,255,255,0.02) 65%),
+        linear-gradient(225deg, rgba(255,255,255,0.025) 35%, transparent 36%, transparent 64%, rgba(255,255,255,0.015) 65%),
+        /* Radial accents */
+        radial-gradient(ellipse at 70% 30%, rgba(255,255,255,0.04) 0%, transparent 60%);
+    background-size:
+        350px 350px,
+        320px 320px,
+        100% 100%;
+    background-position:
+        15% 15%, 45% 45%, 0% 0%;
+    pointer-events: none;
+    opacity: 0.8;
+}
+
+.hero > .container,
+.garage-hero > .container,
+.dealers-hero > .container,
+.car-hire-hero > .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+    width: 100%;
+}
+
+.hero-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-md);
+}
+
+/* Hero Typography - Premium Modern */
+.hero h1,
+.garage-hero h1,
+.dealers-hero h1,
+.car-hire-hero h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    animation: fadeInUp 0.8s ease-out;
+}
+
+@media (min-width: 480px) {
+    .hero h1,
+    .garage-hero h1,
+    .dealers-hero h1,
+    .car-hire-hero h1 {
+        font-size: 1.75rem;
+        margin-bottom: 14px;
+    }
+}
+
+@media (min-width: 768px) {
+    .hero h1,
+    .garage-hero h1,
+    .dealers-hero h1,
+    .car-hire-hero h1 {
+        font-size: 2rem;
+        margin-bottom: 14px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .hero h1,
+    .garage-hero h1,
+    .dealers-hero h1,
+    .car-hire-hero h1 {
+        font-size: 2.25rem;
+        margin-bottom: 16px;
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.hero-subtitle,
+.hero p,
+.garage-hero .hero-subtitle,
+.dealers-hero p,
+.car-hire-hero .hero-subtitle,
+.car-hire-hero p {
+    font-size: 0.9rem;
+    font-weight: 400;
+    margin-bottom: 24px;
+    opacity: 0.95;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+    animation: fadeInUp 0.8s ease-out 0.2s both;
+}
+
+@media (min-width: 768px) {
+    .hero-subtitle,
+    .hero p,
+    .garage-hero .hero-subtitle,
+    .dealers-hero p,
+    .car-hire-hero .hero-subtitle,
+    .car-hire-hero p {
+        font-size: 0.95rem;
+        margin-bottom: 28px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .hero-subtitle,
+    .hero p,
+    .garage-hero .hero-subtitle,
+    .dealers-hero p,
+    .car-hire-hero .hero-subtitle,
+    .car-hire-hero p {
+        font-size: 1rem;
+        margin-bottom: 30px;
+    }
+}
+
+/* Hero Action Buttons */
+.hero .btn,
+.garage-hero .btn,
+.dealers-hero .btn,
+.car-hire-hero .btn,
+.smart-location-actions .btn {
+    margin: 0 8px 12px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    animation: fadeInUp 0.8s ease-out 0.4s both;
+}
+
+.smart-location-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+}
+
+/* Hero Stats Cards */
+.hero-stats,
+.dealers-stats,
+.car-hire-stats {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 0 16px;
+    animation: fadeInUp 0.8s ease-out 0.6s both;
+}
+
+@media (min-width: 480px) {
+    .hero-stats,
+    .dealers-stats,
+    .car-hire-stats {
+        grid-template-columns: repeat(4, 1fr);
+        max-width: 800px;
+        gap: 16px;
+        padding: 0;
+    }
+}
+
+.hero-stat,
+.dealers-stat,
+.car-hire-stat {
+    text-align: center;
+    padding: 20px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 14px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.hero-stat:hover,
+.dealers-stat:hover,
+.car-hire-stat:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-6px) scale(1.03);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+}
+
+.hero-stat-number,
+.dealers-stat-number,
+.car-hire-stat-number {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: block;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+@media (min-width: 768px) {
+    .hero-stat-number,
+    .dealers-stat-number,
+    .car-hire-stat-number {
+        font-size: 1.6rem;
+        margin-bottom: 5px;
+    }
+}
+
+.hero-stat-label,
+.dealers-stat-label,
+.car-hire-stat-label {
+    font-size: 0.65rem;
+    opacity: 0.92;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    line-height: 1.3;
+}
+
+@media (min-width: 768px) {
+    .hero-stat-label,
+    .dealers-stat-label,
+    .car-hire-stat-label {
+        font-size: 0.7rem;
+    }
+}
+
+/* Hero Stat Links - Ensure uniform white text (not blue) */
+.hero-stat-link,
+a.hero-stat,
+a.dealers-stat,
+a.car-hire-stat {
+    text-decoration: none;
+    color: var(--text-white);
+    display: block;
+}
+
+.hero-stat-link:hover,
+a.hero-stat:hover,
+a.dealers-stat:hover,
+a.car-hire-stat:hover {
+    color: var(--text-white);
+    text-decoration: none;
+}
+
+.hero-stat-link .hero-stat-number,
+.hero-stat-link .hero-stat-label {
+    color: var(--text-white);
+}
+
+
+
+/* User Avatar Button */
+.user-avatar-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #27ae60, #229954) !important;
+    color: white !important;
+    border: 2px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    text-decoration: none;
+    margin-left: 12px;
+    line-height: 1 !important;
+    text-transform: uppercase !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.user-avatar-btn span {
+    color: white !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    line-height: 1 !important;
+    z-index: 1;
+}
+
+.user-avatar-btn:hover {
+    color: white !important;
+    text-decoration: none;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+}
+
+.user-avatar-btn i {
+    color: white !important;
+    font-size: 20px !important;
+}
+
+#userInfo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#userInfo > span {
+    display: none;
+}
+
+@media (min-width: 769px) {
+    #userInfo > span {
+        display: inline-block;
+    }
+}
+
+/* Prevent auth flash on page load */
+.user-menu #userInfo,
+.user-menu #guestMenu {
+    opacity: 0;
+    transition: opacity 0.2s ease-in;
+}
+
+.user-menu #userInfo[style*="display: flex"],
+.user-menu #guestMenu[style*="display: flex"] {
+    opacity: 1;
+}
+
+/* ============================================================================
+   BACK TO TOP BUTTON - Floating Action Button
+   ============================================================================ */
+.back-to-top {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-green-dark) 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 10000 !important; /* Above AI chat widget (z-index: 9999) */
+    box-shadow: 0 4px 16px rgba(0, 200, 83, 0.3);
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.8);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.back-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+}
+
+.back-to-top:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 24px rgba(0, 200, 83, 0.4);
+}
+
+.back-to-top:active {
+    transform: scale(0.95);
+}
+
+@media (max-width: 768px) {
+    .back-to-top {
+        width: 45px;
+        height: 45px;
+        bottom: 20px;
+        right: 20px;
+        font-size: 18px;
+    }
+}
+
+/* ============================================================================
+   STICKY FILTER SECTIONS - Global Style
+   ============================================================================ */
+.filter-section,
+.filters-section,
+.search-filters {
+    position: sticky !important;
+    top: 60px !important; /* Below the fixed header */
+    z-index: 9990 !important;
+    background: rgba(255, 255, 255, 0.98) !important;
+    backdrop-filter: blur(10px) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+}
+
+@media (max-width: 768px) {
+    .filter-section,
+    .filters-section,
+    .search-filters {
+        top: 60px !important;
+    }
+}
+
+/* ============================================================================
+   GLOBAL BUTTON REDESIGN - Modern & Sleek
+   ============================================================================ */
+
+/* Primary Buttons - Green Gradient */
+.btn-primary,
+.btn.btn-primary,
+button.btn-primary,
+a.btn-primary {
+    background: linear-gradient(135deg, #159a5b 0%, #0f7f4c 100%) !important;
+    color: white !important;
+    border: 1px solid #0f7f4c !important;
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 8px 16px rgba(15, 127, 76, 0.28) !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.btn-primary:hover,
+.btn.btn-primary:hover,
+button.btn-primary:hover,
+a.btn-primary:hover {
+    background: linear-gradient(135deg, #0f7f4c 0%, #0b6240 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 24px rgba(11, 98, 64, 0.34) !important;
+}
+
+.btn-primary:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 2px 8px rgba(0, 200, 83, 0.2) !important;
+}
+
+/* Secondary Buttons - Outline Style */
+.btn-secondary,
+.btn-outline-primary,
+.btn.btn-secondary,
+.btn.btn-outline-primary {
+    background: #f7fbf9 !important;
+    color: #0f7f4c !important;
+    border: 1px solid #a7d6bf !important;
+    padding: 8px 18px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+}
+
+.btn-secondary:hover,
+.btn-outline-primary:hover,
+.btn.btn-secondary:hover,
+.btn.btn-outline-primary:hover {
+    background: #e8f5ef !important;
+    color: #0b6240 !important;
+    border-color: #0f7f4c !important;
+    box-shadow: 0 8px 16px rgba(15, 127, 76, 0.18) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* Danger Buttons - Red */
+.btn-danger,
+.btn.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+    color: white !important;
+    border: none !important;
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.25) !important;
+}
+
+.btn-danger:hover,
+.btn.btn-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 16px rgba(220, 53, 69, 0.35) !important;
+}
+
+/* Small Buttons */
+.btn-sm,
+.btn.btn-sm {
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+    border-radius: 6px !important;
+}
+
+/* Large Buttons */
+.btn-lg,
+.btn.btn-lg {
+    padding: 14px 32px !important;
+    font-size: 16px !important;
+    border-radius: 10px !important;
+}
+
+/* Icon Buttons */
+.btn i {
+    font-size: 14px;
+}
+
+.btn-sm i {
+    font-size: 13px;
+}
+
+.btn-lg i {
+    font-size: 18px;
+}
+
+/* Disabled State */
+.btn:disabled,
+.btn.disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    transform: none !important;
+}
+
+.btn:disabled:hover,
+.btn.disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Search Button Specific */
+.search-btn {
+    background: linear-gradient(135deg, #159a5b 0%, #0f7f4c 100%) !important;
+    color: white !important;
+    border: none !important;
+    padding: 12px 28px !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 8px 16px rgba(15, 127, 76, 0.28) !important;
+}
+
+.btn-filter {
+    background: linear-gradient(135deg, #159a5b 0%, #0f7f4c 100%) !important;
+    color: white !important;
+    border: 1px solid #0f7f4c !important;
+    box-shadow: 0 8px 16px rgba(15, 127, 76, 0.28) !important;
+}
+
+.btn-filter:hover {
+    background: linear-gradient(135deg, #0f7f4c 0%, #0b6240 100%) !important;
+    box-shadow: 0 12px 24px rgba(11, 98, 64, 0.34) !important;
+}
+
+.search-btn:hover {
+    background: linear-gradient(135deg, #0f7f4c 0%, #0b6240 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 24px rgba(11, 98, 64, 0.34) !important;
+}
+
+/* Shared premium cards: aligned visual language across pages */
+.company-card,
+.dealer-business-card,
+.dealer-card,
+.garage-card,
+.garage-service-card,
+.car-card,
+.listing-card,
+.vehicle-card,
+.showroom-card,
+.service-card,
+.dashboard-card,
+.settings-card,
+.analytics-card,
+.stat-card,
+.contact-card,
+.services-card,
+.search-card,
+.dealer-contact-card,
+.dealer-services-card,
+.garage-contact-card,
+.garage-services-card {
+    position: relative;
+    isolation: isolate;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 251, 249, 0.96) 100%) !important;
+    border: 1px solid rgba(8, 59, 40, 0.13) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 18px 38px rgba(12, 45, 34, 0.14), 0 2px 8px rgba(12, 45, 34, 0.06) !important;
+    transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+    overflow: hidden;
+}
+
+.company-card::before,
+.dealer-business-card::before,
+.dealer-card::before,
+.garage-card::before,
+.garage-service-card::before,
+.car-card::before,
+.listing-card::before,
+.vehicle-card::before,
+.showroom-card::before,
+.service-card::before,
+.dashboard-card::before,
+.settings-card::before,
+.analytics-card::before,
+.stat-card::before,
+.contact-card::before,
+.services-card::before,
+.search-card::before,
+.dealer-contact-card::before,
+.dealer-services-card::before,
+.garage-contact-card::before,
+.garage-services-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 0% 0%, rgba(0, 200, 83, 0.18) 0%, rgba(0, 200, 83, 0) 45%);
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.company-card > *,
+.dealer-business-card > *,
+.dealer-card > *,
+.garage-card > *,
+.garage-service-card > *,
+.car-card > *,
+.listing-card > *,
+.vehicle-card > *,
+.showroom-card > *,
+.service-card > *,
+.dashboard-card > *,
+.settings-card > *,
+.analytics-card > *,
+.stat-card > *,
+.contact-card > *,
+.services-card > *,
+.search-card > *,
+.dealer-contact-card > *,
+.dealer-services-card > *,
+.garage-contact-card > *,
+.garage-services-card > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* Stacking visual rhythm for card grids */
+.cards-grid,
+.results-grid,
+.listings-grid,
+.favorites-grid,
+.vehicles-grid,
+.vehicle-cards-container,
+.showroom-grid,
+.dealers-grid,
+.garages-grid,
+.companies-grid,
+.fleet-grid {
+    --stack-offset: 10px;
+}
+
+.cards-grid > .car-card:nth-child(4n + 1),
+.cards-grid > .listing-card:nth-child(4n + 1),
+.results-grid > .car-card:nth-child(4n + 1),
+.results-grid > .listing-card:nth-child(4n + 1),
+.listings-grid > .listing-card:nth-child(4n + 1),
+.favorites-grid > .car-card:nth-child(4n + 1),
+.vehicles-grid > .vehicle-card:nth-child(4n + 1),
+.vehicle-cards-container > .vehicle-card:nth-child(4n + 1),
+.showroom-grid > .showroom-card:nth-child(4n + 1),
+.dealers-grid > .dealer-card:nth-child(4n + 1),
+.garages-grid > .garage-card:nth-child(4n + 1),
+.companies-grid > .company-card:nth-child(4n + 1),
+.fleet-grid > .car-card:nth-child(4n + 1) {
+    transform: translateY(calc(var(--stack-offset) * -0.18));
+}
+
+.cards-grid > .car-card:nth-child(4n + 2),
+.cards-grid > .listing-card:nth-child(4n + 2),
+.results-grid > .car-card:nth-child(4n + 2),
+.results-grid > .listing-card:nth-child(4n + 2),
+.listings-grid > .listing-card:nth-child(4n + 2),
+.favorites-grid > .car-card:nth-child(4n + 2),
+.vehicles-grid > .vehicle-card:nth-child(4n + 2),
+.vehicle-cards-container > .vehicle-card:nth-child(4n + 2),
+.showroom-grid > .showroom-card:nth-child(4n + 2),
+.dealers-grid > .dealer-card:nth-child(4n + 2),
+.garages-grid > .garage-card:nth-child(4n + 2),
+.companies-grid > .company-card:nth-child(4n + 2),
+.fleet-grid > .car-card:nth-child(4n + 2) {
+    transform: translateY(calc(var(--stack-offset) * 0.14));
+}
+
+.cards-grid > .car-card:nth-child(4n + 3),
+.cards-grid > .listing-card:nth-child(4n + 3),
+.results-grid > .car-card:nth-child(4n + 3),
+.results-grid > .listing-card:nth-child(4n + 3),
+.listings-grid > .listing-card:nth-child(4n + 3),
+.favorites-grid > .car-card:nth-child(4n + 3),
+.vehicles-grid > .vehicle-card:nth-child(4n + 3),
+.vehicle-cards-container > .vehicle-card:nth-child(4n + 3),
+.showroom-grid > .showroom-card:nth-child(4n + 3),
+.dealers-grid > .dealer-card:nth-child(4n + 3),
+.garages-grid > .garage-card:nth-child(4n + 3),
+.companies-grid > .company-card:nth-child(4n + 3),
+.fleet-grid > .car-card:nth-child(4n + 3) {
+    transform: translateY(calc(var(--stack-offset) * -0.08));
+}
+
+.cards-grid > .car-card:nth-child(4n),
+.cards-grid > .listing-card:nth-child(4n),
+.results-grid > .car-card:nth-child(4n),
+.results-grid > .listing-card:nth-child(4n),
+.listings-grid > .listing-card:nth-child(4n),
+.favorites-grid > .car-card:nth-child(4n),
+.vehicles-grid > .vehicle-card:nth-child(4n),
+.vehicle-cards-container > .vehicle-card:nth-child(4n),
+.showroom-grid > .showroom-card:nth-child(4n),
+.dealers-grid > .dealer-card:nth-child(4n),
+.garages-grid > .garage-card:nth-child(4n),
+.companies-grid > .company-card:nth-child(4n),
+.fleet-grid > .car-card:nth-child(4n) {
+    transform: translateY(calc(var(--stack-offset) * 0.2));
+}
+
+.company-card:hover,
+.dealer-business-card:hover,
+.dealer-card:hover,
+.garage-card:hover,
+.garage-service-card:hover,
+.car-card:hover,
+.listing-card:hover,
+.vehicle-card:hover,
+.showroom-card:hover,
+.service-card:hover,
+.dashboard-card:hover,
+.settings-card:hover,
+.analytics-card:hover,
+.stat-card:hover,
+.contact-card:hover,
+.services-card:hover,
+.search-card:hover,
+.dealer-contact-card:hover,
+.dealer-services-card:hover,
+.garage-contact-card:hover,
+.garage-services-card:hover {
+    border-color: rgba(0, 168, 67, 0.35) !important;
+    box-shadow: 0 28px 56px rgba(10, 43, 32, 0.2), 0 4px 14px rgba(10, 43, 32, 0.12) !important;
+    transform: translateY(-8px) scale(1.01) !important;
+}
+
+.company-card h3,
+.dealer-business-card h3,
+.dealer-card h3,
+.garage-card h3,
+.garage-service-card h3,
+.car-card h3,
+.listing-card h3,
+.vehicle-card h3,
+.showroom-card h3,
+.service-card h3,
+.dashboard-card h3,
+.settings-card h3,
+.analytics-card h3,
+.stat-card h3,
+.contact-card h3,
+.services-card h3,
+.search-card h3 {
+    color: #0f2f24;
+    letter-spacing: -0.01em;
+}
+
+.company-card p,
+.dealer-business-card p,
+.dealer-card p,
+.garage-card p,
+.garage-service-card p,
+.car-card p,
+.listing-card p,
+.vehicle-card p,
+.showroom-card p,
+.service-card p,
+.dashboard-card p,
+.settings-card p,
+.analytics-card p,
+.stat-card p,
+.contact-card p,
+.services-card p,
+.search-card p {
+    color: #4f5d6f;
+}
+
+@supports (animation-timeline: view()) {
+    .car-card,
+    .listing-card,
+    .vehicle-card,
+    .dealer-card,
+    .garage-card,
+    .showroom-card,
+    .service-card {
+        animation: card-stack-reveal linear both;
+        animation-timeline: view();
+        animation-range: entry 5% cover 35%;
+    }
+}
+
+@keyframes card-stack-reveal {
+    from {
+        opacity: 0.5;
+        transform: translateY(24px) scale(0.97);
+        filter: saturate(0.92);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: saturate(1);
+    }
+}
+
+/* Mobile Responsive Buttons */
+@media (max-width: 768px) {
+    .btn,
+    .btn-primary,
+    .btn-secondary,
+    .btn-outline-primary {
+        padding: 10px 20px !important;
+        font-size: 13px !important;
+    }
+    
+    .btn-sm {
+        padding: 7px 14px !important;
+        font-size: 13px !important;
+    }
+}
+
+/* Prevent button text overlap */
+.btn, .btn-primary, .btn-secondary, .btn-outline-primary, .btn-danger {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* ============================================================================
+   MOBILE OPTIMIZATIONS - Critical for Mobile Users
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Adjust sticky elements for mobile header height */
+    .listings-search,
+    .filters,
+    .garage-filters-container,
+    .sidebar {
+        top: 60px !important;
+    }
+    
+    /* Ensure buttons don't overflow on mobile */
+    .btn, .btn-primary, .btn-secondary {
+        font-size: 13px !important;
+        padding: 8px 14px !important;
+        min-width: auto !important;
+    }
+    
+    .btn-sm {
+        font-size: 12px !important;
+        padding: 6px 10px !important;
+    }
+    
+    /* Touch-friendly button spacing */
+    .filter-actions,
+    .dealer-card-actions,
+    .garage-card-actions {
+        gap: 8px !important;
+    }
+    
+    /* Prevent horizontal scroll */
+    .container,
+    .main-content,
+    .listings-section {
+        overflow-x: hidden !important;
+    }
+    
+    /* Card adjustments for mobile */
+    .dealer-business-card,
+    .garage-service-card,
+    .car-card,
+    .listing-card,
+    .vehicle-card,
+    .dealer-card,
+    .garage-card,
+    .showroom-card,
+    .service-card {
+        margin: 0 !important;
+        border-radius: 14px !important;
+        transform: none !important;
+        box-shadow: 0 10px 22px rgba(12, 45, 34, 0.14), 0 2px 8px rgba(12, 45, 34, 0.08) !important;
+    }
+    
+    /* Readable text on small screens */
+    h1 { font-size: 1.5rem !important; }
+    h2 { font-size: 1.3rem !important; }
+    h3 { font-size: 1.1rem !important; }
+    
+    /* Filter sidebar on mobile */
+    .sidebar {
+        max-height: calc(100vh - 80px) !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Extra small screens */
+    .btn {
+        font-size: 12px !important;
+        padding: 7px 12px !important;
+    }
+    
+    /* Stack buttons on very small screens */
+    .dealer-card-actions,
+    .garage-card-actions {
+        flex-direction: column !important;
+    }
+    
+    .dealer-action-btn,
+    .garage-action-btn {
+        width: 100% !important;
+    }
+
+    .car-card,
+    .listing-card,
+    .vehicle-card,
+    .dealer-card,
+    .garage-card,
+    .showroom-card,
+    .service-card {
+        border-radius: 12px !important;
+        transform: none !important;
+    }
+}

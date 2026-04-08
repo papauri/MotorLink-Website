@@ -1,0 +1,109 @@
+/**
+ * Vehicle Selection Styles for Journey Planner
+ * Desktop styles for vehicle selection components
+ */
+
+/* Vehicle Selection Container */
+.vehicle-selection-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Vehicle Select Row */
+.vehicle-select-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+}
+
+.vehicle-select {
+    flex: 1;
+}
+
+.add-vehicle-btn {
+    white-space: nowrap;
+}
+
+/* OR Divider */
+.vehicle-search-divider {
+    text-align: center;
+    margin: 5px 0;
+}
+
+.vehicle-search-divider span {
+    font-weight: 600;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Search Row */
+.vehicle-search-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.vehicle-search-input {
+    flex: 1;
+    /* Normal input styling - no special overrides needed */
+}
+
+/* Suggestions dropdown */
+.vehicle-search-suggestions {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.vehicle-search-suggestions .suggestion-item:last-child {
+    border-bottom: none;
+    border-radius: 0 0 6px 6px;
+}
+
+/* Example prompts */
+.vehicle-search-examples {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.vehicle-search-input:focus {
+    outline: none !important;
+    border-color: #2196F3 !important;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1) !important;
+}
+
+.vehicle-search-input:disabled,
+.vehicle-search-input[readonly] {
+    background-color: #f5f5f5 !important;
+    cursor: not-allowed !important;
+}
+
+.vehicle-search-btn {
+    white-space: nowrap;
+}
+
+/* Search Result */
+.vehicle-search-result {
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin-top: 5px;
+}
+
+.vehicle-search-result-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vehicle-search-result-info {
+    flex: 1;
+}
+
+.vehicle-search-year {
+    color: #666;
+    margin-left: 5px;
+}
+
+.vehicle-search-clear {
+    padding: 0;
+}
+

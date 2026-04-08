@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dealer Dashboard - MotorLink Malawi</title>
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/business-dashboard.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-container">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                <nav class="nav" id="mainNav">
+                    <a href="index.html">Home</a>
+                    <a href="garages.html">Garages</a>
+                    <a href="dealers.html">Dealers</a>
+                    <a href="car-hire.html">Car Hire</a>
+                    <a href="car-database.html">Know Your Car</a>
+                    <a href="sell.html">Sell Car</a>
+                </nav>
+                <div class="user-menu" id="userMenu">
+                    <div id="userInfo" style="display: none;">
+                        <a href="profile.html" class="user-avatar-btn" title="My Profile" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </a>
+                        <button onclick="logout()" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    <div id="guestMenu">
+                        <a href="login.html" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="register.html" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+                <button class="mobile-menu-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <aside class="dashboard-sidebar" id="dashboardSidebar">
+            <div class="sidebar-header">
+                <h2>Dealer Dashboard</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#overview" class="sidebar-link active" data-section="overview">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Overview</span>
+                </a>
+                <a href="#showroom" class="sidebar-link" data-section="showroom">
+                    <i class="fas fa-store"></i>
+                    <span>Showroom Details</span>
+                </a>
+                <a href="#inventory" class="sidebar-link" data-section="inventory">
+                    <i class="fas fa-car"></i>
+                    <span>Inventory</span>
+                </a>
+                <a href="#add-car" class="sidebar-link" data-section="add-car">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>Add New Car</span>
+                </a>
+                <a href="#business-info" class="sidebar-link" data-section="business-info">
+                    <i class="fas fa-building"></i>
+                    <span>Business Info</span>
+                </a>
+                <a href="#settings" class="sidebar-link" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-main">
+            <button class="mobile-sidebar-toggle" id="mobileSidebarToggle">
+                <i class="fas fa-bars"></i>
+                <span>Menu</span>
+            </button>
+
+            <!-- Overview Section -->
+            <section id="overview" class="dashboard-section active">
+                <div class="dashboard-header">
+                    <div class="dashboard-welcome">
+                        <h1>Welcome back, <span id="dealerName">Dealer</span>!</h1>
+                        <p>Manage your showroom, inventory, and grow your car sales business</p>
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="totalListings">0</div>
+                            <div class="stat-label">Total Listings</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="activeListings">0</div>
+                            <div class="stat-label">Active Listings</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="pendingListings">0</div>
+                            <div class="stat-label">Pending Approval</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="totalViews">0</div>
+                            <div class="stat-label">Total Views</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recent-activity">
+                    <h2>Recent Activity</h2>
+                    <div id="recentActivity" class="activity-list">
+                        <p class="text-muted">Loading activity...</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Showroom Details Section -->
+            <section id="showroom" class="dashboard-section">
+                <h1>Business Details</h1>
+                <p class="section-description">Manage your dealership information visible to customers</p>
+
+                <form id="showroomForm" class="dashboard-form">
+                    <!-- Business Name (Read-only) -->
+                    <div class="form-group">
+                        <label for="businessName">Business Name</label>
+                        <input type="text" id="businessName" name="business_name" readonly style="background: #f3f4f6; cursor: not-allowed;">
+                        <small class="text-muted">Business name cannot be changed here. Contact support if needed.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="showroomDescription">Business Description</label>
+                        <textarea id="showroomDescription" name="description" rows="4" placeholder="Tell customers about your dealership, specializations, and services..." maxlength="500"></textarea>
+                        <small class="text-muted"><span id="descCharCount">0</span>/500 characters</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="showroomPhone">Contact Phone</label>
+                            <input type="tel" id="showroomPhone" name="phone" placeholder="+265 999 123 456" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="showroomEmail">Contact Email</label>
+                            <input type="email" id="showroomEmail" name="email" placeholder="info@dealership.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="showroomAddress">Physical Address</label>
+                        <textarea id="showroomAddress" name="address" rows="2" placeholder="Street address, building, landmarks..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="showroomDistrict">District</label>
+                        <select id="showroomDistrict" name="district">
+                            <option value="">Select District</option>
+                            <option value="Blantyre">Blantyre</option>
+                            <option value="Lilongwe">Lilongwe</option>
+                            <option value="Mzuzu">Mzuzu</option>
+                            <option value="Zomba">Zomba</option>
+                        </select>
+                    </div>
+
+                    <!-- Social Media Links -->
+                    <div class="form-section-header" style="margin-top: 30px;">
+                        <h3><i class="fab fa-share-alt"></i> Social Media Links</h3>
+                        <p>Add your social media profiles to help customers connect with you</p>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="showroomFacebook"><i class="fab fa-facebook"></i> Facebook Page</label>
+                            <input type="url" id="showroomFacebook" name="facebook_url" placeholder="https://facebook.com/yourpage">
+                        </div>
+                        <div class="form-group">
+                            <label for="showroomInstagram"><i class="fab fa-instagram"></i> Instagram</label>
+                            <input type="url" id="showroomInstagram" name="instagram_url" placeholder="https://instagram.com/yourpage">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="showroomTwitter"><i class="fab fa-twitter"></i> Twitter/X</label>
+                            <input type="url" id="showroomTwitter" name="twitter_url" placeholder="https://twitter.com/yourpage">
+                        </div>
+                        <div class="form-group">
+                            <label for="showroomLinkedIn"><i class="fab fa-linkedin"></i> LinkedIn</label>
+                            <input type="url" id="showroomLinkedIn" name="linkedin_url" placeholder="https://linkedin.com/company/yourpage">
+                        </div>
+                    </div>
+
+                    <!-- Operating Hours with Time Pickers -->
+                    <div class="form-group">
+                        <label>Operating Hours</label>
+                        <div class="hours-grid">
+                            <div class="hour-item">
+                                <label>Monday - Friday</label>
+                                <div class="time-range">
+                                    <input type="time" id="weekdayOpen" name="weekday_open" value="08:00">
+                                    <span>to</span>
+                                    <input type="time" id="weekdayClose" name="weekday_close" value="17:00">
+                                </div>
+                            </div>
+                            <div class="hour-item">
+                                <label>Saturday</label>
+                                <div class="time-range">
+                                    <input type="time" id="saturdayOpen" name="saturday_open" value="08:00">
+                                    <span>to</span>
+                                    <input type="time" id="saturdayClose" name="saturday_close" value="14:00">
+                                </div>
+                            </div>
+                            <div class="hour-item">
+                                <label>Sunday</label>
+                                <div class="time-range">
+                                    <input type="time" id="sundayOpen" name="sunday_open">
+                                    <span>to</span>
+                                    <input type="time" id="sundayClose" name="sunday_close">
+                                    <small class="text-muted">Leave empty if closed</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="location.reload()">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Inventory Section -->
+            <section id="inventory" class="dashboard-section">
+                <div class="section-header">
+                    <div>
+                        <h1>My Inventory</h1>
+                        <p class="section-description">Manage your car listings</p>
+                    </div>
+                    <div class="section-actions">
+                        <span id="inventoryCount" class="count-badge">0 cars</span>
+                    </div>
+                </div>
+
+                <!-- Inventory Stats Cards -->
+                <div class="inventory-stats">
+                    <div class="stat-card stat-active">
+                        <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+                        <div class="stat-details">
+                            <div class="stat-value" id="activeInventoryCount">0</div>
+                            <div class="stat-label">Active</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-sold">
+                        <div class="stat-icon"><i class="fas fa-handshake"></i></div>
+                        <div class="stat-details">
+                            <div class="stat-value" id="soldInventoryCount">0</div>
+                            <div class="stat-label">Sold</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-pending">
+                        <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-details">
+                            <div class="stat-value" id="pendingInventoryCount">0</div>
+                            <div class="stat-label">Pending</div>
+                        </div>
+                    </div>
+                    <div class="stat-card stat-inactive">
+                        <div class="stat-icon"><i class="fas fa-ban"></i></div>
+                        <div class="stat-details">
+                            <div class="stat-value" id="inactiveInventoryCount">0</div>
+                            <div class="stat-label">Inactive</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="inventory-filters">
+                    <input type="text" id="searchInventory" class="search-input" placeholder="Search by make, model, year...">
+                    <button id="clearFilters" class="btn btn-secondary">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                </div>
+
+                <div id="inventoryGrid" class="inventory-grid">
+                    <p class="text-muted">Loading inventory...</p>
+                </div>
+            </section>
+
+            <!-- Add New Car Section -->
+            <section id="add-car" class="dashboard-section">
+                <h1>Add New Car</h1>
+
+                <form id="addCarForm" class="dashboard-form">
+                    <!-- Title -->
+                    <div class="form-group">
+                        <label for="carTitle">Listing Title</label>
+                        <input type="text" id="carTitle" name="title" placeholder="e.g., 2020 Toyota Hilux Double Cab - Excellent Condition" maxlength="200" required>
+                        <small>Create an attractive title for your listing</small>
+                    </div>
+
+                    <!-- Make and Model -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carMake">Make <span class="required">*</span></label>
+                            <select id="carMake" name="make_id" required>
+                                <option value="">Select Make...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="carModel">Model <span class="required">*</span></label>
+                            <select id="carModel" name="model_id" required disabled>
+                                <option value="">Select Make First...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Year and Price -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carYear">Year <span class="required">*</span></label>
+                            <select id="carYear" name="year" required>
+                                <option value="">Select Year...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="carPrice">Price (MWK) <span class="required">*</span></label>
+                            <input type="number" id="carPrice" name="price" placeholder="e.g., 25000000" required>
+                        </div>
+                    </div>
+
+                    <!-- Negotiable -->
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="carNegotiable" name="negotiable" value="1">
+                            <span>Price is Negotiable</span>
+                        </label>
+                    </div>
+
+                    <!-- Location and Condition -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carLocation">Location/District <span class="required">*</span></label>
+                            <select id="carLocation" name="location_id" required>
+                                <option value="">Select Location...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="carCondition">Condition <span class="required">*</span></label>
+                            <select id="carCondition" name="condition_type" required>
+                                <option value="">Select Condition...</option>
+                                <option value="new">Brand New</option>
+                                <option value="used_like_new">Used - Like New</option>
+                                <option value="used_excellent">Used - Excellent</option>
+                                <option value="used_good">Used - Good</option>
+                                <option value="used_fair">Used - Fair</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Mileage and Fuel Type -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carMileage">Mileage (km)</label>
+                            <input type="number" id="carMileage" name="mileage" placeholder="e.g., 50000" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="carFuelType">Fuel Type <span class="required">*</span></label>
+                            <select id="carFuelType" name="fuel_type" required>
+                                <option value="">Select Fuel Type...</option>
+                                <option value="petrol">Petrol</option>
+                                <option value="diesel">Diesel</option>
+                                <option value="hybrid">Hybrid</option>
+                                <option value="electric">Electric</option>
+                                <option value="lpg">LPG</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Transmission and Color -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carTransmission">Transmission <span class="required">*</span></label>
+                            <select id="carTransmission" name="transmission" required disabled>
+                                <option value="">Select Model First...</option>
+                            </select>
+                            <small class="form-hint">Available transmissions for selected model</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="carColor">Exterior Color</label>
+                            <input type="text" id="carColor" name="exterior_color" placeholder="e.g., White, Black, Silver">
+                        </div>
+                    </div>
+
+                    <!-- Engine Capacity, Fuel Tank, and Drivetrain -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carEngineSize">Engine Capacity (Optional)</label>
+                            <select id="carEngineSize" name="engine_size" disabled>
+                                <option value="">Select Model First...</option>
+                            </select>
+                            <small class="form-hint">Available engine sizes for selected model</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="carFuelTankCapacity">Fuel Tank Capacity (Optional)</label>
+                            <select id="carFuelTankCapacity" name="fuel_tank_capacity" disabled>
+                                <option value="">Select Model First...</option>
+                            </select>
+                            <small class="form-hint">Available fuel tank capacities for selected model</small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="carDrivetrain">Drivetrain (Optional)</label>
+                            <select id="carDrivetrain" name="drivetrain" disabled>
+                                <option value="">Select Model First...</option>
+                            </select>
+                            <small class="form-hint">Available drivetrain options for selected model</small>
+                        </div>
+                        <div class="form-group">
+                            <!-- Empty space for layout -->
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="carDescription">Description</label>
+                        <textarea id="carDescription" name="description" rows="5" placeholder="Describe the car's features, condition, service history, etc."></textarea>
+                        <small>Provide detailed information to attract buyers</small>
+                    </div>
+
+                    <!-- Images -->
+                    <div class="form-group">
+                        <label for="carImages">Car Images (Maximum 10 images)</label>
+                        <input type="file" id="carImages" name="images[]" accept="image/jpeg,image/png,image/jpg,image/webp" multiple>
+                        <small>Upload high-quality images. First image will be the featured image.</small>
+                        <div id="imagePreview" class="image-preview-grid"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-plus-circle"></i> Add Car to Inventory
+                        </button>
+                        <button type="reset" class="btn btn-secondary">
+                            <i class="fas fa-undo"></i> Reset Form
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Business Info Section -->
+            <section id="business-info" class="dashboard-section">
+                <h1>Business Information</h1>
+
+                <form id="businessInfoForm" class="dashboard-form">
+                    <div class="form-group">
+                        <label for="businessName">Business Name</label>
+                        <input type="text" id="businessName" name="business_name" readonly>
+                        <small class="text-muted">Business name cannot be changed here. Contact support if needed.</small>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="ownerName">Owner Name</label>
+                            <input type="text" id="ownerName" name="owner_name" readonly style="background: #f3f4f6; cursor: not-allowed;">
+                            <small class="text-muted"><i class="fas fa-info-circle"></i> Owner name is based on your account. Contact support to change it.</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="yearsEstablished">Year Established</label>
+                            <input type="number" id="yearsEstablished" name="years_established" min="1900" max="2025" placeholder="e.g., 2010">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="businessPhone">Business Phone</label>
+                            <input type="tel" id="businessPhone" name="phone" placeholder="+265 99 123 4567" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="businessWhatsApp">WhatsApp Number</label>
+                            <input type="tel" id="businessWhatsApp" name="whatsapp" placeholder="+265 99 123 4567">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="businessEmail">Business Email</label>
+                        <input type="email" id="businessEmail" name="email" placeholder="info@yourbusiness.com" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="businessAddress">Physical Address</label>
+                            <textarea id="businessAddress" name="address" rows="2" placeholder="Street address, building, etc."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="businessLocation">District/Location <span class="required">*</span></label>
+                            <select id="businessLocation" name="location_id" required>
+                                <option value="">Select Location...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="businessDescription">Business Description</label>
+                        <textarea id="businessDescription" name="description" rows="4" placeholder="Tell customers about your dealership, services, and what makes you unique..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="businessWebsite">Website</label>
+                        <input type="url" id="businessWebsite" name="website" placeholder="https://www.yourwebsite.com">
+                    </div>
+
+                    <!-- Social Media Links -->
+                    <div class="form-section-header">
+                        <h3><i class="fab fa-share-alt"></i> Social Media Links</h3>
+                        <p>Add your social media profiles to help customers connect with you</p>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="facebookUrl"><i class="fab fa-facebook"></i> Facebook Page</label>
+                            <input type="url" id="facebookUrl" name="facebook_url" placeholder="https://facebook.com/yourpage">
+                        </div>
+                        <div class="form-group">
+                            <label for="instagramUrl"><i class="fab fa-instagram"></i> Instagram</label>
+                            <input type="url" id="instagramUrl" name="instagram_url" placeholder="https://instagram.com/yourpage">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="twitterUrl"><i class="fab fa-twitter"></i> Twitter/X</label>
+                            <input type="url" id="twitterUrl" name="twitter_url" placeholder="https://twitter.com/yourpage">
+                        </div>
+                        <div class="form-group">
+                            <label for="linkedinUrl"><i class="fab fa-linkedin"></i> LinkedIn</label>
+                            <input type="url" id="linkedinUrl" name="linkedin_url" placeholder="https://linkedin.com/company/yourpage">
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Business Information
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings" class="dashboard-section">
+                <h1>Settings</h1>
+
+                <div class="settings-card">
+                    <h3>Account Settings</h3>
+                    <p>Manage your account preferences</p>
+                    <a href="profile.html" class="btn btn-secondary">
+                        <i class="fas fa-user-cog"></i> Go to Profile Settings
+                    </a>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Notification Preferences</h3>
+                    <form id="notificationForm">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="email_notifications" id="emailNotifications">
+                            <span>Email notifications for new inquiries</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="listing_updates" id="listingUpdates">
+                            <span>Listing status updates</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="marketing_emails" id="marketingEmails">
+                            <span>Marketing and promotional emails</span>
+                        </label>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Preferences
+                        </button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Edit Car Modal -->
+    <div id="editCarModal" class="modal" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fas fa-edit"></i> Edit Car Listing</h2>
+                <button class="modal-close" onclick="dealerDashboard.closeEditModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editCarForm" enctype="multipart/form-data">
+                    <input type="hidden" id="editCarId" name="car_id">
+
+                    <div class="form-group">
+                        <label>Title <span class="required">*</span></label>
+                        <input type="text" id="editTitle" name="title" required maxlength="200">
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Make <span class="required">*</span></label>
+                            <select id="editMake" name="make_id" required>
+                                <option value="">Select Make</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Model <span class="required">*</span></label>
+                            <select id="editModel" name="model_id" required>
+                                <option value="">Select Model</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Year <span class="required">*</span></label>
+                            <input type="number" id="editYear" name="year" required min="1900" max="2030">
+                        </div>
+                        <div class="form-group">
+                            <label>Price (MWK) <span class="required">*</span></label>
+                            <input type="number" id="editPrice" name="price" required min="100000">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editNegotiable" name="negotiable" value="1">
+                            <span>Price is negotiable</span>
+                        </label>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Mileage (km)</label>
+                            <input type="number" id="editMileage" name="mileage" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Location <span class="required">*</span></label>
+                            <select id="editLocation" name="location_id" required>
+                                <option value="">Select Location</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Fuel Type</label>
+                            <select id="editFuelType" name="fuel_type" required>
+                                <option value="petrol">Petrol</option>
+                                <option value="diesel">Diesel</option>
+                                <option value="hybrid">Hybrid</option>
+                                <option value="electric">Electric</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Transmission</label>
+                            <select id="editTransmission" name="transmission" required>
+                                <option value="manual">Manual</option>
+                                <option value="automatic">Automatic</option>
+                                <option value="cvt">CVT</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Condition</label>
+                            <select id="editCondition" name="condition_type" required>
+                                <option value="excellent">Excellent</option>
+                                <option value="very_good">Very Good</option>
+                                <option value="good">Good</option>
+                                <option value="fair">Fair</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Exterior Color</label>
+                            <input type="text" id="editColor" name="exterior_color">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="editDescription" name="description" rows="4"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="editStatus" name="status">
+                            <option value="active">Active</option>
+                            <option value="sold">Sold</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                    </div>
+
+                    <!-- Image Management -->
+                    <div class="form-section-header">
+                        <h3><i class="fas fa-images"></i> Image Management</h3>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Current Images</label>
+                        <div id="editCurrentImages" class="current-images-grid">
+                            <!-- Images will be loaded here with options to set featured/delete -->
+                        </div>
+                        <small class="text-muted">Click the star icon to set featured image. Click the trash icon to delete an image.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Upload New Images (optional)</label>
+                        <input type="file" id="editNewImages" name="new_images[]" accept="image/jpeg,image/png,image/jpg,image/webp" multiple>
+                        <small>Upload additional images for this listing</small>
+                        <div id="editNewImagesPreview" class="image-preview-grid"></div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="dealerDashboard.closeEditModal()">
+                            <i class="fas fa-times"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-car"></i> MotorLink Malawi</h4>
+                    <p>Your trusted partner for buying and selling cars in Malawi. We connect buyers and sellers in a safe, secure environment with the latest cars from trusted dealers across all 28 districts.</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="Follow us on Facebook" title="MotorLink Malawi Facebook">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Twitter" title="MotorLink Malawi Twitter">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Instagram" title="MotorLink Malawi Instagram">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" aria-label="Contact us on WhatsApp" title="MotorLink Malawi WhatsApp">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-link"></i> Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Browse Cars</a></li>
+                        <li><a href="sell.html">Sell Your Car</a></li>
+                        <li><a href="garages.html">Find Garages</a></li>
+                        <li><a href="dealers.html">Car Dealers</a></li>
+                        <li><a href="car-hire.html">Car Hire</a></li>
+                        <li><a href="car-database.html">Know Your Car</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h4><i class="fas fa-life-ring"></i> Support & Help</h4>
+                    <ul>
+                        <li><a href="help.html">Help Center</a></li>
+                        <li><a href="safety.html">Safety Tips</a></li>
+                        <li><a href="contact.html">Contact Us</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-phone"></i> Contact & Payment</h4>
+                    <p><i class="fas fa-envelope"></i> <strong>Email:</strong> <a href="mailto:info@motorlink.mw">info@motorlink.mw</a></p>
+                    <p><i class="fas fa-phone"></i> <strong>Phone:</strong> <a href="tel:+265991234567">+265 991 234 567</a></p>
+                    
+                    <div style="margin-top: 20px;">
+                        <h5><i class="fas fa-mobile-alt"></i> Mobile Money Payments</h5>
+                        <p><strong>Airtel Money:</strong> +265 991 234 567</p>
+                        <p><strong>TNM Mpamba:</strong> +265 881 765 432</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 MotorLink Malawi. All rights reserved. | Connecting Malawi's automotive community since 2025</p>
+                <p style="margin-top: 10px; font-size: 14px;">
+                    <i class="fas fa-shield-alt"></i> Safe Trading • 
+                    <i class="fas fa-mobile-alt"></i> Mobile Friendly • 
+                    <i class="fas fa-globe"></i> Hosted by <a href="https://promanaged-it.com" target="_blank" rel="noopener">ProManaged IT</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="script.js"></script>
+    <script src="js/model-variations.js"></script>
+    <script src="js/form-helpers.js"></script>
+    <script src="js/dealer-dashboard.js"></script>
+
+    <script src="js/page-transitions.js"></script>
+</body>
+</html>

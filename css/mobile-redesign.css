@@ -1,0 +1,864 @@
+/**
+ * MotorLink Mobile Redesign
+ * Modern, clean mobile experience with refined buttons and cards
+ * Target: 320px - 768px mobile devices
+ */
+
+/* ============================================================================
+   COLOR PALETTE - SOFTER GREENS
+   ============================================================================ */
+
+:root {
+    --mobile-green-primary: #00b347;      /* Softer primary green */
+    --mobile-green-hover: #00a03f;        /* Subtle hover */
+    --mobile-green-light: #e8f5e9;        /* Very light green bg */
+    --mobile-green-subtle: #f1f8f4;       /* Subtle background */
+    --mobile-text-primary: #1a1a1a;       /* Dark text */
+    --mobile-text-secondary: #6b7280;     /* Gray text */
+    --mobile-border: #e5e7eb;             /* Light border */
+    --mobile-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    --mobile-shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================================================
+   MOBILE BUTTONS - REFINED & SMALLER
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Primary buttons - smaller, more refined */
+    .btn, .btn-primary, button[type="submit"], 
+    .search-btn, .filter-btn, .action-btn {
+        min-height: 40px !important;
+        height: 40px !important;
+        padding: 10px 18px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        border-radius: 10px !important;
+        border: none !important;
+        background: var(--mobile-green-primary) !important;
+        color: white !important;
+        box-shadow: var(--mobile-shadow) !important;
+        transition: all 0.2s ease !important;
+        letter-spacing: 0.2px !important;
+    }
+
+    .btn:hover, .btn-primary:hover, .search-btn:hover {
+        background: var(--mobile-green-hover) !important;
+        box-shadow: var(--mobile-shadow-hover) !important;
+        transform: translateY(-1px) !important;
+    }
+
+    .btn:active {
+        transform: translateY(0) !important;
+    }
+
+    /* Secondary/outline buttons */
+    .btn-outline-primary, .btn-secondary {
+        min-height: 40px !important;
+        height: 40px !important;
+        padding: 9px 18px !important;
+        font-size: 14px !important;
+        font-weight: 500 !important;
+        border-radius: 10px !important;
+        background: white !important;
+        color: var(--mobile-green-primary) !important;
+        border: 1.5px solid var(--mobile-green-primary) !important;
+        box-shadow: none !important;
+    }
+
+    .btn-outline-primary:hover, .btn-secondary:hover {
+        background: var(--mobile-green-subtle) !important;
+        border-color: var(--mobile-green-hover) !important;
+        color: var(--mobile-green-hover) !important;
+    }
+
+    /* Small buttons */
+    .btn-sm, .btn.btn-sm {
+        min-height: 36px !important;
+        height: 36px !important;
+        padding: 8px 14px !important;
+        font-size: 13px !important;
+    }
+
+    /* Icon buttons */
+    .btn i, button i {
+        font-size: 14px !important;
+        margin-right: 6px !important;
+    }
+
+    /* Chat composer exceptions: keep send button/icon perfectly centered and unclipped */
+    .message-input-container .send-message-btn {
+        min-height: 36px !important;
+        height: 36px !important;
+        width: 36px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex-shrink: 0 !important;
+    }
+
+    .message-input-container .send-message-btn i {
+        margin-right: 0 !important;
+        font-size: 14px !important;
+        line-height: 1 !important;
+    }
+
+    .message-input-container .message-input-wrapper textarea {
+        min-height: 0 !important;
+        height: auto !important;
+        padding: 6px 0 !important;
+    }
+
+    /* Remove excessive shadows */
+    .btn, button {
+        box-shadow: var(--mobile-shadow) !important;
+    }
+}
+
+/* ============================================================================
+   MODERN CARD DESIGN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Base card styling */
+    .car-card, .listing-card, .dealer-card, 
+    .garage-service-card, .service-card {
+        background: linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 251, 249, 0.96) 100%) !important;
+        border-radius: 14px !important;
+        overflow: hidden !important;
+        box-shadow: 0 10px 22px rgba(12, 45, 34, 0.14), 0 2px 8px rgba(12, 45, 34, 0.08) !important;
+        border: 1px solid rgba(8, 59, 40, 0.13) !important;
+        margin-bottom: 16px !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .car-card:active, .listing-card:active {
+        transform: translateY(-2px) scale(0.995) !important;
+    }
+
+    /* Card images - modern proportions */
+    .car-card-image, .listing-card-image,
+    .dealer-card-image, .garage-card-image {
+        height: 200px !important;
+        width: 100% !important;
+        object-fit: cover !important;
+        background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%) !important;
+    }
+
+    /* Card content - better spacing */
+    .car-card-content, .card-body, .card-content {
+        padding: 16px !important;
+    }
+
+    /* Card titles - refined */
+    .car-card-title, .card-title {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        color: var(--mobile-text-primary) !important;
+        margin-bottom: 8px !important;
+        line-height: 1.4 !important;
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+    }
+
+    /* Card price - elegant professional styling */
+    .car-card-price, .price, .rate {
+        font-size: 20px !important;
+        font-weight: 600 !important;
+        color: #1a1a1a !important;
+        margin: 10px 0 !important;
+        letter-spacing: -0.5px !important;
+        position: relative !important;
+        display: inline-block !important;
+    }
+    
+    .car-card-price::after, .price::after {
+        content: '' !important;
+        position: absolute !important;
+        bottom: -3px !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 1.5px !important;
+        background: linear-gradient(90deg, #00b347 0%, transparent 100%) !important;
+        opacity: 0.25 !important;
+    }
+
+    /* Card meta info - chips design */
+    .car-card-meta, .card-meta {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        margin: 12px 0 !important;
+    }
+
+    .meta-item, .car-card-meta span {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        padding: 5px 10px !important;
+        background: #f8f9fa !important;
+        border-radius: 8px !important;
+        font-size: 12px !important;
+        color: var(--mobile-text-secondary) !important;
+        font-weight: 500 !important;
+    }
+
+    .meta-item i {
+        font-size: 11px !important;
+        color: var(--mobile-green-primary) !important;
+    }
+
+    /* Seller info - compact mobile styling */
+    .car-seller-info {
+        font-size: 10px !important;
+        padding: 5px 8px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .car-seller-info i {
+        font-size: 9px !important;
+    }
+
+    /* Card actions - compact */
+    .car-card-actions, .card-actions {
+        display: flex !important;
+        gap: 8px !important;
+        padding-top: 12px !important;
+        border-top: 1px solid #f0f0f0 !important;
+        margin-top: 12px !important;
+    }
+
+    .car-card-actions .btn, .card-actions .btn {
+        flex: 1 !important;
+        min-height: 38px !important;
+        height: 38px !important;
+        padding: 9px 12px !important;
+        font-size: 13px !important;
+    }
+
+    /* Featured badge - subtle */
+    .featured-badge, .badge {
+        position: absolute !important;
+        top: 12px !important;
+        right: 12px !important;
+        padding: 5px 12px !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        backdrop-filter: blur(10px) !important;
+        border-radius: 20px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        color: var(--mobile-green-primary) !important;
+        border: 1px solid rgba(0, 179, 71, 0.2) !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    }
+}
+
+/* ============================================================================
+   COMPACT HEADER
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .header {
+        height: 64px !important;
+        padding: 0 !important;
+        background: rgba(255, 255, 255, 0.98) !important;
+        backdrop-filter: blur(10px) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+    }
+
+    .header-container {
+        height: 64px !important;
+        padding: 0 16px !important;
+    }
+
+    body {
+        padding-top: 64px !important;
+    }
+
+    .logo {
+        font-size: 20px !important;
+        font-weight: 700 !important;
+    }
+
+    .mobile-menu-toggle {
+        width: 44px !important;
+        height: 44px !important;
+        border-radius: 10px !important;
+        background: white !important;
+        border: 2px solid #e5e7eb !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .mobile-menu-toggle:hover {
+        background: #f0fdf4 !important;
+        border-color: var(--mobile-green-primary) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 4px 16px rgba(0, 200, 83, 0.2) !important;
+    }
+
+    .mobile-menu-toggle:active {
+        transform: scale(0.92) !important;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .mobile-menu-toggle i {
+        font-size: 20px !important;
+        transition: transform 0.3s ease !important;
+    }
+
+    .mobile-menu-toggle.active i {
+        transform: rotate(90deg) !important;
+    }
+}
+
+/* ============================================================================
+   REFINED NAVIGATION MENU
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .nav {
+        top: 64px !important;
+        background: white !important;
+        padding: 20px 16px !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+        border-bottom-left-radius: 12px !important;
+        border-bottom-right-radius: 12px !important;
+    }
+
+    .nav a {
+        padding: 12px 16px !important;
+        font-size: 15px !important;
+        font-weight: 500 !important;
+        border-radius: 10px !important;
+        margin: 3px 0 !important;
+    }
+
+    .nav a::before {
+        width: 3px !important;
+    }
+
+    .nav a:hover, .nav a.active {
+        background: var(--mobile-green-subtle) !important;
+        color: var(--mobile-green-primary) !important;
+        transform: translateX(4px) !important;
+    }
+}
+
+/* ============================================================================
+   MODERN INPUT FIELDS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    input[type="text"], input[type="email"], input[type="password"],
+    input[type="number"], input[type="tel"], select, textarea {
+        min-height: 44px !important;
+        height: 44px !important;
+        padding: 11px 14px !important;
+        font-size: 15px !important;
+        border: 1.5px solid var(--mobile-border) !important;
+        border-radius: 10px !important;
+        background: white !important;
+        transition: all 0.2s ease !important;
+    }
+
+    input:focus, select:focus, textarea:focus {
+        border-color: var(--mobile-green-primary) !important;
+        box-shadow: 0 0 0 3px rgba(0, 179, 71, 0.1) !important;
+        outline: none !important;
+    }
+
+    textarea {
+        min-height: 100px !important;
+        height: auto !important;
+    }
+
+    /* Select dropdowns */
+    select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E") !important;
+        background-repeat: no-repeat !important;
+        background-position: right 14px center !important;
+        padding-right: 40px !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+    }
+}
+
+/* ============================================================================
+   HERO SECTION - COMPACT
+   ============================================================================ */
+
+@media (max-width: 480px) {
+    .hero {
+        padding: 50px 16px 40px !important;
+        margin-top: 0 !important;
+    }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+    .hero {
+        padding: 55px 20px 45px !important;
+        margin-top: 0 !important;
+    }
+}
+
+    .hero h1 {
+        font-size: 28px !important;
+        line-height: 1.3 !important;
+        margin-bottom: 12px !important;
+        font-weight: 700 !important;
+    }
+
+    .hero p, .hero-subtitle {
+        font-size: 15px !important;
+        line-height: 1.5 !important;
+        opacity: 0.95 !important;
+    }
+
+    .hero-stats {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+        margin-top: 24px !important;
+    }
+
+    .hero-stat {
+        background: rgba(255, 255, 255, 0.15) !important;
+        backdrop-filter: blur(10px) !important;
+        padding: 16px 12px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .hero-stat-number {
+        font-size: 24px !important;
+        font-weight: 700 !important;
+    }
+
+    .hero-stat-label {
+        font-size: 12px !important;
+        opacity: 0.9 !important;
+    }
+}
+
+/* ============================================================================
+   GARAGE SERVICE CARDS - MOBILE OPTIMIZED
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .garage-service-card {
+        border-radius: 16px !important;
+        margin-bottom: 16px !important;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    .garage-card-header {
+        padding: 14px 16px !important;
+        background: #fafafa !important;
+    }
+
+    .garage-service-name {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        margin-bottom: 8px !important;
+    }
+
+    .garage-card-body {
+        padding: 14px 16px !important;
+        gap: 10px !important;
+    }
+
+    .garage-info-row {
+        padding: 10px 12px !important;
+        border-radius: 10px !important;
+        background: #f8f9fa !important;
+    }
+
+    .garage-info-row .label {
+        font-size: 11px !important;
+    }
+
+    .garage-info-row .value {
+        font-size: 14px !important;
+    }
+
+    .garage-card-actions {
+        padding: 12px 16px !important;
+        gap: 8px !important;
+    }
+
+    .garage-action-btn {
+        min-height: 38px !important;
+        height: 38px !important;
+        padding: 9px 14px !important;
+        font-size: 13px !important;
+        border-radius: 10px !important;
+    }
+
+    .garage-action-btn.primary {
+        background: var(--mobile-green-primary) !important;
+        box-shadow: var(--mobile-shadow) !important;
+    }
+}
+
+/* ============================================================================
+   DEALER CARDS - MODERN DESIGN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .dealer-card, .dealer-business-card {
+        border-radius: 16px !important;
+        padding: 16px !important;
+        margin-bottom: 16px !important;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    .dealer-header {
+        margin-bottom: 12px !important;
+    }
+
+    .dealer-name {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        margin-bottom: 6px !important;
+    }
+
+    .dealer-location {
+        font-size: 13px !important;
+        color: var(--mobile-text-secondary) !important;
+    }
+
+    .dealer-stats {
+        display: flex !important;
+        gap: 8px !important;
+        margin: 12px 0 !important;
+    }
+
+    .dealer-stat {
+        flex: 1 !important;
+        padding: 8px !important;
+        background: #f8f9fa !important;
+        border-radius: 8px !important;
+        text-align: center !important;
+    }
+
+    .dealer-stat-number {
+        font-size: 18px !important;
+        font-weight: 700 !important;
+        color: var(--mobile-green-primary) !important;
+    }
+
+    .dealer-stat-label {
+        font-size: 11px !important;
+        color: var(--mobile-text-secondary) !important;
+    }
+}
+
+/* ============================================================================
+   FILTER SECTION - COMPACT
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .filter-section, .sidebar {
+        padding: 16px !important;
+        background: white !important;
+        border-radius: 12px !important;
+        margin-bottom: 16px !important;
+    }
+
+    .filter-group {
+        margin-bottom: 14px !important;
+    }
+
+    .filter-label {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: var(--mobile-text-primary) !important;
+        margin-bottom: 8px !important;
+        display: block !important;
+    }
+
+    .filter-select, select {
+        width: 100% !important;
+        height: 42px !important;
+        font-size: 14px !important;
+    }
+
+    .filter-actions {
+        display: flex !important;
+        gap: 8px !important;
+        margin-top: 16px !important;
+    }
+
+    .filter-actions .btn {
+        flex: 1 !important;
+    }
+}
+
+/* ============================================================================
+   SEARCH BAR - MODERN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .search-form, .listings-search {
+        margin-bottom: 16px !important;
+    }
+
+    .search-input {
+        height: 44px !important;
+        padding: 12px 16px !important;
+        font-size: 15px !important;
+        border: 1.5px solid var(--mobile-border) !important;
+        border-radius: 10px !important;
+        width: 100% !important;
+    }
+
+    .search-btn {
+        min-height: 44px !important;
+        height: 44px !important;
+        padding: 12px 20px !important;
+        border-radius: 10px !important;
+        margin-top: 8px !important;
+    }
+
+    /* Inline search form */
+    .search-form {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+}
+
+/* ============================================================================
+   CATEGORY TABS - REFINED
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .category-tabs {
+        padding: 16px 0 !important;
+        background: white !important;
+    }
+
+    .category-container {
+        display: flex !important;
+        overflow-x: auto !important;
+        gap: 8px !important;
+        padding: 0 16px !important;
+        scrollbar-width: none !important;
+    }
+
+    .category-container::-webkit-scrollbar {
+        display: none !important;
+    }
+
+    .category-tab {
+        flex-shrink: 0 !important;
+        padding: 10px 16px !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        border-radius: 20px !important;
+        background: white !important;
+        border: 1.5px solid var(--mobile-border) !important;
+        color: var(--mobile-text-secondary) !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .category-tab.active {
+        background: var(--mobile-green-primary) !important;
+        color: white !important;
+        border-color: var(--mobile-green-primary) !important;
+    }
+
+    .category-tab i {
+        font-size: 13px !important;
+        margin-right: 6px !important;
+    }
+}
+
+/* ============================================================================
+   FOOTER - COMPACT
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .footer {
+        padding: 40px 16px 24px !important;
+        padding-bottom: 24px !important;
+        margin-bottom: 0 !important;
+        background: #1a1a1a !important;
+    }
+
+    .footer-section {
+        margin-bottom: 24px !important;
+    }
+
+    .footer-section h4 {
+        font-size: 15px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .footer-section p, .footer-section li {
+        font-size: 14px !important;
+        line-height: 1.6 !important;
+    }
+
+    .footer-section a {
+        padding: 8px 0 !important;
+        font-size: 14px !important;
+    }
+}
+
+/* ============================================================================
+   SPACING & CONTAINERS
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .container {
+        padding: 0 16px !important;
+    }
+    
+    /* Ensure footer container maintains 1200px max-width on all screens */
+    footer.footer .container {
+        max-width: 1200px !important;
+        padding: 0 16px !important;
+    }
+
+    .main-content {
+        padding: 16px 0 !important;
+    }
+
+    section {
+        padding: 24px 0 !important;
+    }
+
+    /* Reduce gaps in grids */
+    .listings-grid, .cars-grid, 
+    .dealers-grid, .garages-grid {
+        gap: 14px !important;
+    }
+}
+
+/* Ensure footer container matches header container width (1200px) on all screen sizes */
+footer.footer .container {
+    max-width: 1200px !important;
+}
+
+/* ============================================================================
+   MODALS - MOBILE OPTIMIZED
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .modal-content {
+        width: 94% !important;
+        max-width: 94% !important;
+        margin: 16px auto !important;
+        border-radius: 16px !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+    }
+
+    .modal-header {
+        padding: 16px !important;
+        border-bottom: 1px solid #f0f0f0 !important;
+    }
+
+    .modal-header h2 {
+        font-size: 18px !important;
+        font-weight: 600 !important;
+    }
+
+    .modal-body {
+        padding: 16px !important;
+    }
+
+    .modal-actions {
+        padding: 16px !important;
+        border-top: 1px solid #f0f0f0 !important;
+        display: flex !important;
+        gap: 8px !important;
+    }
+
+    .modal-actions .btn {
+        flex: 1 !important;
+    }
+}
+
+/* ============================================================================
+   LOADING STATES
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .loading, .loader {
+        padding: 40px 16px !important;
+        text-align: center !important;
+    }
+
+    .loading i {
+        font-size: 32px !important;
+        color: var(--mobile-green-primary) !important;
+    }
+
+    .loading p {
+        font-size: 14px !important;
+        color: var(--mobile-text-secondary) !important;
+        margin-top: 12px !important;
+    }
+}
+
+/* ============================================================================
+   UTILITIES
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Remove excessive margins */
+    * {
+        margin: 0 !important;
+    }
+
+    /* Restore necessary margins */
+    .hero, .section, .card, .listing-card {
+        margin-bottom: 16px !important;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+        margin-bottom: 12px !important;
+    }
+
+    p {
+        margin-bottom: 12px !important;
+    }
+
+    /* Typography scale */
+    h1 { font-size: 28px !important; }
+    h2 { font-size: 22px !important; }
+    h3 { font-size: 18px !important; }
+    h4 { font-size: 16px !important; }
+    h5 { font-size: 14px !important; }
+    
+    body {
+        font-size: 15px !important;
+        line-height: 1.5 !important;
+        color: var(--mobile-text-primary) !important;
+    }
+}
+
+/* ============================================================================
+   ANIMATIONS - SMOOTH & SUBTLE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    * {
+        transition: none !important;
+    }
+
+    button, .btn, a, input, select {
+        transition: all 0.2s ease !important;
+    }
+
+    .card, .car-card, .dealer-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    }
+}

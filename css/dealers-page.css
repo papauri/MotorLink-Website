@@ -1,0 +1,78 @@
+/* ========================================
+   DEALERS PAGE - Completely Isolated Layout Styles
+   Targets actual classes used in dealers.html
+======================================== */
+
+/* Main wrapper ensures everything centers */
+.dealers-page-wrapper {
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Container with explicit centering */
+.dealers-page-wrapper .dealers-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure main-content section is centered */
+.dealers-page-wrapper .main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 0;
+}
+
+/* Dealers Grid - Override any conflicting styles */
+.dealers-page-wrapper .dealers-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin: 0 auto;
+  max-width: 1200px !important;
+  width: 100% !important;
+  padding: 0 !important;
+}
+
+@media (min-width: 640px) {
+  .dealers-page-wrapper .dealers-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .dealers-page-wrapper .dealers-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* Dealers Filters - Ensure centered */
+.dealers-page-wrapper .dealers-filters {
+  position: sticky;
+  top: 80px;
+  max-width: 1200px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  width: 100% !important;
+  z-index: 100;
+  background: white;
+  padding-bottom: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Results header centering */
+.dealers-page-wrapper .results-header {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Empty and loading states */
+.dealers-page-wrapper .empty-state,
+.dealers-page-wrapper .loading-container {
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}

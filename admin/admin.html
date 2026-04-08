@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MotorLink Admin - Complete Management Dashboard</title>
+    <!-- Suppress browser extension console errors -->
+    <script src="../js/suppress-extension-errors.js"></script>
+    <link rel="stylesheet" href="admin-styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/dataTables.bootstrap4.min.css">
+    <link rel="stylesheet" href="../css/mobile-enhancements.css">
+    <link rel="stylesheet" href="../css/mobile-page-indicator.css">
+</head>
+<body>
+    <!-- Login Section -->
+    <div id="loginSection" class="login-container">
+        <div class="login-form">
+            <div class="login-header">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h1>MotorLink Admin</h1>
+                    <p>Complete Management Dashboard</p>
+                </div>
+            </div>
+            
+            <div class="form-tabs">
+                <button class="form-tab active" onclick="switchTab('login')">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+                <button class="form-tab" onclick="switchTab('register')">
+                    <i class="fas fa-user-plus"></i> Register
+                </button>
+                <button class="form-tab" onclick="switchTab('forgot')">
+                    <i class="fas fa-key"></i> Reset
+                </button>
+            </div>
+
+            <div id="alerts"></div>
+
+            <!-- Login Form -->
+            <div id="loginForm" class="form-section active">
+                <form onsubmit="adminLogin(event)">
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email</label>
+                        <input type="email" id="adminEmail" autocomplete="username" required placeholder="admin@motorlink.mw" value="admin@motorlink.mw">
+                        <small>Use: admin@motorlink.mw / password</small>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> Password</label>
+                        <input type="password" id="adminPassword" autocomplete="current-password" required placeholder="Enter password" value="password">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-sign-in-alt"></i> Login to Dashboard
+                    </button>
+                </form>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" class="form-section">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Admin registration requires super admin approval
+                </div>
+                <form onsubmit="adminRegister(event)">
+                    <div class="form-group">
+                        <label><i class="fas fa-user"></i> Full Name</label>
+                        <input type="text" id="regFullName" autocomplete="name" required placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email</label>
+                        <input type="email" id="regEmail" autocomplete="email" required placeholder="admin@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-phone"></i> Phone</label>
+                        <input type="tel" id="regPhone" autocomplete="tel" required placeholder="+265 991 123 456">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-lock"></i> Password</label>
+                        <input type="password" id="regPassword" autocomplete="new-password" required placeholder="Minimum 6 characters">
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-key"></i> Admin Key</label>
+                        <input type="password" id="regAdminKey" autocomplete="off" required placeholder="MOTORLINK_ADMIN_KEY_2025">
+                        <small>Use: MOTORLINK_ADMIN_KEY_2025</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-user-plus"></i> Register Admin
+                    </button>
+                </form>
+            </div>
+
+            <!-- Forgot Password Form -->
+            <div id="forgotForm" class="form-section">
+                <form onsubmit="forgotPassword(event)">
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email</label>
+                        <input type="email" id="forgotEmail" autocomplete="email" required placeholder="admin@motorlink.mw">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <i class="fas fa-paper-plane"></i> Send Reset Link
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" style="display: none;">
+        <!-- Sidebar -->
+        <div class="admin-sidebar" id="adminSidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-car"></i>
+                    <span>MotorLink</span>
+                </div>
+                <div class="admin-info">
+                    <div class="admin-name" id="adminName">Admin User</div>
+                    <div class="admin-role">Administrator</div>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <h4>Overview</h4>
+                    <a href="#" class="nav-item active" data-section="dashboard">
+                        <i class="fas fa-tachometer-alt"></i> Dashboard
+                    </a>
+                    <a href="#" class="nav-item" data-section="analytics">
+                        <i class="fas fa-chart-bar"></i> Analytics
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>Listings Management</h4>
+                    <a href="#" class="nav-item" data-section="cars">
+                        <i class="fas fa-car"></i> Car Listings
+                    </a>
+                    <a href="#" class="nav-item" data-section="pending-cars">
+                        <i class="fas fa-clock"></i> Pending Cars
+                    </a>
+                    <a href="#" class="nav-item" data-section="rejected-cars">
+                        <i class="fas fa-times-circle"></i> Rejected Cars
+                    </a>
+                    <a href="#" class="nav-item" data-section="deleted-cars">
+                        <i class="fas fa-trash-alt"></i> Deleted Listings
+                    </a>
+                    <a href="#" class="nav-item" data-section="payments">
+                        <i class="fas fa-credit-card"></i> Payments
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>Services Management</h4>
+                    <a href="#" class="nav-item" data-section="garages">
+                        <i class="fas fa-tools"></i> Garages
+                    </a>
+                    <a href="#" class="nav-item" data-section="dealers">
+                        <i class="fas fa-handshake"></i> Dealers
+                    </a>
+                    <a href="#" class="nav-item" data-section="car-hire">
+                        <i class="fas fa-key"></i> Car Hire
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>User Management</h4>
+                    <a href="#" class="nav-item" data-section="users">
+                        <i class="fas fa-users"></i> All Users
+                    </a>
+                    <a href="#" class="nav-item" data-section="admins">
+                        <i class="fas fa-user-shield"></i> Administrators
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>System Data</h4>
+                    <a href="#" class="nav-item" data-section="makes-models">
+                        <i class="fas fa-tags"></i> Makes & Models
+                    </a>
+                    <a href="#" class="nav-item" data-section="locations">
+                        <i class="fas fa-map-marker-alt"></i> Locations
+                    </a>
+                </div>
+
+                <div class="nav-section">
+                    <h4>System</h4>
+                    <a href="#" class="nav-item" data-section="settings">
+                        <i class="fas fa-cog"></i> Settings
+                    </a>
+                    <a href="#" class="nav-item" data-section="logs">
+                        <i class="fas fa-file-alt"></i> Activity Logs
+                    </a>
+                    <a href="#" class="nav-item" data-section="ai-chat-usage">
+                        <i class="fas fa-robot"></i> AI Chat Usage
+                    </a>
+                </div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button onclick="logout()" class="btn btn-outline">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="admin-main" id="adminMain">
+            <!-- Header -->
+            <div class="admin-header">
+                <div class="header-left">
+                    <!-- Sidebar Toggle (Mobile & Desktop) -->
+                    <button class="btn btn-ghost sidebar-toggle" id="sidebarToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="pageTitle">Dashboard</h1>
+                </div>
+                <div class="header-right">
+                    <div class="header-stats">
+                        <div class="stat-item">
+                            <i class="fas fa-clock"></i>
+                            <span id="pendingCount">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <i class="fas fa-dollar-sign"></i>
+                            <span id="paymentsCount">0</span>
+                        </div>
+                    </div>
+                    <div class="user-menu">
+                        <div class="user-avatar">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <span id="headerAdminName">Admin</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="admin-content">
+                <!-- Dashboard Section -->
+                <div class="content-section active" id="dashboard-section">
+                    <div class="stats-grid">
+                        <div class="stat-card primary">
+                            <div class="stat-icon"><i class="fas fa-car"></i></div>
+                            <div class="stat-content">
+                                <h3 id="totalCars">0</h3>
+                                <p>Total Cars</p>
+                            </div>
+                        </div>
+                        <div class="stat-card success">
+                            <div class="stat-icon"><i class="fas fa-users"></i></div>
+                            <div class="stat-content">
+                                <h3 id="totalUsers">0</h3>
+                                <p>Total Users</p>
+                            </div>
+                        </div>
+                        <div class="stat-card warning">
+                            <div class="stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="stat-content">
+                                <h3 id="pendingItems">0</h3>
+                                <p>Pending Approval</p>
+                            </div>
+                        </div>
+                        <div class="stat-card info">
+                            <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="stat-content">
+                                <h3 id="todayRevenue">MWK 0</h3>
+                                <p>Today's Revenue</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-line"></i> Recent Activities</h3>
+                                <button class="btn btn-sm btn-outline" onclick="admin.loadRecentActivities()">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                            </div>
+                            <div class="card-body" id="recentActivities">
+                                <div class="loading">Loading activities...</div>
+                            </div>
+                        </div>
+
+                        <div class="dashboard-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-exclamation-triangle"></i> Pending Approvals</h3>
+                                <button class="btn btn-sm btn-outline" onclick="admin.loadPendingApprovals()">
+                                    <i class="fas fa-sync"></i>
+                                </button>
+                            </div>
+                            <div class="card-body" id="pendingApprovals">
+                                <div class="loading">Loading pending items...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Car Listings Section -->
+                <div class="content-section" id="cars-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-car"></i> Car Listings Management</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddCarModal()">
+                                <i class="fas fa-plus"></i> Add Car
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportCars()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Bulk Actions Bar -->
+                    <div class="bulk-actions-bar" id="bulkActionsBar" style="display: none;">
+                        <strong>Bulk Actions:</strong>
+                        <select id="bulkActionSelect" class="form-control">
+                            <option value="">Choose Action...</option>
+                            <option value="approve">Approve Selected</option>
+                            <option value="reject">Reject Selected</option>
+                            <option value="activate">Activate Selected</option>
+                            <option value="suspend">Suspend Selected</option>
+                            <option value="delete">Delete Selected</option>
+                        </select>
+                        <button class="btn btn-primary" onclick="admin.executeBulkAction()">
+                            <i class="fas fa-play"></i> Apply
+                        </button>
+                        <span class="bulk-selected-count" id="bulkSelectedCount">0 selected</span>
+                        <button class="btn btn-outline" onclick="admin.clearBulkSelection()">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="carStatusFilter" class="form-control" onchange="admin.loadCars()">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="pending_approval">Pending</option>
+                            <option value="sold">Sold</option>
+                            <option value="suspended">Suspended</option>
+                            <option value="expired">Expired</option>
+                            <option value="draft">Draft</option>
+                        </select>
+                        <select id="carMakeFilter" class="form-control" onchange="admin.loadCars()">
+                            <option value="">All Makes</option>
+                        </select>
+                        <input type="text" id="carSearchFilter" class="form-control" placeholder="Search cars..." onkeyup="admin.loadCars()">
+                        <button class="btn btn-outline" onclick="admin.loadCars()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="carsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th width="30">
+                                        <input type="checkbox" id="selectAllCars" onchange="admin.toggleSelectAllCars(this)">
+                                    </th>
+                                    <th>ID</th>
+                                    <th>Image</th>
+                                    <th>Title & Description</th>
+                                    <th>Make/Model</th>
+                                    <th>Year</th>
+                                    <th>Price</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th>Views</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="carsTableBody">
+                                <tr><td colspan="12" class="text-center">Loading cars...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pending Cars Section -->
+                <div class="content-section" id="pending-cars-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-clock"></i> Pending Car Approvals</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-success" onclick="admin.bulkApproveCars()">
+                                <i class="fas fa-check-double"></i> Bulk Approve
+                            </button>
+                            <button class="btn btn-danger" onclick="admin.bulkRejectCars()">
+                                <i class="fas fa-times-circle"></i> Bulk Reject
+                            </button>
+                            <button class="btn btn-outline" onclick="admin.loadPendingCars()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> 
+                        Review and approve car listings submitted by users. Each listing must meet platform guidelines.
+                    </div>
+                    
+                    <!-- Add this to the pending-cars-section after the alert -->
+<div class="filters-bar">
+    <input type="text" id="pendingCarSearchFilter" class="form-control" placeholder="Search pending cars..." onkeyup="admin.filterPendingCars()">
+    <button class="btn btn-outline" onclick="admin.filterPendingCars()">
+        <i class="fas fa-sync"></i> Refresh
+    </button>
+</div>
+
+                    <div class="table-container">
+                        <table id="pendingCarsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th width="30">
+                                        <input type="checkbox" id="selectAllPendingCars" onchange="admin.toggleSelectAllCars(this)">
+                                    </th>
+                                    <th>ID</th>
+                                    <th>Image</th>
+                                    <th>Title & Description</th>
+                                    <th>Make/Model</th>
+                                    <th>Year</th>
+                                    <th>Price</th>
+                                    <th>Location</th>
+                                    <th>Submitted</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pendingCarsTableBody">
+                                <tr><td colspan="10" class="text-center">Loading pending cars...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Rejected Cars Section -->
+                <div class="content-section" id="rejected-cars-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-times-circle"></i> Rejected Car Listings</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-outline" onclick="admin.loadRejectedCars()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> 
+                        Review rejected listings and re-approve them if they meet platform guidelines.
+                    </div>
+                    
+                    <div class="filters-bar">
+                        <input type="text" id="rejectedCarSearchFilter" class="form-control" placeholder="Search rejected cars..." onkeyup="admin.filterRejectedCars()">
+                        <button class="btn btn-outline" onclick="admin.filterRejectedCars()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="rejectedCarsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Image</th>
+                                    <th>Title & Description</th>
+                                    <th>Make/Model</th>
+                                    <th>Year</th>
+                                    <th>Price</th>
+                                    <th>Location</th>
+                                    <th>Rejected Date</th>
+                                    <th>Rejection Reason</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rejectedCarsTableBody">
+                                <tr><td colspan="10" class="text-center">Loading rejected cars...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Deleted Cars Section -->
+                <div class="content-section" id="deleted-cars-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-trash-alt"></i> Deleted Car Listings</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-outline" onclick="admin.loadDeletedCars()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i>
+                        View all deleted car listings. These listings have been removed from active display but are kept for record keeping.
+                    </div>
+
+                    <div class="table-container">
+                        <table id="deletedCarsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Image</th>
+                                    <th>Title</th>
+                                    <th>Make/Model</th>
+                                    <th>Year</th>
+                                    <th>Price</th>
+                                    <th>Location</th>
+                                    <th>Owner</th>
+                                    <th>Deleted By</th>
+                                    <th>Listed Date</th>
+                                    <th>Views</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deletedCarsTableBody">
+                                <tr><td colspan="12" class="text-center">Loading deleted cars...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Payments Section -->
+                <div class="content-section" id="payments-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-credit-card"></i> Payments Management</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-success" onclick="showAddPaymentModal()">
+                                <i class="fas fa-plus"></i> Record Payment
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportPayments()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="payment-stats">
+                        <div class="payment-stat-card">
+                            <h4>Today's Payments</h4>
+                            <div class="amount" id="todayPayments">MWK 0</div>
+                            <div class="count" id="todayPaymentsCount">0 payments</div>
+                        </div>
+                        <div class="payment-stat-card">
+                            <h4>This Month</h4>
+                            <div class="amount" id="monthPayments">MWK 0</div>
+                            <div class="count" id="monthPaymentsCount">0 payments</div>
+                        </div>
+                        <div class="payment-stat-card">
+                            <h4>Pending Verification</h4>
+                            <div class="amount" id="pendingPayments">MWK 0</div>
+                            <div class="count" id="pendingPaymentsCount">0 payments</div>
+                        </div>
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="paymentStatusFilter" class="form-control" onchange="admin.loadPayments()">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="verified">Verified</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                        <select id="paymentServiceFilter" class="form-control" onchange="admin.loadPayments()">
+                            <option value="">All Services</option>
+                            <option value="listing_featured">Featured Listing</option>
+                            <option value="listing_premium">Premium Listing</option>
+                            <option value="garage_listing">Garage Listing</option>
+                            <option value="dealer_listing">Dealer Listing</option>
+                        </select>
+                        <input type="date" id="paymentDateFrom" class="form-control" onchange="admin.loadPayments()">
+                        <input type="date" id="paymentDateTo" class="form-control" onchange="admin.loadPayments()">
+                        <button class="btn btn-outline" onclick="admin.loadPayments()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="paymentsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Payment ID</th>
+                                    <th>User</th>
+                                    <th>Service Type</th>
+                                    <th>Amount</th>
+                                    <th>Method</th>
+                                    <th>Reference</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="paymentsTableBody">
+                                <tr><td colspan="9" class="text-center">Loading payments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Users Section -->
+                <div class="content-section" id="users-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-users"></i> User Management</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddUserModal()">
+                                <i class="fas fa-user-plus"></i> Add User
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportUsers()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="userTypeFilter" class="form-control" onchange="admin.loadUsers()">
+                            <option value="">All Types</option>
+                            <option value="individual">Individual</option>
+                            <option value="business">Business</option>
+                            <option value="dealer">Dealer</option>
+                        </select>
+                        <select id="userStatusFilter" class="form-control" onchange="admin.loadUsers()">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="pending_approval">Pending</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                        <input type="text" id="userSearchFilter" class="form-control" placeholder="Search users..." onkeyup="admin.loadUsers()">
+                        <button class="btn btn-outline" onclick="admin.loadUsers()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="usersTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Avatar</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Joined</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody">
+                                <tr><td colspan="10" class="text-center">Loading users...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Administrators Section -->
+                <div class="content-section" id="admins-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-user-shield"></i> Administrator Management</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-outline" onclick="admin.loadAdmins()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Manage admin users who have access to this dashboard. Admin registration requires approval from super admin.
+                    </div>
+
+                    <div class="table-container">
+                        <table id="adminsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Last Login</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminsTableBody">
+                                <tr><td colspan="8" class="text-center">Loading administrators...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Garages Section -->
+                <div class="content-section" id="garages-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-tools"></i> Garages Management</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddGarageModal()">
+                                <i class="fas fa-plus"></i> Add Garage
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportGarages()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="garageStatusFilter" class="form-control" onchange="admin.loadGarages()">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="pending_approval">Pending</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                        <select id="garageLocationFilter" class="form-control" onchange="admin.loadGarages()">
+                            <option value="">All Locations</option>
+                        </select>
+                        <input type="text" id="garageSearchFilter" class="form-control" placeholder="Search garages..." onkeyup="admin.loadGarages()">
+                        <button class="btn btn-outline" onclick="admin.loadGarages()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="garagesTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Owner</th>
+                                    <th>Location</th>
+                                    <th>Phone</th>
+                                    <th>Specialization</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="garagesTableBody">
+                                <tr><td colspan="9" class="text-center">Loading garages...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Dealers Section -->
+                <div class="content-section" id="dealers-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-handshake"></i> Dealers Management</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddDealerModal()">
+                                <i class="fas fa-plus"></i> Add Dealer
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportDealers()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="dealerStatusFilter" class="form-control" onchange="admin.loadDealers()">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="pending_approval">Pending</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                        <select id="dealerLocationFilter" class="form-control" onchange="admin.loadDealers()">
+                            <option value="">All Locations</option>
+                        </select>
+                        <input type="text" id="dealerSearchFilter" class="form-control" placeholder="Search dealers..." onkeyup="admin.loadDealers()">
+                        <button class="btn btn-outline" onclick="admin.loadDealers()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="dealersTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Business Name</th>
+                                    <th>Owner</th>
+                                    <th>Location</th>
+                                    <th>Phone</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dealersTableBody">
+                                <tr><td colspan="9" class="text-center">Loading dealers...</td></tr>
+                            </tbody>
+                            
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Car Hire Section -->
+                <div class="content-section" id="car-hire-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-key"></i> Car Hire Management</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddCarHireModal()">
+                                <i class="fas fa-plus"></i> Add Car Hire
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportCarHire()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="carHireStatusFilter" class="form-control" onchange="admin.loadCarHire()">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="pending_approval">Pending</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                        <select id="carHireLocationFilter" class="form-control" onchange="admin.loadCarHire()">
+                            <option value="">All Locations</option>
+                        </select>
+                        <input type="text" id="carHireSearchFilter" class="form-control" placeholder="Search car hire..." onkeyup="admin.loadCarHire()">
+                        <button class="btn btn-outline" onclick="admin.loadCarHire()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="carHireTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Business Name</th>
+                                    <th>Owner</th>
+                                    <th>Location</th>
+                                    <th>Phone</th>
+                                    <th>Daily Rate</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="carHireTableBody">
+                                <tr><td colspan="9" class="text-center">Loading car hire companies...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Makes & Models Section -->
+                <div class="content-section" id="makes-models-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-tags"></i> Makes & Models Management</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddMakeModal()">
+                                <i class="fas fa-plus"></i> Add Make
+                            </button>
+                            <button class="btn btn-success" onclick="showAddModelModal()">
+                                <i class="fas fa-plus"></i> Add Model
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 20px; padding: 15px; background: #e8f4f8; border-radius: 8px; border-left: 4px solid #0056b3;">
+                        <h4 style="margin: 0 0 10px 0; color: #0056b3;"><i class="fas fa-info-circle"></i> Understanding Makes & Models</h4>
+                        <p style="margin: 0 0 8px 0;"><strong>Makes</strong> are car manufacturers/brands (e.g., Toyota, Honda, BMW)</p>
+                        <p style="margin: 0;"><strong>Models</strong> are specific car variants under each make (e.g., Camry for Toyota, Civic for Honda)</p>
+                        <p style="margin: 8px 0 0 0; font-size: 0.9em; color: #555;">
+                            <i class="fas fa-lightbulb"></i> Tip: Click on the model count badge to filter models by that make. Click table headers to sort.
+                        </p>
+                    </div>
+
+                    <div class="makes-models-grid">
+                        <div class="makes-section">
+                            <h3>Car Makes</h3>
+                            <div class="table-container">
+                                <table id="makesTable" class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Name</th>
+                                            <th>Country</th>
+                                            <th>Models</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="makesTableBody">
+                                        <tr><td colspan="6" class="text-center">Loading makes...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="models-section">
+                            <h3>Car Models</h3>
+                            <p class="text-muted" style="margin-top: -10px; margin-bottom: 15px; font-size: 0.9em;">Each row represents a unique variation with specific engine size, fuel tank capacity, drivetrain, etc.</p>
+                            <div class="table-container">
+                        <table id="modelsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Make</th>
+                                    <th>Model</th>
+                                    <th>Body Type</th>
+                                    <th>Engine (L)</th>
+                                    <th>Fuel Tank (L)</th>
+                                    <th>Drivetrain</th>
+                                    <th>Transmission</th>
+                                    <th>Fuel Type</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modelsTableBody">
+                                <tr><td colspan="11" class="text-center">Loading models...</td></tr>
+                            </tbody>
+                        </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Locations Section -->
+                <div class="content-section" id="locations-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-map-marker-alt"></i> Locations Management</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-primary" onclick="showAddLocationModal()">
+                                <i class="fas fa-plus"></i> Add Location
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportLocations()">
+                                <i class="fas fa-download"></i> Export
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="locationRegionFilter" class="form-control" onchange="admin.loadLocations()">
+                            <option value="">All Regions</option>
+                            <option value="Northern">Northern</option>
+                            <option value="Central">Central</option>
+                            <option value="Southern">Southern</option>
+                        </select>
+                        <input type="text" id="locationSearchFilter" class="form-control" placeholder="Search locations..." onkeyup="admin.loadLocations()">
+                        <button class="btn btn-outline" onclick="admin.loadLocations()">
+                            <i class="fas fa-sync"></i> Refresh
+                        </button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="locationsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Region</th>
+                                    <th>District</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="locationsTableBody">
+                                <tr><td colspan="7" class="text-center">Loading locations...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Analytics Section -->
+                <div class="content-section" id="analytics-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-chart-bar"></i> Analytics Dashboard</h2>
+                        <div style="display: flex; gap: 12px;">
+                            <select id="analyticsTimeRange" class="form-control" style="width: auto;" onchange="admin.loadAnalytics()">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                                <option value="365">Last Year</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="admin.exportAnalytics()">
+                                <i class="fas fa-download"></i> Export Report
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Key Performance Indicators -->
+                    <div class="analytics-kpi-grid">
+                        <div class="analytics-kpi success">
+                            <div class="kpi-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="kpi-content">
+                                <div class="kpi-label">Total Revenue</div>
+                                <div class="kpi-value" id="kpiRevenue">MWK 0</div>
+                                <div class="kpi-change positive" id="kpiRevenueChange">+0%</div>
+                            </div>
+                        </div>
+                        <div class="analytics-kpi primary">
+                            <div class="kpi-icon"><i class="fas fa-users"></i></div>
+                            <div class="kpi-content">
+                                <div class="kpi-label">Active Users</div>
+                                <div class="kpi-value" id="kpiActiveUsers">0</div>
+                                <div class="kpi-change positive" id="kpiUsersChange">+0%</div>
+                            </div>
+                        </div>
+                        <div class="analytics-kpi warning">
+                            <div class="kpi-icon"><i class="fas fa-car"></i></div>
+                            <div class="kpi-content">
+                                <div class="kpi-label">New Listings</div>
+                                <div class="kpi-value" id="kpiListings">0</div>
+                                <div class="kpi-change positive" id="kpiListingsChange">+0%</div>
+                            </div>
+                        </div>
+                        <div class="analytics-kpi info">
+                            <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+                            <div class="kpi-content">
+                                <div class="kpi-label">Pending Items</div>
+                                <div class="kpi-value" id="kpiConversion">0</div>
+                                <div class="kpi-change" id="kpiConversionChange">Awaiting approval</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row 1 -->
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-chart-line"></i> Revenue Trends</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="revenueChart" class="chart-container" style="height: 300px;">
+                                    <canvas id="revenueChartCanvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-user-plus"></i> User Growth</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="userGrowthChart" class="chart-container" style="height: 300px;">
+                                    <canvas id="userGrowthChartCanvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Charts Row 2 -->
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-car-side"></i> Popular Car Makes</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="popularMakesChart" class="chart-container" style="height: 300px;">
+                                    <canvas id="popularMakesChartCanvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-map-marker-alt"></i> Geographic Distribution</h3>
+                            </div>
+                            <div class="card-body">
+                                <div id="geoChart" class="chart-container" style="height: 300px;">
+                                    <canvas id="geoChartCanvas"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Metrics -->
+                    <div class="analytics-grid">
+                        <div class="analytics-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-database"></i> System Overview</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="metric-list">
+                                    <div class="metric-item">
+                                        <span class="metric-label">Total Car Listings</span>
+                                        <span class="metric-value" id="dbTotalCars">0</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Registered Users</span>
+                                        <span class="metric-value" id="dbTotalUsers">0</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Items Awaiting Approval</span>
+                                        <span class="metric-value" id="dbPendingItems">0</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Pending Payment Verifications</span>
+                                        <span class="metric-value" id="dbPendingPayments">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="analytics-card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-funnel-dollar"></i> Listing Flow</h3>
+                            </div>
+                            <div class="card-body">
+                                <div class="funnel-container">
+                                    <div class="funnel-stage">
+                                        <div class="funnel-bar" style="width: 100%; background: #00c853;">
+                                            <span>Total Users</span>
+                                            <strong id="funnelVisitors">0</strong>
+                                        </div>
+                                    </div>
+                                    <div class="funnel-stage">
+                                        <div class="funnel-bar" style="width: 75%; background: #00a843;">
+                                            <span>Total Listings</span>
+                                            <strong id="funnelViews">0</strong>
+                                        </div>
+                                    </div>
+                                    <div class="funnel-stage">
+                                        <div class="funnel-bar" style="width: 50%; background: #008c3a;">
+                                            <span>Pending Approval</span>
+                                            <strong id="funnelInquiries">0</strong>
+                                        </div>
+                                    </div>
+                                    <div class="funnel-stage">
+                                        <div class="funnel-bar" style="width: 25%; background: #006830;">
+                                            <span>Active Listings</span>
+                                            <strong id="funnelConversions">0</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Performers Table -->
+                    <div class="analytics-card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-trophy"></i> Top Performing Listings</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table" id="topListingsTable">
+                                    <thead>
+                                        <tr>
+                                            <th>Rank</th>
+                                            <th>Car</th>
+                                            <th>Year</th>
+                                            <th>Price</th>
+                                            <th>Status</th>
+                                            <th>Listed Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="topListingsBody">
+                                        <tr>
+                                            <td colspan="6" style="text-align: center; padding: 40px;">
+                                                <i class="fas fa-spinner fa-spin" style="font-size: 32px; color: #ccc;"></i>
+                                                <p style="margin-top: 12px; color: #999;">Loading analytics data...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Section -->
+                <div class="content-section" id="settings-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-cog"></i> System Settings</h2>
+                    </div>
+
+                    <div class="settings-container">
+                        <!-- General Settings -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-info-circle"></i> General Settings</h3>
+                            <div class="form-group">
+                                <label for="site-name">Site Name</label>
+                                <input type="text" id="site-name" value="MotorLink Malawi" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="site-tagline">Site Tagline</label>
+                                <input type="text" id="site-tagline" value="Your Trusted Car Marketplace in Malawi" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="site-description">Site Description</label>
+                                <textarea id="site-description" rows="3" class="form-control">MotorLink Malawi is the premier platform for buying, selling, and renting vehicles in Malawi.</textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="admin-email">Admin Email</label>
+                                <input type="email" id="admin-email" value="admin@motorlink.mw" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="support-email">Support Email</label>
+                                <input type="email" id="support-email" value="support@motorlink.mw" class="form-control">
+                            </div>
+                            <button class="btn btn-primary" onclick="saveGeneralSettings()">
+                                <i class="fas fa-save"></i> Save General Settings
+                            </button>
+                        </div>
+
+                        <!-- Listing Settings -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-car"></i> Listing Settings</h3>
+                            <div class="form-group">
+                                <label for="auto-approve-listings">
+                                    <input type="checkbox" id="auto-approve-listings">
+                                    Auto-approve car listings
+                                </label>
+                                <small class="form-text">New listings will be automatically approved without admin review</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="listing-expiry-days">Listing Expiry (Days)</label>
+                                <input type="number" id="listing-expiry-days" value="30" min="7" max="365" class="form-control">
+                                <small class="form-text">Number of days before a listing expires</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="max-images-per-listing">Max Images Per Listing</label>
+                                <input type="number" id="max-images-per-listing" value="10" min="1" max="20" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="featured-listing-price">Featured Listing Price (MWK)</label>
+                                <input type="number" id="featured-listing-price" value="5000" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="max-listings-registered">Max Listings Per Registered User</label>
+                                <input type="number" id="max-listings-registered" value="10" min="0" max="500" class="form-control">
+                                <small class="form-text">Set to 0 for unlimited listings</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="max-listings-guest">Max Listings Per Guest Email</label>
+                                <input type="number" id="max-listings-guest" value="2" min="0" max="50" class="form-control">
+                                <small class="form-text">Set to 0 for unlimited guest listings</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="require-listing-email-validation">
+                                    <input type="checkbox" id="require-listing-email-validation" checked>
+                                    Require listing email validation before admin review
+                                </label>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveListingSettings()">
+                                <i class="fas fa-save"></i> Save Listing Settings
+                            </button>
+                        </div>
+
+                        <!-- User Settings -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-users"></i> User Settings</h3>
+                            <div class="form-group">
+                                <label for="require-email-verification">
+                                    <input type="checkbox" id="require-email-verification" checked>
+                                    Require email verification for new users
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label for="allow-guest-listings">
+                                    <input type="checkbox" id="allow-guest-listings" checked>
+                                    Allow guest listings (without account)
+                                </label>
+                            </div>
+                            <div class="form-group">
+                                <label for="max-free-listings">Max Free Listings Per User</label>
+                                <input type="number" id="max-free-listings" value="3" min="0" max="10" class="form-control">
+                            </div>
+                            <button class="btn btn-primary" onclick="saveUserSettings()">
+                                <i class="fas fa-save"></i> Save User Settings
+                            </button>
+                        </div>
+
+                        <!-- Email Settings -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-envelope"></i> Email Settings</h3>
+                            <form id="emailSettingsForm" onsubmit="event.preventDefault(); saveEmailSettings();">
+                                <div class="form-group">
+                                    <label for="smtp-host">SMTP Host</label>
+                                    <input type="text" id="smtp-host" placeholder="smtp.gmail.com" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="smtp-port">SMTP Port</label>
+                                    <input type="number" id="smtp-port" value="587" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="smtp-username">SMTP Username</label>
+                                    <input type="text" id="smtp-username" class="form-control" autocomplete="username">
+                                </div>
+                                <div class="form-group">
+                                    <label for="smtp-password">SMTP Password</label>
+                                    <input type="password" id="smtp-password" class="form-control" autocomplete="new-password">
+                                </div>
+                                <div class="form-group">
+                                    <label for="email-from-name">From Name</label>
+                                    <input type="text" id="email-from-name" value="MotorLink Malawi" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label for="enable-email-notifications">
+                                        <input type="checkbox" id="enable-email-notifications" checked>
+                                        Enable email notifications
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save"></i> Save Email Settings
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="testEmailSettings()">
+                                    <i class="fas fa-paper-plane"></i> Send Test Email
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Security Settings -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-shield-alt"></i> Security Settings</h3>
+                            <div class="form-group">
+                                <label for="session-timeout">Session Timeout (Minutes)</label>
+                                <input type="number" id="session-timeout" value="1440" min="30" max="10080" class="form-control">
+                                <small class="form-text">How long before inactive users are logged out (default: 24 hours)</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="max-login-attempts">Max Login Attempts</label>
+                                <input type="number" id="max-login-attempts" value="5" min="3" max="10" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="enable-2fa">
+                                    <input type="checkbox" id="enable-2fa">
+                                    Enable Two-Factor Authentication (Coming Soon)
+                                </label>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveSecuritySettings()">
+                                <i class="fas fa-save"></i> Save Security Settings
+                            </button>
+                        </div>
+
+                        <!-- System Info -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-server"></i> System Information</h3>
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <label>Version:</label>
+                                    <span id="system-version">4.1.0</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>PHP Version:</label>
+                                    <span id="php-version">Loading...</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Database:</label>
+                                    <span id="db-version">MySQL 8.0</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Server Time:</label>
+                                    <span id="server-time">Loading...</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Total Users:</label>
+                                    <span id="total-users-count">Loading...</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>Total Listings:</label>
+                                    <span id="total-listings-count">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Maintenance Mode -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-tools"></i> Maintenance Mode</h3>
+                            <div class="form-group">
+                                <label for="maintenance-mode">
+                                    <input type="checkbox" id="maintenance-mode">
+                                    Enable Maintenance Mode
+                                </label>
+                                <small class="form-text">When enabled, only administrators can access the site</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="maintenance-message">Maintenance Message</label>
+                                <textarea id="maintenance-message" rows="3" class="form-control">We're currently performing scheduled maintenance. We'll be back shortly!</textarea>
+                            </div>
+                            <button class="btn btn-warning" onclick="toggleMaintenanceMode()">
+                                <i class="fas fa-tools"></i> Toggle Maintenance Mode
+                            </button>
+                        </div>
+
+                        <!-- Backup & Export -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-database"></i> Backup & Export</h3>
+                            <div class="form-group">
+                                <p>Create backups and export data for safekeeping.</p>
+                            </div>
+                            <button class="btn btn-success" onclick="exportDatabaseBackup()">
+                                <i class="fas fa-download"></i> Export Database Backup
+                            </button>
+                            <button class="btn btn-info" onclick="exportAllData()">
+                                <i class="fas fa-file-export"></i> Export All Data (JSON)
+                            </button>
+                        </div>
+
+                        <!-- AI Chat Settings -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-robot"></i> AI Chat Settings</h3>
+                            <div class="form-group">
+                                <label for="ai-chat-enabled">
+                                    <input type="checkbox" id="ai-chat-enabled" checked onchange="toggleGlobalAIChat(this)">
+                                    Enable AI Chat
+                                </label>
+                                <small id="ai-chat-enabled-status" class="form-text" style="display: block; margin-top: 6px; font-weight: 600; color: #2e7d32;">
+                                    Status: Enabled globally
+                                </small>
+                                <small class="form-text">
+                                    <strong>What this does:</strong> When enabled, all logged-in users can access the MotorLink AI Assistant chatbot. When disabled, the AI chat feature is completely unavailable to all users. Changes take effect immediately.
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label for="ai-chat-provider">AI Chat Provider</label>
+                                <select id="ai-chat-provider" class="form-control">
+                                    <option value="openai">ChatGPT (OpenAI)</option>
+                                    <option value="deepseek">DeepSeek</option>
+                                    <option value="qwen">Qwen</option>
+                                    <option value="glm">GLM</option>
+                                </select>
+                                <small class="form-text">
+                                    <strong>What this does:</strong> Selects which provider powers the MotorLink AI Assistant. You can switch providers at any time without code changes.
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label for="ai-model-name">AI Model <span id="current-model-badge" class="badge badge-info" style="margin-left: 10px; display: none;">Current</span></label>
+                                <select id="ai-model-name" class="form-control" onchange="updateModelBadge()">
+                                    <option value="gpt-4o-mini">gpt-4o-mini (OpenAI)</option>
+                                    <option value="gpt-4o">gpt-4o (OpenAI)</option>
+                                    <option value="gpt-4-turbo">gpt-4-turbo (OpenAI)</option>
+                                    <option value="gpt-4">gpt-4 (OpenAI)</option>
+                                    <option value="gpt-3.5-turbo">gpt-3.5-turbo (OpenAI)</option>
+                                    <option value="deepseek-chat">deepseek-chat (DeepSeek)</option>
+                                    <option value="deepseek-reasoner">deepseek-reasoner (DeepSeek)</option>
+                                    <option value="qwen-turbo">qwen-turbo (Qwen)</option>
+                                    <option value="qwen-plus">qwen-plus (Qwen)</option>
+                                    <option value="qwen-max">qwen-max (Qwen)</option>
+                                    <option value="glm-5.5-turbo">GLM-5.5-Turbo (GLM New)</option>
+                                    <option value="glm-5.1">GLM-5.1 (GLM New)</option>
+                                    <option value="glm-4.7">GLM-4.7 (GLM)</option>
+                                    <option value="glm-4.6">GLM-4.6 (GLM)</option>
+                                    <option value="glm-4.5v">GLM-4.5V (GLM)</option>
+                                    <option value="glm-4.5">GLM-4.5 (GLM)</option>
+                                    <option value="glm-4.5-air">GLM-4.5-Air (GLM)</option>
+                                </select>
+                                <small class="form-text">
+                                    <strong>What this does:</strong> Selects the model used by your selected provider. Save changes to apply immediately for new AI chat requests.
+                                    <br>
+                                    <em><strong>Cost Impact:</strong> Changing models affects API costs. Monitor usage in "AI Chat Usage Logs" section.</em>
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label for="ai-max-tokens">Max Tokens Per Request</label>
+                                <input type="number" id="ai-max-tokens" value="600" min="1" max="4000" class="form-control">
+                                <small class="form-text">
+                                    <strong>What this does:</strong> Controls the maximum length of AI responses. Each token is roughly 4 characters or 0.75 words. Lower values (200-400) = shorter, more concise responses. Higher values (600-4000) = longer, more detailed responses. <strong>Recommended:</strong> 600 tokens for balanced, complete responses. <strong>Range:</strong> 1-4000 tokens.
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label for="ai-temperature">Temperature</label>
+                                <input type="number" id="ai-temperature" value="0.8" min="0" max="2" step="0.1" class="form-control">
+                                <small class="form-text">
+                                    <strong>What this does:</strong> Controls how creative or deterministic the AI responses are. <strong>0.0-0.3:</strong> Very focused, consistent, factual (good for precise answers). <strong>0.4-0.7:</strong> Balanced, natural conversation. <strong>0.8-1.2:</strong> More natural, varied responses (recommended for conversational AI). <strong>1.3-2.0:</strong> Very creative, unpredictable. <strong>Recommended:</strong> 0.8 for natural, helpful car-related queries. <strong>Range:</strong> 0.0-2.0.
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label for="ai-requests-per-day">Requests Per Day (Per User)</label>
+                                <input type="number" id="ai-requests-per-day" value="50" min="1" max="1000" class="form-control">
+                                <small class="form-text">
+                                    <strong>What this does:</strong> Sets the maximum number of AI chat messages each user can send per day (resets at midnight). This prevents abuse and controls API costs. Users who exceed this limit will see: "You've reached your daily limit of X requests. Please try again tomorrow." <strong>Recommended:</strong> 50 requests/day for normal usage. <strong>Range:</strong> 1-1000 requests/day.
+                                </small>
+                            </div>
+                            <div class="form-group">
+                                <label for="ai-requests-per-hour">Requests Per Hour (Per User)</label>
+                                <input type="number" id="ai-requests-per-hour" value="10" min="1" max="100" class="form-control">
+                                <small class="form-text">
+                                    <strong>What this does:</strong> Sets the maximum number of AI chat messages each user can send per hour (rolling window). This prevents rapid-fire abuse and controls API costs. Users who exceed this limit will see: "You've reached your hourly limit of X requests. You can try again in approximately Y minutes." <strong>Recommended:</strong> 10 requests/hour for normal usage. <strong>Range:</strong> 1-100 requests/hour.
+                                </small>
+                            </div>
+                            <div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                                <div class="alert alert-info" style="margin-bottom: 15px;">
+                                    <strong><i class="fas fa-info-circle"></i> Settings Summary:</strong>
+                                    <ul style="margin: 10px 0 0 20px; padding: 0;">
+                                        <li><strong>Enable/Disable:</strong> Controls if AI chat is available to users</li>
+                                        <li><strong>AI Model:</strong> Determines response quality and API costs</li>
+                                        <li><strong>Max Tokens:</strong> Controls response length (600 = ~450 words)</li>
+                                        <li><strong>Temperature:</strong> Controls creativity vs consistency (0.8 = natural, balanced)</li>
+                                        <li><strong>Rate Limits:</strong> Prevents abuse and controls costs per user</li>
+                                    </ul>
+                                    <p style="margin: 10px 0 0 0;"><strong>Note:</strong> All changes take effect immediately for new AI chat requests.</p>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveAIChatSettings()">
+                                <i class="fas fa-save"></i> Save AI Chat Settings
+                            </button>
+                        </div>
+
+                        <!-- AI Learning Management -->
+                        <div class="settings-card" style="margin-top: 30px;">
+                            <h3><i class="fas fa-brain"></i> AI Learning Management</h3>
+                            <p class="text-muted">Manage automatic learning for AI knowledge base. The system learns new topics from user queries and can be manually triggered.</p>
+                            
+                            <!-- Stats Display -->
+                            <div class="alert alert-info" id="ai-learning-stats" style="margin-bottom: 20px;">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5><i class="fas fa-globe"></i> Web Cache</h5>
+                                        <p><strong>Total Topics:</strong> <span id="web-cache-total">0</span></p>
+                                        <p><strong>Learned Today:</strong> <span id="web-cache-today">0</span> / <span id="web-cache-limit">20</span></p>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5><i class="fas fa-cog"></i> Parts Cache</h5>
+                                        <p><strong>Total Parts:</strong> <span id="parts-cache-total">0</span></p>
+                                        <p><strong>Learned Today:</strong> <span id="parts-cache-today">0</span> / <span id="parts-cache-limit">500</span></p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Learning Settings -->
+                            <h4 style="margin-top: 20px; margin-bottom: 15px;"><i class="fas fa-sliders-h"></i> Learning Settings</h4>
+                            
+                            <div class="form-group">
+                                <label for="ai-provider">AI Provider</label>
+                                <select id="ai-provider" class="form-control">
+                                    <option value="openai">ChatGPT (OpenAI)</option>
+                                    <option value="deepseek">DeepSeek</option>
+                                    <option value="qwen">Qwen</option>
+                                    <option value="glm">GLM</option>
+                                    <option value="auto">Auto (Use Settings)</option>
+                                </select>
+                                <small class="form-text">Select which AI provider to use for learning. "Auto" uses the provider set in settings.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="openai-enabled" checked>
+                                    Enable OpenAI for Learning
+                                </label>
+                                <small class="form-text">When enabled, OpenAI can be used for learning new topics.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="deepseek-enabled" checked>
+                                    Enable DeepSeek for Learning
+                                </label>
+                                <small class="form-text">When enabled, DeepSeek can be used for learning new topics.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="qwen-enabled" checked>
+                                    Enable Qwen for Learning
+                                </label>
+                                <small class="form-text">When enabled, Qwen can be used for learning new topics.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="glm-enabled" checked>
+                                    Enable GLM for Learning
+                                </label>
+                                <small class="form-text">When enabled, GLM can be used for learning new topics.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="web-cache-limit-input">Web Cache Daily Limit</label>
+                                <input type="number" id="web-cache-limit-input" value="20" min="1" max="1000" class="form-control">
+                                <small class="form-text">Maximum number of general car topics to learn per day (default: 20).</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="parts-cache-limit-input">Parts Cache Daily Limit</label>
+                                <input type="number" id="parts-cache-limit-input" value="500" min="1" max="5000" class="form-control">
+                                <small class="form-text">Maximum number of car parts to learn per day (default: 500).</small>
+                            </div>
+
+                            <button class="btn btn-primary" onclick="saveAILearningSettings()">
+                                <i class="fas fa-save"></i> Save Learning Settings
+                            </button>
+
+                            <!-- Manual Learning Triggers -->
+                            <h4 style="margin-top: 30px; margin-bottom: 15px;"><i class="fas fa-play-circle"></i> Manual Learning Triggers</h4>
+                            
+                            <div class="card" style="margin-bottom: 20px;">
+                                <div class="card-body">
+                                    <h5><i class="fas fa-globe"></i> Web Cache Learning</h5>
+                                    <p>Learn general car-related topics (specifications, maintenance, etc.)</p>
+                                    <div class="form-group">
+                                        <label for="web-learning-count">Number of Topics to Learn</label>
+                                        <input type="number" id="web-learning-count" value="20" min="1" max="1000" class="form-control" style="max-width: 200px;">
+                                    </div>
+                                    <button class="btn btn-success" onclick="triggerWebLearning()" id="btn-trigger-web">
+                                        <i class="fas fa-play"></i> Start Web Learning
+                                    </button>
+                                    <div id="web-learning-status" style="margin-top: 10px;"></div>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5><i class="fas fa-cog"></i> Parts Cache Learning</h5>
+                                    <p>Learn car parts and part numbers (OEM numbers, compatibility, etc.)</p>
+                                    <div class="form-group">
+                                        <label for="parts-learning-count">Number of Parts to Learn</label>
+                                        <input type="number" id="parts-learning-count" value="500" min="1" max="5000" class="form-control" style="max-width: 200px;">
+                                    </div>
+                                    <button class="btn btn-success" onclick="triggerPartsLearning()" id="btn-trigger-parts">
+                                        <i class="fas fa-play"></i> Start Parts Learning
+                                    </button>
+                                    <div id="parts-learning-status" style="margin-top: 10px;"></div>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-warning" style="margin-top: 20px;">
+                                <i class="fas fa-info-circle"></i> <strong>Note:</strong> Learning runs automatically when users ask questions that require internet research. Manual triggers are for bulk learning. Daily limits apply to both automatic and manual learning.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logs Section -->
+                <div class="content-section" id="logs-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-file-alt"></i> Activity Logs</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="admin.loadActivityLogs()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                            <button class="btn btn-success" onclick="admin.exportActivityLogs()">
+                                <i class="fas fa-download"></i> Export to Text
+                            </button>
+                            <button class="btn btn-info" onclick="admin.copyActivityLogsToClipboard()">
+                                <i class="fas fa-copy"></i> Copy to Clipboard
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="filter-bar" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div class="form-group">
+                                <label>Action Type</label>
+                                <select id="logActionTypeFilter" class="form-control" onchange="admin.loadActivityLogs()">
+                                    <option value="">All Actions</option>
+                                    <option value="user_updated">User Updated</option>
+                                    <option value="user_deleted">User Deleted</option>
+                                    <option value="garage_deleted">Garage Deleted</option>
+                                    <option value="dealer_deleted">Dealer Deleted</option>
+                                    <option value="car_hire_deleted">Car Hire Deleted</option>
+                                    <option value="car_featured">Car Featured</option>
+                                    <option value="car_premium">Car Premium</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date From</label>
+                                <input type="date" id="logDateFrom" class="form-control" onchange="admin.loadActivityLogs()">
+                            </div>
+                            <div class="form-group">
+                                <label>Date To</label>
+                                <input type="date" id="logDateTo" class="form-control" onchange="admin.loadActivityLogs()">
+                            </div>
+                            <div class="form-group">
+                                <label>Search</label>
+                                <input type="text" id="logSearch" class="form-control" placeholder="Search logs..." onkeyup="admin.loadActivityLogs()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Logs Table -->
+                    <div class="table-responsive">
+                        <table class="data-table" id="activityLogsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date/Time</th>
+                                    <th>Admin</th>
+                                    <th>Action Type</th>
+                                    <th>Description</th>
+                                    <th>Details</th>
+                                    <th>IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody id="activityLogsTableBody">
+                                <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- AI Chat Usage Logs Section -->
+                <div class="content-section" id="ai-chat-usage-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-robot"></i> AI Chat Usage Logs</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="loadAIChatUsage()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Usage Stats -->
+                    <div class="stats-grid" id="ai-chat-stats" style="display: none;">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-comments"></i></div>
+                            <div class="stat-info">
+                                <h3 id="total-ai-requests">0</h3>
+                                <p>Total Requests</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-users"></i></div>
+                            <div class="stat-info">
+                                <h3 id="unique-ai-users">0</h3>
+                                <p>Unique Users</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-coins"></i></div>
+                            <div class="stat-info">
+                                <h3 id="total-ai-tokens">0</h3>
+                                <p>Total Tokens</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="stat-info">
+                                <h3 id="total-ai-cost">$0.00</h3>
+                                <p>Estimated Cost</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="filters-container">
+                        <div class="filter-group">
+                            <div class="form-group">
+                                <label>User</label>
+                                <select id="ai-usage-user-select" class="form-control" onchange="loadAIChatUsage()">
+                                    <option value="">All Users</option>
+                                </select>
+                                <small>Select a user to view their usage</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Date From</label>
+                                <input type="date" id="ai-usage-date-from" class="form-control" onchange="loadAIChatUsage()">
+                            </div>
+                            <div class="form-group">
+                                <label>Date To</label>
+                                <input type="date" id="ai-usage-date-to" class="form-control" onchange="loadAIChatUsage()">
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-secondary" onclick="clearAIChatFilters()">
+                                    <i class="fas fa-times"></i> Clear Filters
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Usage Logs Table -->
+                    <div class="table-responsive">
+                        <table class="data-table" id="aiChatUsageTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Date/Time</th>
+                                    <th>User</th>
+                                    <th>Message Preview</th>
+                                    <th>Tokens</th>
+                                    <th>Model</th>
+                                    <th>Cost</th>
+                                    <th>IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody id="aiChatUsageTableBody">
+                                <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="pagination-container" id="ai-chat-pagination"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Overlay -->
+        <div class="mobile-overlay" id="mobileOverlay"></div>
+
+        <!-- Modal Structure -->
+        <div class="modal-overlay" id="editCarModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Edit Car Listing</h3>
+                    <button class="modal-close" id="modalClose">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form class="modal-form" id="editCarForm">
+                        <!-- Form content will be loaded here by JavaScript -->
+                    </form>
+                </div>
+
+                <!-- Database Management Section -->
+                <div class="content-section" id="database-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-database"></i> Database Management</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="loadDatabaseTables()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="database-container">
+                        <!-- Tables List -->
+                        <div class="database-sidebar">
+                            <h3><i class="fas fa-list"></i> Tables</h3>
+                            <div id="databaseTablesList" class="tables-list">
+                                <div class="loading">Loading tables...</div>
+                            </div>
+                        </div>
+
+                        <!-- Table Content -->
+                        <div class="database-content">
+                            <div id="databaseTableInfo" class="table-info" style="display: none;">
+                                <div class="table-header">
+                                    <h3 id="currentTableName"></h3>
+                                    <div class="table-actions">
+                                        <button class="btn btn-success btn-sm" onclick="showInsertRecordForm()">
+                                            <i class="fas fa-plus"></i> Insert Record
+                                        </button>
+                                        <button class="btn btn-info btn-sm" onclick="refreshTableData()">
+                                            <i class="fas fa-sync"></i> Refresh
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Table Structure -->
+                                <div class="table-structure">
+                                    <h4><i class="fas fa-table"></i> Structure</h4>
+                                    <div id="tableStructure" class="structure-table"></div>
+                                </div>
+
+                                <!-- Table Data -->
+                                <div class="table-data">
+                                    <h4><i class="fas fa-database"></i> Data</h4>
+                                    <div class="data-controls">
+                                        <div class="pagination-info">
+                                            <span id="paginationInfo">Showing 0-0 of 0</span>
+                                        </div>
+                                        <div class="pagination-controls">
+                                            <button class="btn btn-sm" onclick="changePage(-1)" id="prevPageBtn" disabled>
+                                                <i class="fas fa-chevron-left"></i> Previous
+                                            </button>
+                                            <span id="currentPageInfo">Page 1</span>
+                                            <button class="btn btn-sm" onclick="changePage(1)" id="nextPageBtn" disabled>
+                                                Next <i class="fas fa-chevron-right"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div id="tableDataContainer" class="data-table-container">
+                                        <div class="loading">Loading data...</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="databaseWelcome" class="welcome-message">
+                                <i class="fas fa-database fa-3x"></i>
+                                <h3>Database Management</h3>
+                                <p>Select a table from the left to view and manage its data.</p>
+                                <p class="warning"><i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Only super admins can access this section. Be careful when modifying database records.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals Container -->
+    <div id="modalContainer"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/js/jquery.dataTables.min.js"></script>
+    <script src="../config.js?v=20251217003"></script>
+    <script src="admin-edit.js?v=20251217003"></script>
+    <script src="admin-modals.js?v=20251217003"></script>
+    <script src="admin-script.js?v=20251217003"></script>
+
+</body>
+</html>

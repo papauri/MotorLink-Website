@@ -1,0 +1,25 @@
+# API Keys and Sensitive Configuration
+config.js
+config-api-keys.php
+admin/admin-config.php
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dependencies
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.jpg

@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MotorLink Malawi - Buy & Sell Cars in Malawi | #1 Car Marketplace</title>
+    <meta name="description" content="Buy and sell cars in Malawi with MotorLink - the most trusted car marketplace. Browse thousands of cars from verified sellers across Blantyre, Lilongwe, Mzuzu and all districts.">
+    <meta name="keywords" content="cars malawi, buy car malawi, sell car malawi, used cars malawi, car dealers malawi, car hire malawi, rent car malawi, toyota malawi, honda malawi, nissan malawi, blantyre cars, lilongwe cars">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://promanaged-it.com/motorlink/">
+    <meta property="og:title" content="MotorLink Malawi - Buy & Sell Cars in Malawi">
+    <meta property="og:description" content="The most trusted car marketplace in Malawi. Browse thousands of cars from verified sellers across the country.">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://promanaged-it.com/motorlink/">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="https://promanaged-it.com/motorlink/favicon.ico">
+    
+    <!-- CSS -->
+    <!-- Suppress browser extension console errors -->
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/style-enhancements.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+    <link rel="stylesheet" href="css/unified-filters.css">
+    <link rel="stylesheet" href="css/mobile-filter-tray.css">
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <link rel="stylesheet" href="css/animations.css">
+    <link rel="stylesheet" href="css/logo-3d-animation.css">
+    <link rel="stylesheet" href="css/hero-premium-animation.css">
+</head>
+<body class="index-page">
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-container">
+                <a href="index.html" class="logo" title="MotorLink Malawi - Home">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+
+                <nav class="nav" id="mainNav" role="navigation" aria-label="Main navigation">
+                    <a href="index.html">Home</a>
+                    <a href="car-database.html">Know Your Car</a>
+                    <a href="garages.html">Garages</a>
+                    <a href="dealers.html">Dealers</a>
+                    <a href="car-hire.html">Car Hire</a>
+                    <a href="sell.html">Sell Car</a>
+                </nav>
+                
+                <div class="user-menu" id="userMenu">
+                    <div id="userInfo" style="display: none;">
+                        <a href="profile.html" class="user-avatar-btn" title="My Profile" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </a>
+                        <button onclick="logout()" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    <div id="guestMenu">
+                        <a href="login.html" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="register.html" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+                
+                <button class="mobile-menu-toggle" id="mobileToggle" aria-label="Toggle mobile menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+<!-- User Dashboard (shown only when logged in) -->
+<div id="userDashboard" class="user-dashboard hidden">
+        <div class="container">
+            <div class="dashboard-header">
+                <div class="user-welcome">
+                    <h2>Welcome back, <span id="dashboardUserName"></span>!</h2>
+                    <p>Manage your listings, profile, and account settings</p>
+                </div>
+                <div class="dashboard-actions">
+                    <a href="sell.html" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Sell New Car
+                    </a>
+                </div>
+            </div>
+            
+            <div class="dashboard-grid">
+                <!-- Profile Quick Settings -->
+               <div class="dashboard-card" data-action="profile">
+                    <div class="card-icon">
+                        <i class="fas fa-user-cog"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Profile Settings</h3>
+                        <p>Update your personal information, phone number, and preferences</p>
+                    </div>
+                    <div class="card-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+                
+                <!-- My Listings -->
+                <div class="dashboard-card" data-action="listings">
+                    <div class="card-icon">
+                        <i class="fas fa-car"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>My Listings</h3>
+                        <p>View and manage your active car listings</p>
+                        <span class="card-badge" id="listingsCount">0</span>
+                    </div>
+                    <div class="card-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+                
+                <!-- Messages/Inquiries -->
+                <div class="dashboard-card" data-action="messages">
+                    <div class="card-icon">
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Messages</h3>
+                        <p>Check inquiries and messages from buyers</p>
+                        <span class="card-badge" id="messagesCount">0</span>
+                    </div>
+                    <div class="card-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+                
+                <!-- Favorites -->
+                <div class="dashboard-card" data-action="favorites">
+                    <div class="card-icon">
+                        <i class="fas fa-heart"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>Saved Cars</h3>
+                        <p>Cars you've marked as favorites</p>
+                        <span class="card-badge" id="favoritesCount">0</span>
+                    </div>
+                    <div class="card-arrow">
+                        <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Settings Modal -->
+    <!-- Profile Settings Modal -->
+<div id="profileModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2><i class="fas fa-user-cog"></i> Profile Settings</h2>
+            <button class="modal-close" onclick="closeProfileModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <form id="profileForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="profileFullName" class="form-control" required autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="profileEmail" class="form-control" readonly autocomplete="email">
+                    </div>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="profilePhone" class="form-control" placeholder="+265 99 123 4567" autocomplete="tel">
+                    </div>
+                    <div class="form-group">
+                        <label>WhatsApp Number</label>
+                        <input type="tel" id="profileWhatsapp" class="form-control" placeholder="+265 99 123 4567" autocomplete="tel">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="profileCity" class="form-control" autocomplete="address-level2">
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea id="profileAddress" class="form-control" rows="3" autocomplete="street-address"></textarea>
+                </div>
+                
+                <!-- Password Change Section -->
+                <div class="password-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <h3 style="margin-bottom: 15px; color: #333;">
+                        <i class="fas fa-lock"></i> Change Password
+                    </h3>
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" id="currentPassword" class="form-control" placeholder="Enter current password" autocomplete="current-password">
+                    </div>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="newPassword" class="form-control" placeholder="Enter new password" minlength="6" autocomplete="new-password">
+                        </div>
+                        <div class="form-group">
+                            <label>Confirm New Password</label>
+                            <input type="password" id="confirmPassword" class="form-control" placeholder="Confirm new password" minlength="6" autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeProfileModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Find Your Perfect Car in Malawi</h1>
+            <p class="hero-subtitle">Browse thousands of quality cars from trusted sellers across Malawi. Find the car that matches your needs and budget in Blantyre, Lilongwe, Mzuzu and beyond.</p>
+
+            <div class="hero-stats">
+                <a href="index.html" class="hero-stat hero-stat-link">
+                    <div class="hero-stat-number" id="totalCars">2,847</div>
+                    <div class="hero-stat-label">Cars Available</div>
+                </a>
+                <a href="dealers.html" class="hero-stat hero-stat-link">
+                    <div class="hero-stat-number" id="totalDealers">156</div>
+                    <div class="hero-stat-label">Trusted Dealers</div>
+                </a>
+                <a href="garages.html" class="hero-stat hero-stat-link">
+                    <div class="hero-stat-number" id="totalGarages">89</div>
+                    <div class="hero-stat-label">Service Centers</div>
+                </a>
+                <a href="car-hire.html" class="hero-stat hero-stat-link">
+                    <div class="hero-stat-number" id="totalCarHire">45</div>
+                    <div class="hero-stat-label">Car Hire Services</div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Service Links Section -->
+    <section class="services-section">
+        <div class="container">
+            <div class="services-grid">
+                <a href="garages.html" class="service-card">
+                    <div class="service-icon garage-icon">
+                        <i class="fas fa-tools"></i>
+                    </div>
+                    <h3>Car Garages</h3>
+                    <p>Professional automotive repair and maintenance services</p>
+                    <span class="service-arrow"><i class="fas fa-arrow-right"></i></span>
+                </a>
+
+                <a href="dealers.html" class="service-card">
+                    <div class="service-icon dealer-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <h3>Car Dealers</h3>
+                    <p>Certified dealers and trusted showrooms across Malawi</p>
+                    <span class="service-arrow"><i class="fas fa-arrow-right"></i></span>
+                </a>
+
+                <a href="car-hire.html" class="service-card">
+                    <div class="service-icon car-hire-icon">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <h3>Car Hire</h3>
+                    <p>Rent quality vehicles for business or leisure trips</p>
+                    <span class="service-arrow"><i class="fas fa-arrow-right"></i></span>
+                </a>
+
+                <a href="car-database.html" class="service-card">
+                    <div class="service-icon know-car-icon">
+                        <i class="fas fa-book-open"></i>
+                    </div>
+                    <h3>Know Your Car</h3>
+                    <p>Explore comprehensive car specifications and details</p>
+                    <span class="service-arrow"><i class="fas fa-arrow-right"></i></span>
+                </a>
+
+                <a href="sell.html" class="service-card">
+                    <div class="service-icon sell-icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <h3>Sell Your Car</h3>
+                    <p>List your car and reach thousands of potential buyers</p>
+                    <span class="service-arrow"><i class="fas fa-arrow-right"></i></span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Category Tabs -->
+    <section class="category-tabs">
+        <div class="container">
+            <div class="category-container">
+                <a href="#" class="category-tab active" data-category="all" aria-label="All cars">
+                    <i class="fas fa-car"></i> All Cars
+                </a>
+                <a href="#" class="category-tab" data-category="suv" aria-label="SUV cars">
+                    <i class="fas fa-truck-pickup"></i> SUVs
+                </a>
+                <a href="#" class="category-tab" data-category="sedan" aria-label="Sedan cars">
+                    <i class="fas fa-car"></i> Sedans
+                </a>
+                <a href="#" class="category-tab" data-category="pickup" aria-label="Pickup trucks">
+                    <i class="fas fa-truck"></i> Trucks
+                </a>
+                <a href="#" class="category-tab" data-category="hatchback" aria-label="Hatchback cars">
+                    <i class="fas fa-car-side"></i> Hatchbacks
+                </a>
+                <a href="#" class="category-tab" data-category="van" aria-label="Commercial vehicles">
+                    <i class="fas fa-shuttle-van"></i> Commercial
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile Filter Tray Button (Floating Action Button) -->
+    <button class="mobile-filter-fab" id="mobileFilterFab" aria-label="Open filters">
+        <i class="fas fa-sliders-h"></i>
+    </button>
+
+    <!-- Mobile Filter Tray Overlay -->
+    <div class="mobile-filter-overlay" id="mobileFilterOverlay"></div>
+
+    <!-- Mobile Filter Tray -->
+    <div class="mobile-filter-tray" id="mobileFilterTray" role="dialog" aria-label="Filter options">
+        <div class="mobile-filter-tray-header">
+            <h3><i class="fas fa-filter"></i> Filter Cars</h3>
+            <button class="mobile-filter-tray-close" id="mobileFilterTrayClose" aria-label="Close filters">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mobile-filter-tray-content">
+            <!-- Filters will be populated here on mobile -->
+        </div>
+        <div class="mobile-filter-tray-actions">
+            <button type="button" class="btn btn-outline-primary btn-clear-filters-mobile">
+                <i class="fas fa-redo"></i> Clear All
+            </button>
+            <button type="submit" class="btn btn-primary btn-apply-filters-mobile">
+                <i class="fas fa-check"></i> Apply
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        <main class="main-content">
+            <!-- Sidebar Filters -->
+            <aside class="sidebar" role="complementary" aria-label="Filter options">
+                <h3><i class="fas fa-filter"></i> Filter Results</h3>
+
+                <form class="filter-form" id="filterForm">
+                    <div class="filter-group">
+                        <label class="filter-label" for="searchFilter">
+                            <i class="fas fa-search"></i> Search
+                        </label>
+                        <input type="text"
+                               class="search-input filter-input"
+                               id="searchFilter"
+                               name="search"
+                               placeholder="Search by make, model, or keyword..."
+                               aria-label="Search cars">
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label" for="locationFilter">
+                            <i class="fas fa-map-marker-alt"></i> Location
+                        </label>
+                        <select name="location" class="filter-select" id="locationFilter">
+                            <option value="">All Locations</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label" for="makeFilter">
+                            <i class="fas fa-car"></i> Make
+                        </label>
+                        <select name="make" class="filter-select" id="makeFilter">
+                            <option value="">All Makes</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label" for="modelFilter">
+                            <i class="fas fa-cog"></i> Model
+                        </label>
+                        <select name="model" class="filter-select" id="modelFilter">
+                            <option value="">Select Make First</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-money-bill-wave"></i> Price Range (MWK)
+                        </label>
+                        <div class="price-range">
+                            <input type="number" 
+                                   name="min_price" 
+                                   class="filter-input" 
+                                   placeholder="Min Price" 
+                                   min="0" 
+                                   step="100000"
+                                   aria-label="Minimum price">
+                            <input type="number" 
+                                   name="max_price" 
+                                   class="filter-input" 
+                                   placeholder="Max Price" 
+                                   min="0" 
+                                   step="100000"
+                                   aria-label="Maximum price">
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">
+                            <i class="fas fa-calendar"></i> Year Range
+                        </label>
+                        <div class="price-range">
+                            <select name="year_from" class="filter-select" aria-label="From year">
+                                <option value="">From Year</option>
+                            </select>
+                            <select name="year_to" class="filter-select" aria-label="To year">
+                                <option value="">To Year</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label" for="fuelTypeFilter">
+                            <i class="fas fa-gas-pump"></i> Fuel Type
+                        </label>
+                        <select name="fuel_type" class="filter-select" id="fuelTypeFilter">
+                            <option value="">Any Fuel Type</option>
+                            <option value="petrol">Petrol</option>
+                            <option value="diesel">Diesel</option>
+                            <option value="hybrid">Hybrid</option>
+                            <option value="electric">Electric</option>
+                            <option value="lpg">LPG</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label" for="transmissionFilter">
+                            <i class="fas fa-cogs"></i> Transmission
+                        </label>
+                        <select name="transmission" class="filter-select" id="transmissionFilter">
+                            <option value="">Any Transmission</option>
+                            <option value="manual">Manual</option>
+                            <option value="automatic">Automatic</option>
+                            <option value="cvt">CVT</option>
+                            <option value="semi-automatic">Semi-Automatic</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label" for="conditionFilter">
+                            <i class="fas fa-star"></i> Condition
+                        </label>
+                        <select name="condition" class="filter-select" id="conditionFilter">
+                            <option value="">Any Condition</option>
+                            <option value="excellent">Excellent</option>
+                            <option value="very_good">Very Good</option>
+                            <option value="good">Good</option>
+                            <option value="fair">Fair</option>
+                            <option value="poor">Poor</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label" for="sellerTypeFilter">
+                            <i class="fas fa-user-tag"></i> Seller Type
+                        </label>
+                        <select name="seller_type" class="filter-select" id="sellerTypeFilter">
+                            <option value="">All Sellers</option>
+                            <option value="private">Private Seller</option>
+                            <option value="dealer">Dealer</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-actions">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-search"></i> Apply Filters
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm btn-clear-filters">
+                            <i class="fas fa-times"></i> Clear All
+                        </button>
+                    </div>
+                </form>
+            </aside>
+
+            <!-- Listings Section -->
+            <section class="listings-section" role="main" aria-label="Car listings">
+                <!-- Search Bar -->
+                <div class="listings-search">
+                    <form class="search-form" role="search" aria-label="Search cars">
+                        <input type="text"
+                               class="search-input"
+                               placeholder="Search by make, model, or keyword..."
+                               name="search"
+                               aria-label="Search cars by make, model or keyword">
+                        <button type="submit" class="search-btn">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </form>
+                </div>
+
+                <div class="listings-header">
+                    <div>
+                        <h2>Latest Cars for Sale in Malawi</h2>
+                        <p class="results-count">Loading cars...</p>
+                    </div>
+                    
+                    <div class="sort-controls">
+                        <label for="sortSelect">
+                            <i class="fas fa-sort"></i> Sort by:
+                        </label>
+                        <select name="sort" class="sort-select" id="sortSelect" aria-label="Sort results">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                            <option value="price_low">Price: Low to High</option>
+                            <option value="price_high">Price: High to Low</option>
+                            <option value="year_new">Year: Newest First</option>
+                            <option value="most_viewed">Most Viewed</option>
+                            <option value="nearest">Nearest First</option>
+                        </select>
+                        <button type="button" class="btn btn-sm btn-success" id="findNearbyBtn" style="display: none; margin-left: 8px;">
+                            <i class="fas fa-location-arrow"></i> Find Nearby
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Car Listings Grid -->
+                <div class="listings-grid" id="listingsGrid" role="region" aria-label="Car listings results">
+                    <div class="loading" style="grid-column: 1 / -1;">
+                        <div class="car-loader">
+                            <div class="car-loader-body">
+                                <div class="car-loader-wheel"></div>
+                                <div class="car-loader-wheel"></div>
+                            </div>
+                            <div class="car-loader-road"></div>
+                        </div>
+                        <span>Loading awesome cars...</span>
+                    </div>
+                    <!-- Listings will be dynamically inserted here by JavaScript -->
+                </div>
+                
+                <!-- Pagination Controls -->
+                <div class="pagination-controls" id="paginationControls" style="display: none;">
+                    <button class="btn-pagination" id="prevPage" disabled>
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <div class="pagination-info">
+                        Page <span id="currentPageNum">1</span> of <span id="totalPages">1</span>
+                    </div>
+                    <button class="btn-pagination" id="nextPage">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-car"></i> MotorLink Malawi</h4>
+                    <p>Your trusted partner for buying and selling cars in Malawi. We connect buyers and sellers in a safe, secure environment with the latest cars from trusted dealers across all 28 districts.</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="Follow us on Facebook" title="MotorLink Malawi Facebook">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Twitter" title="MotorLink Malawi Twitter">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Instagram" title="MotorLink Malawi Instagram">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" aria-label="Contact us on WhatsApp" title="MotorLink Malawi WhatsApp">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-link"></i> Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Browse Cars</a></li>
+                        <li><a href="sell.html">Sell Your Car</a></li>
+                        <li><a href="garages.html">Find Garages</a></li>
+                        <li><a href="dealers.html">Car Dealers</a></li>
+                        <li><a href="car-hire.html">Car Hire</a></li>
+                        <li><a href="car-database.html">Know Your Car</a></li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h4><i class="fas fa-life-ring"></i> Support & Help</h4>
+                    <ul>
+                        <li><a href="help.html">Help Center</a></li>
+                        <li><a href="safety.html">Safety Tips</a></li>
+                        <li><a href="contact.html">Contact Us</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                        <li><a href="cookie-policy.html">Cookie Policy</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-phone"></i> Contact & Payment</h4>
+                    <p><i class="fas fa-envelope"></i> <strong>Email:</strong> <a href="mailto:info@motorlink.mw">info@motorlink.mw</a></p>
+                    <p><i class="fas fa-phone"></i> <strong>Phone:</strong> <a href="tel:+265991234567">+265 991 234 567</a></p>
+                    
+                    <div style="margin-top: 20px;">
+                        <h5><i class="fas fa-mobile-alt"></i> Mobile Money Payments</h5>
+                        <p><strong>Airtel Money:</strong> +265 991 234 567</p>
+                        <p><strong>TNM Mpamba:</strong> +265 881 765 432</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 MotorLink Malawi. All rights reserved. | Connecting Malawi's automotive community since 2025</p>
+                <p style="margin-top: 10px; font-size: 14px;">
+                    <i class="fas fa-shield-alt"></i> Safe Trading • 
+                    <i class="fas fa-mobile-alt"></i> Mobile Friendly • 
+                    <i class="fas fa-globe"></i> Hosted by <a href="https://promanaged-it.com" target="_blank" rel="noopener">ProManaged IT</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Image Gallery Modal -->
+    <div id="imageGalleryModal" class="modal" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2><i class="fas fa-images"></i> <span id="galleryCarTitle">Car Images</span></h2>
+                <button class="modal-close" onclick="closeImageGallery()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="imageGalleryContainer" class="image-gallery-grid">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading images...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeImageGallery()">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <a id="viewFullListingBtn" href="#" class="btn btn-primary">
+                    <i class="fas fa-eye"></i> View Full Listing
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="config.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="js/footer-loader.js"></script>
+    <script src="js/mobile-filter-tray.js"></script>
+    <script src="script.js"></script>
+
+    <!-- Image Gallery Functionality -->
+    <script src="js/image-gallery.js"></script>
+    
+    <!-- Cookie Consent Manager -->
+    <script src="js/cookie-consent.js"></script>
+    
+    <!-- Page Transitions -->
+    <script src="js/page-transitions.js"></script>
+    
+    <!-- Logo 3D Animation (first load only) -->
+    <script src="js/logo-3d-init.js"></script>
+</body>
+</html>

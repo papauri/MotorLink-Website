@@ -1,0 +1,3859 @@
+
+/* ========================================
+   MotorLink Car Hire - Updated to Match Site Design
+======================================== */
+
+/* This page now inherits shared tokens, typography, hero and button styles from common.css */
+
+/* Fix car-hire stats to center properly with 3 columns */
+.car-hire-stats {
+  grid-template-columns: repeat(3, 1fr) !important;
+  max-width: 700px !important;
+}
+
+@media (max-width: 480px) {
+  .car-hire-stats {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 var(--space-md);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--space-sm);
+  }
+}
+
+/* ========================================
+   Filter Section - Clean Horizontal Bar
+======================================== */
+.filter-section {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(10px);
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 70px; /* Below the fixed header */
+  z-index: 999;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+@media (min-width: 768px) {
+  .filter-bar {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+.filter-select {
+  flex: 1;
+  height: 40px;
+  max-width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  background: var(--bg-white);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23757575' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 32px;
+  box-sizing: border-box;
+}
+
+.filter-select:hover {
+  border-color: var(--border-medium);
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary-green);
+  box-shadow: 0 0 0 3px var(--primary-green-bg);
+}
+
+.btn-filter {
+  height: 40px;
+  padding: 0 18px;
+  background: var(--primary-green);
+  color: var(--text-white);
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.btn-filter:hover {
+  background: var(--primary-green-dark);
+}
+
+.btn-filter:active {
+  transform: translateY(0);
+}
+
+/* ========================================
+   Companies Section - Premium Grid
+======================================== */
+.companies-section {
+  padding: var(--space-2xl) 0;
+  background: var(--bg-white);
+}
+
+/* SPACIOUS COMPANY CARDS GRID - 2-3 per row */
+.companies-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 24px;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .companies-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 28px;
+  }
+}
+
+@media (min-width: 1100px) {
+  .companies-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 32px;
+  }
+}
+
+/* ========================================
+   Company Card - Uniform Design (Matches Dealers)
+======================================== */
+
+/* Clickable Card Link Wrapper */
+.company-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+  cursor: pointer;
+}
+
+.company-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 280px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.company-card-link:hover .company-card {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: #00c853;
+  transform: translateY(-4px);
+}
+
+.company-card-link:focus {
+  outline: 2px solid #00c853;
+  outline-offset: 2px;
+  border-radius: 12px;
+}
+
+.company-card-link:focus .company-card {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: #00c853;
+}
+
+.company-card.featured-company {
+  border-top: 4px solid #f59e0b;
+  background: linear-gradient(to bottom, #fffbf5 0%, #ffffff 100%);
+}
+
+/* Header Section - Uniform Height */
+.company-card .company-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 70px;
+  margin-bottom: 6px;
+}
+
+.company-card .company-header-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding-right: 100px; /* Prevent badge overlap */
+}
+
+/* Corner Ribbon Badges Container */
+.company-card .company-header-right {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  z-index: 5;
+}
+
+.company-card .company-business-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+/* Modern 2-row grid layout: district+distance / years+vehicles - Match dealer design */
+.company-card .company-location-meta {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: flex-start;
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 6px;
+  font-size: 0.75rem;
+  color: #374151;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.company-card .company-location-meta span,
+.company-card .company-location-meta .distance-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 10px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: #374151;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  flex: 0 0 calc(50% - 3px);
+  max-width: calc(50% - 3px);
+  transition: all 0.2s ease;
+}
+
+.company-card .company-location-meta span:hover,
+.company-card .company-location-meta .distance-info:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.company-card .company-location-meta i {
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+/* Distance info inherits pill styling but keeps green color */
+.company-card .company-location-meta .distance-info {
+  color: #374151;
+}
+
+.company-card .company-location-meta .distance-info i {
+  color: #00c853 !important;
+}
+
+/* Add clock icon for years established - ALL SCREENS (matches dealer design) */
+.company-card .company-location-meta span:nth-child(3)::before {
+  content: '\f017';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  margin-right: 4px;
+  font-size: 0.7rem;
+  color: #00c853;
+  display: inline-block;
+}
+
+/* Add car icon for vehicles - ALL SCREENS (matches dealer design) */
+.company-card .company-location-meta span:nth-child(4)::before {
+  content: '\f1b9';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  margin-right: 4px;
+  font-size: 0.7rem;
+  color: #00c853;
+  display: inline-block;
+}
+
+/* Modern badge-style address - Match dealer design */
+.company-card .company-address {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: #fef3c7;
+  border-radius: 6px;
+  border: 1px solid #fbbf24;
+  font-size: 0.75rem;
+  color: #1f2937;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  max-width: fit-content;
+  line-height: 1.3;
+  margin-top: 0;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.company-card .company-address:hover {
+  background: #fde68a;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(251, 191, 36, 0.2);
+}
+
+.company-card .company-address i {
+  font-size: 0.7rem;
+  color: #d97706;
+  flex-shrink: 0;
+}
+
+.company-card .company-address span {
+  color: #92400e;
+  font-weight: 700;
+}
+
+/* Corner Ribbon Badge Style - Elegant Watermark */
+.company-card .company-status-tag {
+  position: relative;
+  padding: 6px 14px 6px 10px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%);
+  box-shadow: -2px 2px 8px rgba(0, 0, 0, 0.15);
+  min-width: 90px;
+  backdrop-filter: blur(10px);
+}
+
+.company-card .company-status-tag i {
+  font-size: 0.7rem;
+}
+
+/* Folded corner effect */
+.company-card .company-status-tag::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  width: 10px;
+  height: 5px;
+  background: inherit;
+  filter: brightness(0.6);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+
+/* Featured Badge - Vibrant Gold */
+.company-card .company-status-tag.featured-tag {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Verified Badge - Professional Blue */
+.company-card .company-status-tag.verified-tag {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Certified Badge - Softer, Elegant Gold */
+.company-card .company-status-tag.certified-tag {
+  background: linear-gradient(135deg, #facc15 0%, #eab308 100%);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Body Section - Enhanced Visual Hierarchy */
+.company-card .company-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  flex: 1;
+  min-height: 140px;
+  align-content: flex-start;
+}
+
+/* Rating - Enhanced Visibility */
+.company-card .company-rating-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  background: #fffbf0;
+  border-radius: 8px;
+  border: 1px solid #fef3c7;
+}
+
+.company-card .company-stars {
+  display: flex;
+  gap: 3px;
+  font-size: 0.9rem;
+  color: #f59e0b;
+}
+
+.company-card .company-rating-number {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+/* Stats Display */
+.company-card .company-stats-display {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: #4b5563;
+  font-weight: 500;
+  min-height: 40px;
+}
+
+.company-card .stat-item-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.company-card .stat-item-inline i {
+  font-size: 0.85rem;
+  color: #00c853;
+}
+
+/* Vehicle Types Section */
+.company-card .company-vehicle-types {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
+  min-height: 34px;
+}
+
+.company-card .company-vehicle-types > i {
+  font-size: 0.85rem;
+  color: #00c853;
+  width: 16px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.company-card .vehicle-types-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 4px;
+  flex: 1;
+}
+
+.company-card .vehicle-type-tag {
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+  color: #15803d;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.company-card .vehicle-type-tag.more-types {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border-color: #fbbf24;
+}
+
+/* Services Section */
+.company-card .company-services {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.85rem;
+  min-height: 34px;
+}
+
+.company-card .company-services > i {
+  font-size: 0.85rem;
+  color: #00c853;
+  width: 16px;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.company-card .services-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 4px;
+  flex: 1;
+}
+
+.company-card .service-tag {
+  font-size: 0.55rem;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+  border-radius: 10px;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.company-card .service-tag.more-services {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border-color: #fbbf24;
+}
+
+/* Actions - Compact Fancy Button Design */
+.company-card .company-card-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.company-card .company-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 20px;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #00c853 0%, #00a844 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(0, 200, 83, 0.25);
+}
+
+/* Shimmer effect */
+.company-card .company-action-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.6s ease;
+}
+
+.company-card-link:hover .company-action-btn::before {
+  left: 100%;
+}
+
+.company-card .company-action-btn i {
+  font-size: 0.8rem;
+  transition: all 0.3s ease;
+}
+
+.company-card-link:hover .company-action-btn {
+  background: linear-gradient(135deg, #00b248 0%, #009639 100%);
+  box-shadow: 0 5px 15px rgba(0, 200, 83, 0.4);
+  transform: translateY(-2px) scale(1.02);
+}
+
+.company-card-link:hover .company-action-btn i {
+  transform: rotate(5deg) scale(1.1);
+}
+
+.company-card-link:active .company-action-btn {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Mobile optimizations for company cards */
+@media (max-width: 768px) {
+  .company-card {
+    padding: 12px;
+    min-height: 220px;
+  }
+
+  .company-card .company-card-header {
+    min-height: 60px;
+    gap: 8px;
+  }
+
+  .company-card .company-business-name {
+    font-size: 0.95rem;
+    margin-bottom: 4px;
+  }
+
+  .company-card .company-location-meta {
+    font-size: 0.72rem;
+    gap: 8px;
+  }
+
+  .company-card .company-location-meta i {
+    font-size: 0.7rem;
+  }
+
+  /* Corner ribbon - smaller on mobile */
+  .company-card .company-status-tag {
+    font-size: 0.6rem;
+    padding: 5px 10px 5px 8px;
+    min-width: 75px;
+  }
+
+  .company-card .company-status-tag i {
+    font-size: 0.65rem;
+  }
+
+  .company-card .company-card-body {
+    min-height: 120px;
+    gap: 8px;
+    padding: 10px 0;
+  }
+
+  /* Compact rating display */
+  .company-card .company-rating-display {
+    padding: 5px 8px;
+    gap: 6px;
+  }
+
+  .company-card .company-stars {
+    font-size: 0.8rem;
+    gap: 2px;
+  }
+
+  .company-card .company-rating-number {
+    font-size: 0.9rem;
+  }
+
+  /* Compact stats */
+  .company-card .company-stats-display {
+    font-size: 0.75rem;
+    gap: 10px;
+  }
+
+  /* Smaller tags on mobile */
+  .company-card .vehicle-type-tag,
+  .company-card .service-tag {
+    font-size: 0.5rem;
+    padding: 2px 5px;
+  }
+
+  /* Compact action button */
+  .company-card .company-action-btn {
+    padding: 7px 14px;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .company-card {
+    padding: 10px;
+  }
+
+  .company-card .company-business-name {
+    font-size: 0.9rem;
+  }
+
+  /* 🔧 FIX: company-location-meta overflow on mobile - match dealer-location-meta */
+  .company-card .company-location-meta {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    font-size: 0.68rem;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .company-card .company-location-meta span,
+  .company-card .company-location-meta .distance-info {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    padding: 8px 10px !important;
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    word-break: break-word !important;
+    overflow: hidden !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    flex: unset !important;
+    font-size: 0.7rem !important;
+    font-weight: 600 !important;
+    line-height: 1.3 !important;
+    color: #374151 !important;
+  }
+
+  .company-card .company-location-meta i {
+    font-size: 0.7rem !important;
+    color: #00c853 !important;
+    flex-shrink: 0 !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* ❌ HIDE fa-location-arrow icon on mobile - match dealer.html behavior */
+  .company-card .company-location-meta .distance-info i {
+    display: none !important;
+  }
+
+  /* 📍 Make distance-info PROMINENT without icon - easier to read (match dealer.html) */
+  .company-card .company-location-meta .distance-info {
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%) !important;
+    border: 2px solid #10b981 !important;
+    color: #047857 !important;
+    padding: 8px 10px !important;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
+  }
+
+  .company-card .company-rating-number {
+    font-size: 0.85rem;
+  }
+
+  .company-card .company-stars {
+    font-size: 0.75rem;
+  }
+
+  .company-card .company-stats-display {
+    font-size: 0.7rem;
+  }
+
+  .company-card .vehicle-type-tag,
+  .company-card .service-tag {
+    font-size: 0.48rem;
+  }
+
+  .company-card .company-action-btn {
+    padding: 6px 12px;
+    font-size: 0.68rem;
+  }
+}
+
+/* ========================================
+   Company Detail Header - Clean
+======================================== */
+.company-header {
+  background: var(--gradient-primary);
+  color: var(--text-white);
+  padding: var(--space-3xl) var(--space-md) var(--space-xl);
+  margin-top: 64px;
+  position: relative;
+  overflow: hidden;
+}
+
+.company-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.company-header > * {
+  position: relative;
+  z-index: 1;
+}
+
+.company-header-content h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  margin-bottom: var(--space-sm);
+  line-height: 1.2;
+}
+
+.company-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-lg);
+  margin-top: var(--space-md);
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .company-header {
+    padding: 70px 12px 20px !important;
+    min-height: auto !important;
+  }
+  
+  .company-header-content h1 {
+    font-size: 1.3rem !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .company-meta {
+    gap: var(--space-md);
+  }
+  
+  /* Hide non-essential meta items on mobile to reduce clutter */
+  .meta-item:nth-child(n+2) {
+    display: none !important;
+  }
+
+  .quick-contact-box {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .company-header {
+    padding: 65px 10px 16px !important;
+  }
+  
+  .company-header-content h1 {
+    font-size: 1.1rem !important;
+  }
+}
+
+/* ========================================
+   Fleet Section - Clean Grid
+======================================== */
+.fleet-section {
+  padding: var(--space-2xl) 0;
+  background: var(--bg-light);
+}
+
+.section-title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-xl);
+  text-align: center;
+}
+
+.fleet-grid {
+  display: grid !important;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg);
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .fleet-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--space-lg);
+  }
+}
+
+@media (min-width: 1024px) {
+  .fleet-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: var(--space-xl);
+  }
+}
+
+@media (max-width: 480px) {
+  .fleet-grid {
+    grid-template-columns: 1fr !important;
+    gap: var(--space-md);
+  }
+}
+
+/* ========================================
+   Fleet Card - Clean & Consistent with Uniform Sizing
+======================================== */
+.fleet-card {
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 450px; /* Uniform minimum height */
+  box-shadow: var(--shadow-sm);
+}
+
+.fleet-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--primary-green);
+}
+
+/* Image */
+.fleet-image {
+  height: 180px;
+  background: var(--bg-light);
+  overflow: hidden;
+  position: relative;
+}
+
+.fleet-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.fleet-card:hover .fleet-image img {
+  transform: scale(1.05);
+}
+
+/* Content */
+.fleet-info {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.fleet-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-md) 0;
+  line-height: 1.3;
+}
+
+/* Specs - Clean */
+.fleet-specs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.spec-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.spec-item i {
+  color: var(--primary-green);
+  width: 14px;
+  flex-shrink: 0;
+}
+
+/* Mobile-specific fleet card optimizations */
+@media (max-width: 768px) {
+  .fleet-card {
+    min-height: auto; /* Remove fixed height on mobile */
+  }
+  
+  .fleet-image {
+    height: 160px; /* Reduce image height on mobile */
+  }
+  
+  .fleet-info {
+    padding: 16px; /* Reduce padding */
+  }
+  
+  .fleet-title {
+    font-size: 1.05rem;
+    margin-bottom: 12px;
+  }
+  
+  .fleet-specs {
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+  }
+  
+  .spec-item {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .fleet-image {
+    height: 140px; /* Further reduce on small mobile */
+  }
+  
+  .fleet-info {
+    padding: 14px;
+  }
+  
+  .fleet-title {
+    font-size: 1rem;
+  }
+  
+  .spec-item {
+    font-size: 0.75rem;
+  }
+}
+
+/* Pricing - Clean */
+.fleet-price {
+  margin-bottom: var(--space-md);
+}
+
+.price-main {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary-green);
+  line-height: 1;
+}
+
+.price-period {
+  font-size: 0.9rem;
+  color: var(--text-tertiary);
+  margin-left: var(--space-xs);
+}
+
+.price-additional {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: var(--space-xs);
+}
+
+/* Features - Minimal */
+.fleet-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-lg);
+  flex: 1;
+}
+
+.feature-badge {
+  padding: 4px 8px;
+  background: var(--bg-light);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Button */
+.btn-inquire {
+  width: 100%;
+  padding: var(--space-md);
+  background: var(--primary-green);
+  color: var(--text-white);
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: auto; /* Push to bottom */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.btn-inquire:hover {
+  background: var(--primary-green-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ========================================
+   Contact Section - Clean
+======================================== */
+.contact-section {
+  padding: var(--space-2xl) 0;
+  background: var(--bg-white);
+}
+
+.contact-card {
+  max-width: 600px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.contact-card h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: var(--space-lg);
+}
+
+.contact-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+@media (min-width: 480px) {
+  .contact-buttons {
+    flex-direction: row;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+.btn-contact {
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  transition: all 0.3s ease;
+  flex: 1;
+  max-width: 200px;
+  margin: 0 auto;
+}
+
+.btn-contact.primary {
+  background: var(--primary-green);
+  color: var(--text-white);
+  border: 1px solid var(--primary-green);
+}
+
+.btn-contact.primary:hover {
+  background: var(--primary-green-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-contact.secondary {
+  background: #25d366;
+  color: var(--text-white);
+  border: 1px solid #25d366;
+}
+
+.btn-contact.secondary:hover {
+  background: #20ba5a;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-contact.outline {
+  background: transparent;
+  color: var(--primary-green);
+  border: 2px solid var(--primary-green);
+}
+
+.btn-contact.outline:hover {
+  background: var(--primary-green);
+  color: var(--text-white);
+  transform: translateY(-1px);
+}
+
+/* ========================================
+   Loading States - Minimal
+======================================== */
+.loading {
+  text-align: center;
+  padding: var(--space-3xl) var(--space-md);
+  color: var(--text-tertiary);
+  grid-column: 1 / -1;
+}
+
+.loading i {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: var(--space-md);
+  color: var(--primary-green);
+  animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-8px);
+  }
+  60% {
+    transform: translateY(-4px);
+  }
+}
+
+.loading p {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+/* ========================================
+   Empty States
+======================================== */
+.no-results {
+  text-align: center;
+  padding: var(--space-3xl) var(--space-md);
+  color: var(--text-tertiary);
+  background: var(--bg-light);
+  border-radius: var(--border-radius-lg);
+  border: 2px dashed var(--border-light);
+  grid-column: 1 / -1;
+}
+
+.no-results i {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: var(--space-lg);
+  color: var(--border-medium);
+}
+
+.no-results h3 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+  color: var(--text-primary);
+}
+
+.no-results p {
+  font-size: 1rem;
+  margin: 0 0 var(--space-lg) 0;
+  line-height: 1.5;
+}
+
+/* ========================================
+  Location Section
+======================================== */
+.location-section {
+  padding: var(--space-2xl) 0;
+  background: var(--bg-light);
+}
+
+/* Desktop layout: 2-column grid for address/directions and map */
+.location-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xl);
+  align-items: start;
+}
+
+/* Address card on desktop - left column */
+.location-container > .address-card {
+  background: var(--bg-white);
+  padding: var(--space-xl);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+}
+
+/* Directions on desktop - below address in left column */
+.location-container > .directions-actions {
+  background: var(--bg-white);
+  padding: var(--space-lg);
+  border-radius: var(--border-radius);
+  margin-top: 0;
+}
+
+.address-card {
+  background: var(--bg-light);
+  padding: var(--space-lg);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--space-lg);
+}
+
+.address-card i {
+  color: var(--primary-green);
+  margin-right: var(--space-sm);
+}
+
+.opening-hours {
+  margin-top: var(--space-lg);
+}
+
+.opening-hours h4 {
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+  font-weight: 600;
+}
+
+.hours-grid {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.hour-item {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.hour-item:last-child {
+  border-bottom: none;
+}
+
+.day {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.time {
+  color: var(--text-secondary);
+}
+
+.closed {
+  color: var(--error-red);
+}
+
+.map-container {
+  height: 400px;
+  border-radius: var(--border-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+}
+
+#companyMap {
+  height: 100%;
+  width: 100%;
+}
+
+.directions-actions {
+  margin-top: var(--space-lg);
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.btn-directions {
+  background: var(--primary-green);
+  color: var(--text-white);
+  border: none;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-directions:hover {
+  background: var(--primary-green-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+@media (max-width: 768px) {
+  .location-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .map-container {
+    height: 300px;
+  }
+  
+  .location-info {
+    padding: var(--space-lg);
+  }
+}
+
+.featured-company {
+    border: 2px solid var(--primary-green);
+    position: relative;
+}
+
+.featured-company::before {
+    content: 'Featured';
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    background: var(--primary-green);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 0 var(--border-radius-lg) 0 var(--border-radius-lg);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.results-count {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin-bottom: var(--space-lg);
+    grid-column: 1 / -1;
+}
+
+/* Enhanced filter bar for additional filters */
+.filter-bar.enhanced {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 900px;
+}
+
+@media (min-width: 768px) {
+    .filter-bar.enhanced {
+        flex-direction: row;
+        align-items: center;
+    }
+}
+
+/* Stats animation */
+.car-hire-stat-number {
+    transition: all 0.5s ease-in-out;
+}
+
+/* No results styling */
+.no-results {
+    text-align: center;
+    padding: var(--space-2xl) var(--space-md);
+    color: var(--text-muted);
+    grid-column: 1 / -1;
+}
+
+.no-results h3 {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+}
+/* ========================================
+   CAR HIRE COMPANY DETAIL PAGE - ENHANCED
+======================================== */
+
+/* Company Header - Match Index Hero Style */
+.company-header {
+    background: linear-gradient(135deg, #00c853 0%, #00a843 50%, #008c3a 100%);
+    color: var(--text-white);
+    padding: 40px 0 35px;
+    margin-top: 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.company-header::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.12) 25%, transparent 25%),
+        linear-gradient(315deg, rgba(255,255,255,0.08) 25%, transparent 25%),
+        linear-gradient(45deg, rgba(255,255,255,0.06) 20%, transparent 20%),
+        linear-gradient(225deg, rgba(255,255,255,0.05) 20%, transparent 20%),
+        radial-gradient(ellipse at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+    pointer-events: none;
+    animation: heroGlow 10s ease-in-out infinite;
+}
+
+@keyframes heroGlow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+.company-header::after {
+    content: '';
+    position: absolute;
+    top: -20%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%),
+        radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 100% 100%, 25px 25px;
+    border-radius: 50%;
+    transform: rotate(0deg);
+    pointer-events: none;
+    opacity: 0.5;
+    animation: floatRotate 20s ease-in-out infinite;
+}
+
+@keyframes floatRotate {
+    0%, 100% {
+        transform: rotate(0deg) translateY(0px);
+        opacity: 0.5;
+    }
+    50% {
+        transform: rotate(180deg) translateY(-30px);
+        opacity: 0.7;
+    }
+}
+
+.company-header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+    padding: 0 var(--space-lg);
+}
+
+.header-top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 25px;
+    align-items: start;
+    margin-bottom: 20px;
+}
+
+.company-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    line-height: 1.2;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+
+@media (min-width: 768px) {
+    .company-header h1 {
+        font-size: 2rem;
+    }
+}
+
+/* Header badges - inline style with softer colors */
+.company-header h1 .verified-badge,
+.company-header h1 .featured-badge,
+.company-header h1 .certified-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    padding: 5px 12px;
+    border-radius: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.company-header h1 .verified-badge {
+    background: rgba(59, 130, 246, 0.35);
+    color: white;
+    border: 1px solid rgba(96, 165, 250, 0.6);
+}
+
+.company-header h1 .featured-badge {
+    background: rgba(245, 158, 11, 0.35);
+    color: white;
+    border: 1px solid rgba(251, 191, 36, 0.6);
+}
+
+.company-header h1 .certified-badge {
+    background: rgba(250, 204, 21, 0.35);
+    color: white;
+    border: 1px solid rgba(253, 224, 71, 0.6);
+}
+
+.company-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    font-size: 0.9rem;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    opacity: 0.95;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.meta-item.highlight {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 5px 12px;
+    border-radius: 16px;
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.meta-item i {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+/* Quick Contact Box */
+.quick-contact-box {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 12px;
+    padding: 16px;
+    min-width: 220px;
+}
+
+.quick-contact-box h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.quick-contact-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quick-contact-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.quick-contact-btn.whatsapp {
+    background: #25D366;
+    color: white;
+}
+
+.quick-contact-btn.whatsapp:hover {
+    background: #20BA5A;
+    transform: translateY(-2px);
+}
+
+.quick-contact-btn.phone {
+    background: white;
+    color: #00a843;
+}
+
+.quick-contact-btn.phone:hover {
+    background: #f5f5f5;
+    transform: translateY(-2px);
+}
+
+.quick-contact-btn.directions {
+    background: #0066cc;
+    color: white;
+}
+
+.quick-contact-btn.directions:hover {
+    background: #0052a3;
+    transform: translateY(-2px);
+}
+
+/* Company Description */
+.company-description {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+}
+
+.company-description p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    opacity: 0.95;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Key Features */
+.key-features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+}
+
+.feature-box {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-box:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.feature-box i {
+    font-size: 1.5rem;
+    opacity: 0.95;
+}
+
+.feature-box strong {
+    display: block;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+    font-weight: 600;
+}
+
+.feature-box small {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.85;
+}
+
+/* Fleet Section Improvements */
+.fleet-section {
+    padding: 50px 0;
+    background: #f8f9fa;
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 35px;
+}
+
+.section-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #00a843;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.section-subtitle {
+    font-size: 1rem;
+    color: #666;
+    margin: 0;
+}
+
+.fleet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 24px;
+}
+
+.no-vehicles {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+}
+
+.no-vehicles i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
+}
+
+/* Enhanced Fleet Cards - Compact Size */
+.fleet-card {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e0e0e0;
+}
+
+.fleet-card:hover {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-4px);
+    border-color: #00c853;
+}
+
+.fleet-card.unavailable {
+    opacity: 0.7;
+}
+
+.fleet-card.unavailable .fleet-image::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.fleet-image {
+    position: relative;
+    height: 140px;
+    overflow: hidden;
+}
+
+.fleet-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    transition: transform 0.3s ease;
+}
+
+/* Mobile fleet image adjustments for better display */
+@media (max-width: 768px) {
+    .fleet-image {
+        height: 140px;
+    }
+
+    .fleet-image img {
+        object-fit: cover;
+        width: 100%;
+    }
+    
+    .fleet-info {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .fleet-image {
+        height: 130px;
+    }
+    
+    .fleet-info {
+        padding: 10px;
+    }
+}
+
+.fleet-card:hover .fleet-image img {
+    transform: scale(1.05);
+}
+
+.unavailable-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #f44336;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 2;
+}
+
+.available-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #4caf50;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 2;
+}
+
+.maintenance-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #ff9800;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 2;
+}
+
+.not-available-badge {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    background: #95a5a6;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    z-index: 2;
+}
+
+.reg-badge {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.fleet-info {
+    padding: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.fleet-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #00a843;
+    margin: 0 0 10px 0;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+/* Fleet Specs Grid - Compact */
+.fleet-specs {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.spec-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.spec-item i {
+    font-size: 0.9rem;
+    color: #00a843;
+    min-width: 16px;
+}
+
+.spec-item div {
+    flex: 1;
+}
+
+.spec-item small {
+    display: block;
+    font-size: 0.6rem;
+    color: #999;
+    margin-bottom: 1px;
+}
+
+.spec-item strong {
+    display: block;
+    font-size: 0.75rem;
+    color: #333;
+}
+
+/* Fleet Features - Compact with Consistent Sizing */
+.fleet-features {
+    margin-bottom: 10px;
+    min-height: 60px;
+    max-height: 60px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.fleet-features h4 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.features-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-content: flex-start; /* Align features to top */
+    flex: 1; /* Take remaining space */
+}
+
+.feature-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px 6px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 8px;
+    font-size: 0.6rem;
+    font-weight: 500;
+    white-space: nowrap;
+    height: 20px;
+}
+
+.feature-badge i {
+    font-size: 0.55rem;
+}
+
+/* Make feature badges smaller and more uniform on mobile */
+@media (max-width: 768px) {
+    .fleet-features {
+        min-height: 55px;
+        max-height: 55px;
+    }
+
+    .feature-badge {
+        padding: 2px 5px;
+        font-size: 0.58rem;
+        gap: 2px;
+        height: 18px;
+    }
+
+    .feature-badge i {
+        font-size: 0.54rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .fleet-features {
+        min-height: 50px;
+        max-height: 50px;
+    }
+
+    .feature-badge {
+        padding: 2px 4px;
+        font-size: 0.55rem;
+        height: 16px;
+    }
+
+    .feature-badge i {
+        font-size: 0.5rem;
+    }
+}
+
+/* Desktop feature badges */
+@media (min-width: 1024px) {
+    .fleet-features {
+        min-height: 60px;
+        max-height: 60px;
+    }
+
+    .feature-badge {
+        padding: 2px 7px;
+        font-size: 0.62rem;
+        gap: 2px;
+        height: 20px;
+    }
+
+    .feature-badge i {
+        font-size: 0.58rem;
+    }
+}
+
+/* Fleet Pricing - More Compact with Smaller Text */
+.fleet-pricing {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e8f5e9 100%);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: auto;
+}
+
+.pricing-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.pricing-row:not(:last-child) {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.pricing-row.main-price {
+    padding: 0 0 6px 0;
+}
+
+.price-label {
+    font-size: 0.65rem;
+    color: #666;
+}
+
+.price-value {
+    font-size: 0.75rem;
+    color: #333;
+    font-weight: 600;
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+}
+
+.pricing-row.main-price .price-value {
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.pricing-row.main-price .price-value strong {
+    font-size: 0.95rem;
+    color: #00a843;
+}
+
+.pricing-row.main-price .price-value small {
+    font-size: 0.6rem;
+    color: #999;
+    font-weight: normal;
+}
+
+/* Services & Contact Section - Compact 3-Column Row */
+.services-contact-section {
+    padding: 30px 0;
+    background: #f8f9fa;
+}
+
+.services-contact-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 equal columns in 1 row */
+    grid-template-rows: 1fr; /* Force single row */
+    gap: 16px;
+    margin-bottom: 20px;
+    width: 100%; /* Ensure full container width */
+}
+
+/* Compact card layout - All 3 cards in one row with uniform heights */
+.services-card,
+.contact-card,
+.hours-card {
+    background: white;
+    border-radius: 12px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e8e8e8;
+    transition: all 0.3s ease;
+    min-height: 320px; /* Ensure uniform card height */
+    max-width: 100%; /* Prevent overflow */
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box; /* Include padding in width */
+}
+
+.services-card:hover,
+.contact-card:hover,
+.hours-card:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.services-card h3,
+.contact-card h3,
+.hours-card h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #00a843;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0; /* Prevent title from shrinking */
+    min-height: 24px; /* Ensure uniform header height */
+}
+
+/* Hours Card - Compact Vertical List */
+.hours-card .hours-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1; /* Take remaining space */
+}
+
+.hours-card .hour-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 0.75rem;
+}
+
+.hours-card .hour-item .day {
+    font-weight: 600;
+    color: #333;
+}
+
+.hours-card .hour-item .time {
+    color: #4caf50;
+    font-weight: 500;
+}
+
+.hours-card .hour-item .time.closed {
+    color: #999;
+}
+
+/* Horizontal grid layout for services list - Compact */
+.services-list {
+    display: grid;
+    grid-template-columns: 1fr; /* Single column for compact layout */
+    gap: 6px;
+    margin-bottom: 12px;
+    flex: 1; /* Take remaining space */
+}
+
+.service-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.service-item i {
+    color: #00c853;
+    font-size: 12px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.service-item.special i {
+    color: #ff6f00;
+}
+
+.service-item span {
+    font-size: 0.8rem;
+    color: #424242;
+    line-height: 1.3;
+}
+
+.special-services h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #ff6f00;
+    margin: 10px 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Vertical layout for contact info - Compact */
+.contact-info-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1; /* Take remaining space */
+}
+
+.contact-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.contact-info-item:hover {
+    background: #e8f5e9;
+    transform: translateY(-1px);
+}
+
+.contact-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #00c853 0%, #00a843 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.contact-icon.whatsapp {
+    background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+}
+
+.contact-icon.email {
+    background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+}
+
+.contact-icon.location {
+    background: linear-gradient(135deg, #ff6f00 0%, #f57c00 100%);
+}
+
+.contact-icon.web {
+    background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+}
+
+.contact-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.contact-details label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #757575;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    display: block;
+    margin-bottom: 2px;
+}
+
+.contact-details a,
+.contact-details p {
+    font-size: 0.8rem;
+    color: #212121;
+    font-weight: 500;
+    text-decoration: none;
+    word-break: break-word;
+    margin: 0;
+    display: block;
+    line-height: 1.3;
+}
+
+.contact-details a:hover {
+    color: #00c853;
+}
+
+/* Tablet adjustments - Keep 3 columns on larger tablets */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .services-contact-grid {
+        grid-template-columns: repeat(3, 1fr); /* Keep 3 columns */
+        grid-template-rows: 1fr; /* Force single row */
+        gap: 14px;
+    }
+
+    .services-card,
+    .contact-card,
+    .hours-card {
+        padding: 16px;
+        min-height: 300px;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .services-card h3,
+    .contact-card h3,
+    .hours-card h3 {
+        font-size: 0.95rem;
+    }
+}
+
+/* Mobile responsive */
+/* Medium mobile devices - 3 column grid for contact info */
+@media (min-width: 481px) and (max-width: 768px) {
+    .contact-info-list {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+    }
+    
+    .contact-info-item {
+        padding: 8px 6px;
+        gap: 6px;
+    }
+    
+    .contact-icon {
+        width: 30px;
+        height: 30px;
+        font-size: 0.85rem;
+    }
+    
+    .contact-details label {
+        font-size: 0.6rem;
+    }
+    
+    .contact-details a {
+        font-size: 0.7rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .services-contact-section {
+        padding: 24px 0;
+    }
+
+    .services-contact-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .services-card,
+    .contact-card,
+    .hours-card {
+        padding: 14px;
+    }
+
+    .services-card h3,
+    .contact-card h3,
+    .hours-card h3 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+    }
+
+    .hours-card .hour-item {
+        padding: 5px 8px;
+        font-size: 0.75rem;
+    }
+    
+    .services-list {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    
+    /* Contact info items remain vertical on tablet */
+    .contact-info-item {
+        padding: 8px;
+        gap: 8px;
+    }
+    
+    .contact-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 14px;
+    }
+    
+    .contact-details label {
+        font-size: 0.65rem;
+    }
+    
+    .contact-details a,
+    .contact-details p {
+        font-size: 0.8rem;
+    }
+}
+
+.services-card h3 i,
+.contact-card h3 i {
+    font-size: 1.3rem;
+}
+
+/* Services List - Grid Layout Updated Above */
+
+/* Special Services */
+.special-services {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e8e8e8;
+}
+
+/* Contact Info List - Grid Layout Updated Above */
+
+/* Social Media Section - Compact */
+.social-media-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #e8e8e8;
+}
+
+.social-media-section h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.social-icons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.social-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    color: white;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.social-icon:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.social-icon.facebook {
+    background: #1877f2;
+}
+
+.social-icon.instagram {
+    background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
+}
+
+.social-icon.twitter {
+    background: #1DA1F2;
+}
+
+.social-icon.linkedin {
+    background: #0077b5;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .fleet-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
+
+@media (max-width: 768px) {
+    .company-header {
+        padding: 25px 0 20px;
+        min-height: auto;
+    }
+
+    /* Center align company-header-content on mobile + prevent overflow */
+    .company-header-content {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 100%;
+        padding: 0 16px;
+        box-sizing: border-box;
+        overflow-x: hidden;
+    }
+
+    .header-top {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        justify-items: center;
+        text-align: center;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .company-header h1 {
+        font-size: 1.4rem;
+        text-align: center;
+        justify-content: center;
+        width: 100%;
+        max-width: 100%;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+
+    /* Hide badges on mobile to keep it simple */
+    .verified-badge,
+    .featured-badge,
+    .certified-badge {
+        display: none !important;
+    }
+
+    /* Center and simplify company meta info on mobile - FIX OVERFLOW */
+    .company-meta {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+        font-size: 0.85rem;
+        justify-content: center;
+        text-align: center;
+        width: 100%;
+        max-width: 100%;
+        margin: 12px auto 16px;
+    }
+
+    .company-meta .meta-item {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .company-meta .meta-item i {
+        flex-shrink: 0;
+    }
+
+    /* Hide all but first 2 meta items on mobile to keep it simple */
+    .company-meta .meta-item:nth-child(n+3) {
+        display: none !important;
+    }
+    
+    .quick-contact-box {
+        width: 100%;
+        padding: 14px;
+    }
+    
+    .quick-contact-box h4 {
+        font-size: 0.9rem;
+    }
+    
+    .quick-contact-buttons {
+        gap: 8px;
+    }
+    
+    .quick-contact-btn {
+        font-size: 0.8rem;
+        padding: 8px 12px;
+    }
+    
+    /* Hide company-description INSIDE header on mobile - will be moved outside by JS */
+    .company-header .company-description {
+        display: none !important;
+    }
+
+    /* Show company-description when moved outside header */
+    .company-description-section {
+        display: block !important;
+    }
+
+    .company-description-section .company-description {
+        display: block !important;
+        background: white;
+        padding: 16px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin: 0;
+        color: #374151;
+        font-size: 0.9rem;
+        line-height: 1.6;
+    }
+    
+    /* Enhance key features styling on mobile to match showroom-stats - FIX OVERFLOW */
+    .key-features {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        margin: 16px auto 0;
+        max-width: 100%;
+        width: 100%;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .key-features .feature-box {
+        background: rgba(255, 255, 255, 0.2) !important;
+        backdrop-filter: blur(12px) !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
+        border-radius: 12px !important;
+        padding: 12px 8px !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+        min-width: 0;
+    }
+
+    .key-features .feature-box:hover {
+        background: rgba(255, 255, 255, 0.28) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    .key-features .feature-box i {
+        font-size: 1.4rem !important;
+        margin-bottom: 4px !important;
+    }
+
+    .key-features .feature-box strong {
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+    }
+
+    .key-features .feature-box small {
+        font-size: 0.7rem !important;
+        opacity: 0.9 !important;
+    }
+
+    .key-features .feature-box:nth-child(n+3) {
+        display: none !important;
+    }
+    
+    .fleet-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Make fleet specs horizontal 2-column grid on mobile to fit more items */
+    .fleet-specs {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        overflow-x: visible;
+        padding-bottom: 4px;
+    }
+    
+    .spec-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 4px;
+        min-width: 70px;
+    }
+    
+    .spec-item i {
+        font-size: 1rem;
+    }
+    
+    .spec-item small {
+        font-size: 0.6rem;
+    }
+    
+    .spec-item strong {
+        font-size: 0.75rem;
+    }
+    
+    /* Mobile-optimized services and contact cards */
+    .services-card,
+    .contact-card {
+        padding: 18px;
+    }
+    
+    .services-card h3,
+    .contact-card h3 {
+        font-size: 1.1rem;
+        margin-bottom: 14px;
+    }
+    
+    /* Make contact info more compact and grid-based on mobile - 2 columns */
+    .contact-info-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .contact-info-item {
+        padding: 10px 8px;
+        font-size: 0.75rem;
+        gap: 6px;
+        flex-direction: column;
+        text-align: center;
+        background: #f8f9fa;
+    }
+    
+    .contact-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+        margin: 0 auto;
+        background: #e8e8e8 !important;
+        color: #424242 !important;
+    }
+    
+    .contact-icon.whatsapp {
+        background: #e8f5e9 !important;
+        color: #25d366 !important;
+    }
+    
+    .contact-details {
+        text-align: center;
+    }
+    
+    .contact-details label {
+        font-size: 0.6rem;
+        margin-bottom: 3px;
+    }
+    
+    .contact-details a {
+        font-size: 0.7rem;
+        word-break: break-all;
+    }
+    
+    /* Social media compact on mobile */
+    .social-media-section {
+        margin-top: 16px;
+        padding-top: 14px;
+    }
+    
+    .social-media-section h4 {
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+    
+    .social-icons {
+        gap: 8px;
+        justify-content: center;
+    }
+    
+    .social-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 0.95rem;
+    }
+    
+    /* Horizontal grid layout for service items on mobile */
+    .services-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .service-item {
+        padding: 8px;
+        font-size: 0.75rem;
+        gap: 6px;
+    }
+    
+    .service-item i {
+        font-size: 0.9rem;
+    }
+    
+    .service-item span {
+        font-size: 0.75rem;
+    }
+    
+    /* Special services on mobile */
+    .special-services {
+        margin-top: 14px;
+        padding-top: 14px;
+    }
+    
+    .special-services h4 {
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    .company-header {
+        padding: 20px 0 15px;
+    }
+
+    .company-header-content {
+        padding: 0 16px;
+    }
+
+    .company-header h1 {
+        font-size: 1.15rem;
+    }
+
+    .company-meta {
+        gap: 8px;
+        font-size: 0.75rem;
+    }
+
+    /* Show only location on small mobile - keep it super simple */
+    .company-meta .meta-item:nth-child(n+2) {
+        display: none !important;
+    }
+
+    /* Extra compact key-features on very small screens */
+    .key-features {
+        gap: 8px;
+        max-width: 100%;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        margin-top: 12px !important;
+    }
+
+    .key-features .feature-box {
+        padding: 10px 8px !important;
+        gap: 8px !important;
+        background: rgba(255, 255, 255, 0.18) !important;
+        border-radius: 10px !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        text-align: center !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .key-features .feature-box:active {
+        background: rgba(255, 255, 255, 0.25) !important;
+    }
+
+    .key-features .feature-box i {
+        font-size: 1.3rem !important;
+        margin-bottom: 2px !important;
+    }
+
+    .key-features .feature-box strong {
+        font-size: 0.8rem !important;
+        margin-bottom: 2px !important;
+    }
+
+    .key-features .feature-box small {
+        font-size: 0.65rem !important;
+        opacity: 0.9 !important;
+    }
+    
+    /* Hide desktop-only meta items on mobile */
+    .meta-item-desktop {
+        display: none !important;
+    }
+    
+    .quick-contact-box {
+        padding: 12px;
+    }
+    
+    .quick-contact-box h4 {
+        font-size: 0.85rem;
+        margin-bottom: 8px;
+    }
+    
+    .quick-contact-btn {
+        padding: 7px 10px;
+        font-size: 0.75rem;
+    }
+    
+    .fleet-title {
+        font-size: 1.05rem;
+    }
+    
+    .fleet-image {
+        height: 180px;
+    }
+    
+    /* Make fleet specs 2-column on small mobile for better readability */
+    .fleet-specs {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+    
+    .spec-item {
+        min-width: 60px;
+    }
+    
+    .spec-item small {
+        font-size: 0.55rem;
+    }
+    
+    .spec-item strong {
+        font-size: 0.7rem;
+    }
+    
+    .pricing-row.main-price .price-value strong {
+        font-size: 1.05rem;
+    }
+    
+    .section-title {
+        font-size: 1.4rem;
+    }
+    
+    .services-card,
+    .contact-card {
+        padding: 16px;
+    }
+    
+    .services-card h3,
+    .contact-card h3 {
+        font-size: 1rem;
+        margin-bottom: 12px;
+    }
+    
+    /* Contact card even more compact on small mobile - 2 columns */
+    .contact-info-list {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    
+    .contact-info-item {
+        padding: 8px 6px;
+        gap: 5px;
+        background: #f8f9fa;
+    }
+    
+    .contact-icon {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+        background: #e8e8e8 !important;
+        color: #424242 !important;
+    }
+    
+    .contact-icon.whatsapp {
+        background: #e8f5e9 !important;
+        color: #25d366 !important;
+    }
+    
+    .contact-details label {
+        font-size: 0.55rem;
+    }
+    
+    .contact-details a {
+        font-size: 0.65rem;
+    }
+    
+    /* Services more compact */
+    .service-item {
+        padding: 6px;
+        font-size: 0.7rem;
+    }
+    
+    .service-item i {
+        font-size: 0.85rem;
+    }
+    
+    .service-item span {
+        font-size: 0.7rem;
+    }
+}
+
+
+/* Location Section - More Compact */
+.location-section {
+    padding: 40px 0;
+    background: #f8f9fa;
+}
+
+.location-section .section-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #00a843;
+    margin: 0 0 24px 0;
+    text-align: center;
+}
+
+.location-container {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e8e8e8;
+}
+
+.location-info {
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+}
+
+.location-info h3 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #00a843;
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.address-card {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+}
+
+.address-text {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.85rem;
+}
+
+.address-text i {
+    font-size: 1rem;
+    color: #00a843;
+    margin-bottom: 3px;
+}
+
+.address-text strong {
+    color: #333;
+    font-size: 0.8rem;
+}
+
+.opening-hours {
+    margin-bottom: 16px;
+}
+
+.opening-hours h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hours-grid {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.hour-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 8px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.hour-item .day {
+    font-weight: 600;
+    color: #333;
+}
+
+.hour-item .time {
+    color: #4caf50;
+    font-weight: 500;
+}
+
+.hour-item .time.closed {
+    color: #999;
+}
+
+.directions-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.btn-directions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.btn-directions:first-child {
+    background: linear-gradient(135deg, #00c853 0%, #00a843 100%);
+    color: white;
+}
+
+.btn-directions:first-child:hover {
+    background: linear-gradient(135deg, #00a843 0%, #008c3a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 168, 67, 0.3);
+}
+
+.btn-directions:last-child {
+    background: white;
+    color: #00a843;
+    border: 2px solid #00a843;
+}
+
+.btn-directions:last-child:hover {
+    background: #00a843;
+    color: white;
+}
+
+.map-container {
+    position: relative;
+    min-height: 400px;
+}
+
+#companyMap {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    border-radius: 0;
+}
+
+/* Loading State */
+.loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    padding: 40px 20px;
+    color: #999;
+}
+
+.loading i {
+    font-size: 2.5rem;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Responsive Location Section */
+@media (max-width: 1024px) {
+    .location-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .map-container {
+        min-height: 350px;
+    }
+    
+    #companyMap {
+        min-height: 350px;
+    }
+}
+
+@media (max-width: 768px) {
+    /* MOBILE ONLY: Completely separate location cards using flexbox column layout */
+    .location-container {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+        overflow: visible !important;
+    }
+
+    .location-section {
+        padding: 24px 0;
+    }
+
+    .location-section .section-title {
+        font-size: 1.3rem;
+        margin-bottom: 18px;
+    }
+
+    /* ADDRESS CARD - Full-width card, completely separated */
+    .address-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+        padding: 14px !important;
+        margin-bottom: 0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+        border: 1px solid rgba(0, 168, 67, 0.2) !important;
+        position: relative;
+        overflow: hidden;
+        display: block !important;
+        width: 100% !important;
+    }
+
+    .address-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #00c853 0%, #00a843 100%);
+    }
+
+    .address-card::after {
+        content: '\f3c5';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        font-size: 1.6rem;
+        color: rgba(0, 200, 83, 0.08);
+        z-index: 0;
+    }
+
+    .address-card .address-text {
+        font-size: 0.75rem;
+        gap: 4px;
+        position: relative;
+        z-index: 1;
+        line-height: 1.5;
+    }
+
+    .address-card .address-text i {
+        font-size: 0.85rem;
+        color: #00c853;
+        flex-shrink: 0;
+    }
+
+    .address-card .address-text strong {
+        font-size: 0.7rem;
+        color: #00a843;
+        font-weight: 700;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    /* Hide meta-item address on mobile - we're using address-card instead */
+    .meta-item.address-meta {
+        display: none !important;
+    }
+    
+    /* Opening hours in compact 2-column grid on mobile */
+    .hours-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        padding: 10px;
+    }
+    
+    .hour-item {
+        padding: 6px;
+        font-size: 0.72rem;
+        flex-direction: column;
+        text-align: center;
+        gap: 3px;
+    }
+    
+    .hour-item .day {
+        font-size: 0.68rem;
+    }
+    
+    .hour-item .time {
+        font-size: 0.68rem;
+    }
+    
+    .opening-hours h4 {
+        font-size: 0.9rem;
+        margin-bottom: 10px;
+    }
+    
+    /* DIRECTIONS CARD - Full-width card, completely separated */
+    .directions-actions {
+        background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%) !important;
+        padding: 14px !important;
+        margin-top: 0 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 3px 8px rgba(33, 150, 243, 0.15), 0 1px 3px rgba(33, 150, 243, 0.08) !important;
+        border: 1px solid rgba(33, 150, 243, 0.25) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        position: relative;
+        overflow: hidden;
+        width: 100% !important;
+    }
+
+    .directions-actions::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #2196f3 0%, #1976d2 100%);
+    }
+
+    .directions-actions::after {
+        content: '\f5a0';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        position: absolute;
+        bottom: 8px;
+        right: 10px;
+        font-size: 1.6rem;
+        color: rgba(33, 150, 243, 0.12);
+        z-index: 0;
+    }
+
+    .btn-directions {
+        padding: 10px 12px !important;
+        font-size: 0.72rem !important;
+        flex: 1 !important;
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        position: relative;
+        z-index: 1;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+        white-space: nowrap;
+    }
+
+    .btn-directions i {
+        font-size: 0.7rem !important;
+    }
+
+    /* MAP CONTAINER - Full-width card, completely separated */
+    .map-container {
+        background: #ffffff !important;
+        padding: 0 !important;
+        min-height: 220px !important;
+        border-radius: 12px !important;
+        box-shadow: 0 3px 8px rgba(255, 152, 0, 0.12), 0 1px 3px rgba(255, 152, 0, 0.06) !important;
+        border: 1px solid rgba(255, 152, 0, 0.2) !important;
+        overflow: hidden !important;
+        position: relative;
+        width: 100% !important;
+    }
+
+    .map-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #ff9800 0%, #f57c00 100%);
+        z-index: 10;
+    }
+
+    #companyMap {
+        min-height: 220px !important;
+        border-radius: 12px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* ============================================================
+       🎨 COMPLETELY REDESIGNED LOCATION SECTION FOR MOBILE
+       Inspired by showroom.html - Clean, Modern, No Overflow
+       ============================================================ */
+
+    .location-section {
+        padding: 24px 0 !important;
+        background: #f8fafc !important;
+        overflow: hidden !important;
+    }
+
+    .location-section .container {
+        padding: 0 16px !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .location-section .section-title {
+        font-size: 1.1rem !important;
+        font-weight: 700 !important;
+        color: #1f2937 !important;
+        margin: 0 0 20px 0 !important;
+        text-align: center !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
+    }
+
+    .location-section .section-title::before {
+        content: '\f3c5';
+        font-family: 'Font Awesome 6 Free';
+        font-weight: 900;
+        color: #00c853;
+        font-size: 1rem;
+    }
+
+    /* 📦 LOCATION CONTAINER - Maintain 2-column grid on small mobile */
+    .location-container {
+        gap: 10px !important;
+    }
+
+    /* Optimize for smaller screens */
+    .address-card {
+        padding: 12px !important;
+    }
+
+    .address-card .address-text {
+        font-size: 0.7rem;
+    }
+
+    .address-card .address-text i {
+        font-size: 0.8rem;
+    }
+
+    .address-card .address-text strong {
+        font-size: 0.65rem;
+    }
+
+    .address-card::after {
+        font-size: 1.4rem;
+        top: 8px;
+        right: 8px;
+    }
+
+    .directions-actions {
+        padding: 12px !important;
+    }
+
+    .directions-actions::after {
+        font-size: 1.4rem;
+    }
+
+    .btn-directions {
+        padding: 8px 10px !important;
+        font-size: 0.68rem !important;
+    }
+
+    .btn-directions i {
+        font-size: 0.65rem !important;
+    }
+
+    .map-container {
+        min-height: 200px !important;
+    }
+
+    #companyMap {
+        min-height: 200px !important;
+    }
+
+    .address-text {
+        display: flex !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        font-size: 0.875rem !important;
+        color: #374151 !important;
+        font-weight: 500 !important;
+        line-height: 1.6 !important;
+        word-wrap: break-word !important;
+        overflow-wrap: break-word !important;
+        word-break: break-word !important;
+        flex-direction: row !important;
+        max-width: 100% !important;
+        padding: 14px 16px !important;
+    }
+
+    .address-text i {
+        font-size: 1rem !important;
+        color: #00c853 !important;
+        width: 32px !important;
+        height: 32px !important;
+        flex-shrink: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: #f0fdf4 !important;
+        border-radius: 8px !important;
+        margin-top: 0 !important;
+    }
+
+    .address-text strong {
+        display: block !important;
+        font-size: 0.65rem !important;
+        color: #6b7280 !important;
+        font-weight: 600 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        margin-bottom: 4px !important;
+    }
+
+    /* 🧭 DIRECTIONS ACTIONS - Beautiful standalone card */
+    .directions-actions {
+        background: #ffffff !important;
+        border-radius: 14px !important;
+        border: 1px solid #e5e7eb !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+    }
+
+    /* Directions card header */
+    .directions-actions::before {
+        content: '\f5eb  Quick Actions';
+        font-family: 'Font Awesome 6 Free', -apple-system, sans-serif;
+        font-weight: 900;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        font-size: 0.9rem !important;
+        color: #1f2937 !important;
+        padding: 14px 16px !important;
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+        border-bottom: 1px solid #bfdbfe !important;
+    }
+
+    .directions-actions .btn-directions {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 12px !important;
+        padding: 14px 16px !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        border-radius: 0 !important;
+        border: none !important;
+        border-bottom: 1px solid #f3f4f6 !important;
+        background: #ffffff !important;
+        color: #374151 !important;
+        text-decoration: none !important;
+        transition: all 0.2s ease !important;
+        cursor: pointer !important;
+        white-space: nowrap !important;
+        box-shadow: none !important;
+        width: 100% !important;
+    }
+
+    .directions-actions .btn-directions:last-child {
+        border-bottom: none !important;
+    }
+
+    .directions-actions .btn-directions i {
+        font-size: 1rem !important;
+        color: #3b82f6 !important;
+        width: 32px !important;
+        height: 32px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: #eff6ff !important;
+        border-radius: 8px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .directions-actions .btn-directions:active {
+        background: #f0f9ff !important;
+        color: #1d4ed8 !important;
+    }
+
+    .directions-actions .btn-directions:active i {
+        background: #3b82f6 !important;
+        color: #ffffff !important;
+    }
+
+    /* 🗺️ MAP CONTAINER - Beautiful standalone card */
+    .map-container {
+        background: #ffffff !important;
+        border-radius: 14px !important;
+        border: 1px solid #e5e7eb !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06) !important;
+        overflow: hidden !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Map header */
+    .map-container::before {
+        content: '\f279  View on Map';
+        font-family: 'Font Awesome 6 Free', -apple-system, sans-serif;
+        font-weight: 900;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
+        font-size: 0.9rem !important;
+        color: #1f2937 !important;
+        padding: 14px 16px !important;
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+        border-bottom: 1px solid #fcd34d !important;
+    }
+
+    #companyMap {
+        min-height: 220px !important;
+        width: 100% !important;
+    }
+
+    /* 🕐 OPENING HOURS - If present in location section */
+    .opening-hours {
+        padding: 14px 16px !important;
+        border-top: 1px solid #f3f4f6 !important;
+    }
+
+    .opening-hours h4 {
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        font-size: 0.85rem !important;
+        font-weight: 700 !important;
+        color: #1f2937 !important;
+        margin: 0 0 12px 0 !important;
+    }
+
+    .opening-hours h4 i {
+        font-size: 0.85rem !important;
+        color: #00c853 !important;
+    }
+
+    .hours-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+        padding: 0 !important;
+    }
+
+    .hour-item {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        padding: 8px 10px !important;
+        background: #f9fafb !important;
+        border-radius: 8px !important;
+        border: 1px solid #f3f4f6 !important;
+    }
+
+    .hour-item .day {
+        font-size: 0.68rem !important;
+        font-weight: 600 !important;
+        color: #374151 !important;
+    }
+
+    .hour-item .time {
+        font-size: 0.68rem !important;
+        font-weight: 500 !important;
+        color: #00c853 !important;
+    }
+
+    .hour-item .time.closed {
+        color: #9ca3af !important;
+    }
+}
+
+
+.filter-section {
+    position: sticky;
+    top: 60px;
+    background: white;
+    z-index: 10;
+    padding: 20px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0);
+    transition: box-shadow 0.3s ease;
+    margin-bottom: 0;
+}
+
+.filter-section.scrolled {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.filter-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    .filter-section {
+        top: 60px;
+        padding: 15px 0;
+    }
+    
+    .filter-bar {
+        padding: 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-section {
+        padding: 12px 0;
+    }
+    
+    .filter-bar {
+        padding: 12px;
+    }
+}
+
+/* ============================================================================
+   MOBILE FILTER OPTIMIZATION - Hide desktop filter bar on mobile
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Hide the filter section on mobile - use mobile filter tray instead */
+    .filter-section {
+        display: none !important;
+    }
+
+    /* Car Hire Company Header - Mobile Optimization */
+    section.company-header {
+        padding: 70px 12px 20px !important;
+        min-height: auto !important;
+    }
+
+    section.company-header .company-header-content h1 {
+        font-size: 1.3rem !important;
+        margin-bottom: 8px !important;
+    }
+
+    section.company-header .company-meta .meta-item:nth-child(n+2) {
+        display: none !important;
+    }
+
+    section.company-header .quick-contact-box {
+        display: none !important;
+    }
+}
+
+@media (max-width: 480px) {
+    section.company-header {
+        padding: 65px 10px 16px !important;
+    }
+
+    section.company-header .company-header-content h1 {
+        font-size: 1.1rem !important;
+    }
+}
+

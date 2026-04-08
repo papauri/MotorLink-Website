@@ -1,0 +1,487 @@
+// ============================================================================
+// Unified Mobile Menu Handler
+// ============================================================================
+// Works across all pages of the website for consistent mobile navigation
+
+// Function to highlight active page in navigation
+function highlightActivePage(nav) {
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+    const navLinks = nav.querySelectorAll('a[href]');
+
+    navLinks.forEach(link => {
+        const linkHref = link.getAttribute('href');
+
+        // Check if this link matches the current page
+        if (linkHref === currentPage ||
+            (currentPage === '' && linkHref === 'index.html') ||
+            (currentPage === '/' && linkHref === 'index.html')) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+}
+
+// Cleanup function to remove all mobile menu clones
+function cleanupMobileMenuClones(nav) {
+    if (!nav) return;
+    
+    // Remove all cloned mobile menu elements
+    const mobileClones = nav.querySelectorAll('#guestMenuMobile, #userInfoMobile, .mobile-dashboard-links, .mobile-dash-link, .logout-link');
+    mobileClones.forEach(element => element.remove());
+}
+
+function initMobileMenu() {
+    const toggle = document.getElementById('mobileToggle');
+    const nav = document.getElementById('mainNav');
+    const userMenu = document.getElementById('userMenu');
+
+    if (!toggle || !nav) {
+        return;
+    }
+
+    // Highlight active page in navigation
+    highlightActivePage(nav);
+
+    // Cleanup any existing clones before adding new ones
+    cleanupMobileMenuClones(nav);
+
+    // Clone user menu items into nav for mobile and smaller tablets
+    if (userMenu && window.innerWidth <= 950) {
+        const userInfo = userMenu.querySelector('#userInfo');
+        const guestMenu = userMenu.querySelector('#guestMenu');
+
+        // Check if user is actually logged in by checking localStorage
+        // Don't check element visibility as desktop header may be hidden on mobile
+        const isLoggedIn = localStorage.getItem('motorlink_authenticated') === 'true' &&
+                          localStorage.getItem('motorlink_user');
+
+        if (isLoggedIn) {
+            // User is logged in - show user info and dashboard links
+            const clone = userInfo.cloneNode(true);
+            clone.id = 'userInfoMobile';
+            nav.appendChild(clone);
+
+            // Get user type from localStorage to show appropriate dashboard
+            const userData = JSON.parse(localStorage.getItem('motorlink_user'));
+            const userType = userData?.type;
+
+            // Check if dashboard links already exist (to prevent duplicates)
+            const existingDashboardLinks = nav.querySelector('.mobile-dashboard-links');
+            if (existingDashboardLinks) {
+                existingDashboardLinks.remove();
+            }
+
+            // Remove any existing dashboard-link elements from desktop nav that got cloned
+            const desktopDashboardLinks = nav.querySelectorAll('.dashboard-link');
+            desktopDashboardLinks.forEach(link => link.remove());
+
+            // Add user dashboard links to mobile menu when logged in
+            const dashboardLinks = document.createElement('div');
+            dashboardLinks.className = 'mobile-dashboard-links';
+
+            // Build dashboard link based on user type
+            let dashboardHTML = '';
+            switch(userType) {
+                case 'dealer':
+                    dashboardHTML = `
+                        <a href="dealer-dashboard.html" class="mobile-dash-link">
+                            <i class="fas fa-store"></i> My Showroom
+                        </a>
+                    `;
+                    break;
+                case 'garage':
+                    dashboardHTML = `
+                        <a href="garage-dashboard.html" class="mobile-dash-link">
+                            <i class="fas fa-wrench"></i> My Garage
+                        </a>
+                    `;
+                    break;
+                case 'car_hire':
+                    dashboardHTML = `
+                        <a href="car-hire-dashboard.html" class="mobile-dash-link">
+                            <i class="fas fa-car-side"></i> My Fleet
+                        </a>
+                    `;
+                    break;
+                case 'admin':
+                    dashboardHTML = `
+                        <a href="admin/admin.html" class="mobile-dash-link">
+                            <i class="fas fa-shield-alt"></i> Admin Panel
+                        </a>
+                    `;
+                    break;
+                // Individual users don't get a dashboard link
+            }
+
+            dashboardLinks.innerHTML = dashboardHTML + `
+                <a href="my-listings.html" class="mobile-dash-link">
+                    <i class="fas fa-car"></i> My Listings
+                </a>
+                <a href="profile.html" class="mobile-dash-link">
+                    <i class="fas fa-user-cog"></i> Profile Settings
+                </a>
+                <a href="favorites.html" class="mobile-dash-link">
+                    <i class="fas fa-heart"></i> Favorites
+                </a>
+            `;
+            nav.appendChild(dashboardLinks);
+
+            // Add logout button
+            const logoutLink = document.createElement('a');
+            logoutLink.href = '#';
+            logoutLink.className = 'mobile-dash-link logout-link';
+            logoutLink.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
+            logoutLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                // CRITICAL: Remove dashboard links before logout
+                const dashboardLinks = document.querySelectorAll('.dashboard-link, .mobile-dash-link, .mobile-dashboard-links');
+                dashboardLinks.forEach(link => link.remove());
+                
+                // Trigger logout
+                if (typeof window.logout === 'function') {
+                    window.logout();
+                } else if (typeof window.authManager !== 'undefined' && window.authManager.logout) {
+                    window.authManager.logout();
+                } else {
+                    // Fallback logout - clear all data
+                    localStorage.removeItem('motorlink_user');
+                    localStorage.removeItem('motorlink_authenticated');
+                    localStorage.removeItem('motorlink_favorites');
+                    sessionStorage.clear();
+                    window.location.href = 'index.html';
+                }
+            });
+            nav.appendChild(logoutLink);
+        } else if (guestMenu) {
+            // User is NOT logged in - show login/register options
+            // CRITICAL: Remove any dashboard links that might still be present
+            const dashboardLinks = nav.querySelectorAll('.dashboard-link, .mobile-dash-link, .mobile-dashboard-links');
+            dashboardLinks.forEach(link => link.remove());
+            
+            const clone = guestMenu.cloneNode(true);
+            clone.id = 'guestMenuMobile';
+            nav.appendChild(clone);
+        }
+    }
+
+    // Toggle menu on button click
+    toggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isActive = nav.classList.contains('active');
+
+        if (isActive) {
+            closeMenu();
+        } else {
+            openMenu();
+        }
+    });
+
+    // Close menu when clicking outside
+    document.addEventListener('click', function(e) {
+        if (nav.classList.contains('active')) {
+            if (!nav.contains(e.target) && !toggle.contains(e.target)) {
+                closeMenu();
+            }
+        }
+    });
+
+    // Handle window resize - cleanup clones when switching to desktop
+    let resizeTimeout;
+    window.addEventListener('resize', function() {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(function() {
+            const isDesktop = window.innerWidth > 950;
+            
+            // Close menu if switching to desktop
+            if (isDesktop && nav.classList.contains('active')) {
+                closeMenu();
+            }
+            
+            // Cleanup mobile clones when switching to desktop
+            // CSS will handle hiding them, but we remove from DOM to prevent conflicts
+            if (isDesktop) {
+                cleanupMobileMenuClones(nav);
+            }
+            // Note: Mobile clones are only added once on init, not on resize
+            // They remain in DOM but are hidden by CSS on desktop
+        }, 150);
+    });
+
+    // Close menu when navigating
+    const navLinks = nav.querySelectorAll('a');
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            if (nav.classList.contains('active')) {
+                closeMenu();
+            }
+        });
+    });
+
+    function openMenu() {
+        nav.classList.add('active');
+        toggle.classList.add('active');
+        if (userMenu) {
+            userMenu.classList.add('active');
+        }
+        
+        // Change icon to X with faster animation (180deg for smoother transition)
+        const icon = toggle.querySelector('i');
+        if (icon) {
+            icon.style.transform = 'rotate(180deg)';
+            setTimeout(() => {
+                icon.className = 'fas fa-times';
+                icon.style.transform = 'rotate(0deg)';
+            }, 100);
+        }
+        
+        // Add backdrop overlay with faster fade
+        const backdrop = document.createElement('div');
+        backdrop.id = 'menu-backdrop';
+        backdrop.style.cssText = `
+            position: fixed;
+            top: 64px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 9998;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        `;
+        document.body.appendChild(backdrop);
+        
+        // Fade in backdrop faster
+        setTimeout(() => {
+            backdrop.style.opacity = '1';
+        }, 5);
+        
+        // Close menu when clicking backdrop
+        backdrop.addEventListener('click', closeMenu);
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+        
+    }
+
+    function closeMenu() {
+        nav.classList.remove('active');
+        toggle.classList.remove('active');
+        if (userMenu) {
+            userMenu.classList.remove('active');
+        }
+        
+        // Change icon back to hamburger with faster animation (180deg for smoother transition)
+        const icon = toggle.querySelector('i');
+        if (icon) {
+            icon.style.transform = 'rotate(-180deg)';
+            setTimeout(() => {
+                icon.className = 'fas fa-bars';
+                icon.style.transform = 'rotate(0deg)';
+            }, 100);
+        }
+        
+        // Remove backdrop with faster fade
+        const backdrop = document.getElementById('menu-backdrop');
+        if (backdrop) {
+            backdrop.style.opacity = '0';
+            setTimeout(() => {
+                backdrop.remove();
+            }, 200);
+        }
+
+        // Restore body scroll
+        document.body.style.overflow = '';
+        
+    }
+
+}
+
+// ============================================================================
+// Move Descriptions Outside Header on Mobile
+// ============================================================================
+function moveDescriptionsOnMobile() {
+    // Only run on mobile and smaller tablet screens
+    if (window.innerWidth > 950) return;
+
+    // Handle showroom.html - move dealer-description outside header
+    const dealerDescription = document.getElementById('dealerDescription');
+    const showroomHeader = document.querySelector('.showroom-header-minimal');
+
+    if (dealerDescription && showroomHeader && dealerDescription.style.display !== 'none') {
+        // Check if not already moved
+        if (dealerDescription.closest('.showroom-header-minimal')) {
+            // Create a wrapper section for the description
+            const descriptionSection = document.createElement('section');
+            descriptionSection.className = 'dealer-description-section mobile-only';
+            descriptionSection.style.cssText = `
+                background: #f8f9fa;
+                padding: 20px 16px;
+                margin: 0;
+            `;
+
+            // Move the description element
+            descriptionSection.appendChild(dealerDescription.cloneNode(true));
+            dealerDescription.style.display = 'none'; // Hide original
+
+            // Insert after the header
+            showroomHeader.parentNode.insertBefore(descriptionSection, showroomHeader.nextSibling);
+        }
+    }
+
+    // Handle car-hire-company.html - move company-description outside header
+    const companyHeader = document.querySelector('.company-header');
+    const companyDescription = companyHeader ? companyHeader.querySelector('.company-description') : null;
+
+    if (companyDescription && companyDescription.style.display !== 'none') {
+        // Check if not already moved
+        if (companyDescription.closest('.company-header')) {
+            // Create a wrapper section for the description
+            const descriptionSection = document.createElement('section');
+            descriptionSection.className = 'company-description-section mobile-only';
+            descriptionSection.style.cssText = `
+                background: #f8f9fa;
+                padding: 20px 16px;
+                margin: 0;
+            `;
+
+            // Move the description element
+            descriptionSection.appendChild(companyDescription.cloneNode(true));
+            companyDescription.style.display = 'none'; // Hide original
+
+            // Insert after the header
+            companyHeader.parentNode.insertBefore(descriptionSection, companyHeader.nextSibling);
+        }
+    }
+}
+
+// ============================================================================
+// Add Page Indicator/Breadcrumb Navigation
+// ============================================================================
+function addPageIndicatorToMobileMenu() {
+    const nav = document.getElementById('mainNav');
+    if (!nav) return;
+
+    // Get current page
+    const currentPage = window.location.pathname.split('/').pop() || 'index.html';
+
+    // Define page hierarchy/tree
+    const pageTree = {
+        'index.html': { name: 'Home', icon: 'fas fa-home', parent: null },
+        'dealers.html': { name: 'Dealers', icon: 'fas fa-store', parent: null },
+        'showroom.html': { name: 'Showroom', icon: 'fas fa-car', parent: 'dealers.html' },
+        'car-hire.html': { name: 'Car Hire', icon: 'fas fa-car-side', parent: null },
+        'car-hire-company.html': { name: 'Company', icon: 'fas fa-building', parent: 'car-hire.html' },
+        'garages.html': { name: 'Garages', icon: 'fas fa-wrench', parent: null },
+        'sell.html': { name: 'Sell Your Car', icon: 'fas fa-dollar-sign', parent: null },
+        'about.html': { name: 'About Us', icon: 'fas fa-info-circle', parent: null },
+        'contact.html': { name: 'Contact', icon: 'fas fa-envelope', parent: null },
+        'car-database.html': { name: 'Know Your Car', icon: 'fas fa-car', parent: null },
+        'login.html': { name: 'Login', icon: 'fas fa-sign-in-alt', parent: null },
+        'register.html': { name: 'Register', icon: 'fas fa-user-plus', parent: null },
+        'profile.html': { name: 'Profile', icon: 'fas fa-user', parent: null },
+        'my-listings.html': { name: 'My Listings', icon: 'fas fa-list', parent: null },
+        'favorites.html': { name: 'Favorites', icon: 'fas fa-heart', parent: null }
+    };
+
+    // Check if indicator already exists
+    let pageIndicator = document.querySelector('.mobile-page-indicator');
+    if (pageIndicator) {
+        pageIndicator.remove();
+    }
+
+    // Create page indicator
+    pageIndicator = document.createElement('div');
+    pageIndicator.className = 'mobile-page-indicator';
+    
+    // Set inline styles immediately to prevent FOUC (Flash of Unstyled Content)
+    pageIndicator.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, #00c853 0%, #00a843 100%); border-bottom: 2px solid rgba(0, 0, 0, 0.1); font-size: 0.85rem; font-weight: 500; line-height: 1.4; color: rgba(255, 255, 255, 0.9); overflow-x: auto; white-space: nowrap; margin-bottom: 0; min-height: 44px; max-height: 44px; box-sizing: border-box; width: 100%; flex-shrink: 0;';
+
+    const currentPageInfo = pageTree[currentPage];
+    if (currentPageInfo) {
+        let breadcrumbHTML = '';
+
+        // Build breadcrumb trail
+        if (currentPageInfo.parent && pageTree[currentPageInfo.parent]) {
+            const parentInfo = pageTree[currentPageInfo.parent];
+            breadcrumbHTML = `
+                <a href="${currentPageInfo.parent}">
+                    <i class="${parentInfo.icon}"></i>
+                    <span>${parentInfo.name}</span>
+                </a>
+                <i class="fas fa-chevron-right"></i>
+            `;
+        }
+
+        breadcrumbHTML += `
+            <span class="current-page">
+                <i class="${currentPageInfo.icon}"></i>
+                <span>${currentPageInfo.name}</span>
+            </span>
+        `;
+
+        pageIndicator.innerHTML = breadcrumbHTML;
+
+        // Insert after the header
+        const header = document.querySelector('header');
+        if (header) {
+            header.parentNode.insertBefore(pageIndicator, header.nextSibling);
+            
+            // Force a reflow to ensure styles are applied immediately
+            void pageIndicator.offsetHeight;
+            
+            // Ensure CSS is applied by checking computed styles
+            requestAnimationFrame(() => {
+                const computedStyle = window.getComputedStyle(pageIndicator);
+                if (computedStyle.fontSize === '0px' || !computedStyle.fontSize) {
+                    // CSS not loaded yet, wait a bit and reapply inline styles
+                    setTimeout(() => {
+                        pageIndicator.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 12px 20px; background: linear-gradient(135deg, #00c853 0%, #00a843 100%); border-bottom: 2px solid rgba(0, 0, 0, 0.1); font-size: 0.85rem; font-weight: 500; line-height: 1.4; color: rgba(255, 255, 255, 0.9); overflow-x: auto; white-space: nowrap; margin-bottom: 0; min-height: 44px; max-height: 44px; box-sizing: border-box; width: 100%; flex-shrink: 0;';
+                    }, 10);
+                }
+            });
+        }
+
+        // Add pulse animation style if not already added
+        if (!document.querySelector('#page-indicator-animation')) {
+            const style = document.createElement('style');
+            style.id = 'page-indicator-animation';
+            style.textContent = `
+                @keyframes pulse {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50% { opacity: 0.7; transform: scale(1.2); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+}
+
+// ============================================================================
+// Initialize all mobile enhancements
+// ============================================================================
+function initMobileEnhancements() {
+    initMobileMenu();
+    moveDescriptionsOnMobile();
+    addPageIndicatorToMobileMenu();
+
+    // Re-run on resize for mobile descriptions
+    // Note: Resize handler for menu cleanup is in initMobileMenu()
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            // Only move descriptions, don't re-init menu
+            moveDescriptionsOnMobile();
+        }, 250);
+    });
+}
+
+// Auto-initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMobileEnhancements);
+} else {
+    initMobileEnhancements();
+}

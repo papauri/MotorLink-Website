@@ -1,0 +1,235 @@
+/**
+ * MotorLink - Professional Price Styling
+ * Elegant, sophisticated price display
+ */
+
+/* ============================================================================
+   PRICE STYLING - PROFESSIONAL & FANCY
+   ============================================================================ */
+
+/* Desktop prices - elegant dark styling */
+.car-card-price, .price, .rate, .daily-rate, .car-price,
+.listing-price, .vehicle-price, .rental-rate {
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    color: #1a1a1a !important;
+    margin: 12px 0 !important;
+    letter-spacing: -0.8px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    line-height: 1.2 !important;
+    position: relative !important;
+    display: inline-block !important;
+}
+
+/* Add subtle underline accent */
+.car-card-price::after, .price::after {
+    content: '' !important;
+    position: absolute !important;
+    bottom: -4px !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 2px !important;
+    background: linear-gradient(90deg, #00b347 0%, transparent 100%) !important;
+    opacity: 0.3 !important;
+}
+
+/* Currency symbol styling */
+.car-card-price .currency, .price .currency {
+    font-size: 18px !important;
+    font-weight: 500 !important;
+    color: #666 !important;
+    margin-right: 2px !important;
+}
+
+/* "From" or "Starting at" text */
+.price-prefix {
+    font-size: 12px !important;
+    font-weight: 500 !important;
+    color: #999 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+    display: block !important;
+    margin-bottom: 4px !important;
+}
+
+/* Mobile prices - compact & elegant */
+@media (max-width: 768px) {
+    .car-card-price, .price, .rate, .daily-rate, .car-price,
+    .listing-price, .vehicle-price, .rental-rate {
+        font-size: 22px !important;
+        font-weight: 600 !important;
+        color: #1a1a1a !important;
+        margin: 10px 0 !important;
+        letter-spacing: -0.6px !important;
+    }
+    
+    .car-card-price::after, .price::after {
+        height: 1.5px !important;
+        opacity: 0.25 !important;
+    }
+    
+    .car-card-price .currency, .price .currency {
+        font-size: 16px !important;
+    }
+}
+
+/* Alternative style - with background */
+.car-card-price.style-alt, .price.style-alt {
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%) !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    border-left: 3px solid #00b347 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04) !important;
+}
+
+.car-card-price.style-alt::after, .price.style-alt::after {
+    display: none !important;
+}
+
+/* Price in cards - specific styling */
+.car-card .car-card-price,
+.listing-card .price,
+.dealer-card .price {
+    display: block !important;
+    margin: 14px 0 !important;
+}
+
+/* Price with negotiable badge */
+.price-container {
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+}
+
+.negotiable-badge {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+    background: #f0f9ff !important;
+    color: #0369a1 !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* Price range (min - max) */
+.price-range {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    color: #1a1a1a !important;
+    letter-spacing: -0.5px !important;
+}
+
+.price-range .separator {
+    color: #999 !important;
+    margin: 0 8px !important;
+}
+
+/* Discount/original price */
+.original-price {
+    font-size: 16px !important;
+    color: #999 !important;
+    text-decoration: line-through !important;
+    font-weight: 400 !important;
+    margin-right: 8px !important;
+}
+
+.discount-badge {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+    background: #fef2f2 !important;
+    color: #dc2626 !important;
+    border-radius: 4px !important;
+    font-weight: 600 !important;
+}
+
+/* Featured/special pricing */
+.featured-price {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+    padding: 12px 16px !important;
+    border-radius: 10px !important;
+    border: 1px solid #fde68a !important;
+    display: inline-block !important;
+}
+
+.featured-price .car-card-price,
+.featured-price .price {
+    margin: 0 !important;
+    color: #92400e !important;
+}
+
+.featured-price::after {
+    display: none !important;
+}
+
+/* Per month/day/week suffix */
+.price-suffix {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    color: #666 !important;
+    margin-left: 4px !important;
+}
+
+/* Hover effects for interactive prices */
+.car-card:hover .car-card-price,
+.listing-card:hover .price {
+    color: #00b347 !important;
+    transition: color 0.2s ease !important;
+}
+
+.car-card:hover .car-card-price::after,
+.listing-card:hover .price::after {
+    opacity: 0.6 !important;
+    transition: opacity 0.2s ease !important;
+}
+
+/* Price in hero/banner sections */
+.hero .price, .banner .price {
+    font-size: 32px !important;
+    font-weight: 700 !important;
+    color: white !important;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+}
+
+@media (max-width: 768px) {
+    .hero .price, .banner .price {
+        font-size: 24px !important;
+    }
+}
+
+/* Remove old bright green styling */
+.car-card-price, .price, .rate {
+    /* Override any previous green bold styling */
+    text-shadow: none !important;
+}
+
+/* Ensure consistency across all price elements */
+.amount, .cost, .fee, .total {
+    font-family: inherit !important;
+    font-weight: 600 !important;
+    color: #1a1a1a !important;
+    letter-spacing: -0.5px !important;
+}
+
+/* Small prices (in lists, summaries) */
+.price-small, .amount-small {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #1a1a1a !important;
+}
+
+/* Large prices (hero sections, featured items) */
+.price-large, .amount-large {
+    font-size: 36px !important;
+    font-weight: 700 !important;
+    color: #1a1a1a !important;
+    letter-spacing: -1px !important;
+}
+
+@media (max-width: 768px) {
+    .price-large, .amount-large {
+        font-size: 28px !important;
+        letter-spacing: -0.8px !important;
+    }
+}

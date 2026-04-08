@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MotorLink - Malawi's Premier Car Marketplace | by ProManaged IT</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-green: #2d6a4f;
+      --primary-green-light: #40916c;
+      --primary-green-dark: #1b4332;
+      --neutral-50: #f8f9fa;
+      --neutral-100: #f1f3f5;
+      --neutral-200: #e9ecef;
+      --neutral-300: #dee2e6;
+      --neutral-400: #adb5bd;
+      --neutral-500: #6c757d;
+      --neutral-600: #495057;
+      --neutral-700: #343a40;
+      --neutral-800: #212529;
+      --neutral-900: #1a1a1a;
+      --accent-teal: #2a9d8f;
+      --accent-warm: #e76f51;
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.12);
+      --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.16);
+      --shadow-xl: 0 24px 64px rgba(0, 0, 0, 0.20);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      scroll-snap-type: y proximity;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--neutral-100);
+      color: var(--neutral-800);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Scroll Indicator */
+    .scroll-indicator {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--neutral-200);
+      z-index: 1000;
+    }
+
+    .scroll-progress {
+      height: 100%;
+      background: linear-gradient(90deg, var(--primary-green), var(--accent-teal));
+      width: 0%;
+      transition: width 0.1s;
+    }
+
+    /* Navigation Dots */
+    .nav-dots {
+      position: fixed;
+      right: 30px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      z-index: 999;
+    }
+
+    .nav-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--neutral-300);
+      border: 2px solid var(--neutral-400);
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+    }
+
+    .nav-dot:hover {
+      transform: scale(1.3);
+      background: var(--primary-green);
+      border-color: var(--primary-green);
+    }
+
+    .nav-dot.active {
+      background: var(--primary-green);
+      border-color: var(--primary-green);
+      transform: scale(1.2);
+    }
+
+    .nav-dot::after {
+      content: attr(data-label);
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--neutral-700);
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+      background: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .nav-dot:hover::after {
+      opacity: 1;
+    }
+
+    /* Card Container */
+    .ad-cards {
+      perspective: 2000px;
+    }
+
+    /* Individual Card */
+    .ad-card {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 40px;
+      position: relative;
+      scroll-snap-align: start;
+    }
+
+    .card-inner {
+      max-width: 1200px;
+      width: 100%;
+      background: white;
+      border-radius: 32px;
+      box-shadow: var(--shadow-xl);
+      overflow: hidden;
+      position: relative;
+      opacity: 0;
+      transform: translateY(100px) rotateX(8deg);
+      transition: all 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .card-inner.visible {
+      opacity: 1;
+      transform: translateY(0) rotateX(0);
+    }
+
+    .card-inner::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary-green), var(--accent-teal));
+    }
+
+    /* Card Background Patterns */
+    .card-bg-pattern {
+      position: absolute;
+      inset: 0;
+      opacity: 0.03;
+      background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* Card 1: Hero */
+    .hero-card .card-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .hero-left {
+      padding: 80px 60px;
+      background: linear-gradient(135deg, var(--neutral-900) 0%, var(--neutral-800) 100%);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-left::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 100%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(42, 157, 143, 0.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 40px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .logo-mark {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--primary-green), var(--accent-teal));
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      box-shadow: 0 8px 24px rgba(45, 106, 79, 0.3);
+    }
+
+    .logo-text h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+
+    .logo-text .byline {
+      font-size: 12px;
+      color: var(--neutral-400);
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .hero-headline {
+      font-size: 52px;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-headline .accent {
+      color: var(--accent-teal);
+    }
+
+    .hero-subheadline {
+      font-size: 18px;
+      line-height: 1.6;
+      color: var(--neutral-300);
+      margin-bottom: 40px;
+      max-width: 460px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-tags {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-tag {
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 100px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--neutral-200);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s;
+    }
+
+    .hero-tag:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .cta-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 36px;
+      background: white;
+      color: var(--neutral-900);
+      font-size: 16px;
+      font-weight: 700;
+      border-radius: 100px;
+      text-decoration: none;
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      box-shadow: var(--shadow-md);
+      position: relative;
+      z-index: 1;
+      width: fit-content;
+    }
+
+    .cta-primary:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .cta-primary i {
+      transition: transform 0.3s;
+    }
+
+    .cta-primary:hover i {
+      transform: translateX(6px);
+    }
+
+    .hero-right {
+      padding: 60px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 20px;
+      background: var(--neutral-50);
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .stat-box {
+      background: white;
+      padding: 28px;
+      border-radius: 20px;
+      border: 1px solid var(--neutral-200);
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--primary-green), var(--accent-teal));
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .stat-box:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--primary-green-light);
+    }
+
+    .stat-box:hover::before {
+      opacity: 1;
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: 900;
+      color: var(--primary-green);
+      margin-bottom: 6px;
+      letter-spacing: -1px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: var(--neutral-600);
+      font-weight: 500;
+    }
+
+    /* Card 2: Features */
+    .features-card .card-content {
+      padding: 80px 60px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .section-eyebrow {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary-green);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 42px;
+      font-weight: 900;
+      color: var(--neutral-900);
+      letter-spacing: -1.5px;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      font-size: 18px;
+      color: var(--neutral-600);
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-item {
+      background: var(--neutral-50);
+      padding: 40px 32px;
+      border-radius: 24px;
+      border: 1px solid var(--neutral-200);
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-item::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary-green), var(--accent-teal));
+      transform: scaleX(0);
+      transition: transform 0.4s;
+    }
+
+    .feature-item:hover {
+      background: white;
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .feature-item:hover::after {
+      transform: scaleX(1);
+    }
+
+    .feature-icon-wrap {
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--primary-green), var(--primary-green-light));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: white;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 20px rgba(45, 106, 79, 0.25);
+    }
+
+    .feature-item:nth-child(2) .feature-icon-wrap {
+      background: linear-gradient(135deg, var(--accent-teal), #52b788);
+    }
+
+    .feature-item:nth-child(3) .feature-icon-wrap {
+      background: linear-gradient(135deg, var(--accent-warm), #f4845f);
+    }
+
+    .feature-item:nth-child(4) .feature-icon-wrap {
+      background: linear-gradient(135deg, #264653, #2a9d8f);
+    }
+
+    .feature-item:nth-child(5) .feature-icon-wrap {
+      background: linear-gradient(135deg, #6c757d, #adb5bd);
+    }
+
+    .feature-item:nth-child(6) .feature-icon-wrap {
+      background: linear-gradient(135deg, #457b9d, #1d3557);
+    }
+
+    .feature-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--neutral-900);
+      margin-bottom: 12px;
+    }
+
+    .feature-desc {
+      font-size: 15px;
+      color: var(--neutral-600);
+      line-height: 1.6;
+    }
+
+    /* Card 3: Business Types */
+    .business-card .card-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .business-left {
+      padding: 80px 60px;
+      background: linear-gradient(135deg, var(--primary-green-dark) 0%, var(--primary-green) 100%);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .business-left .section-eyebrow {
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .business-left .section-title {
+      color: white;
+      margin-bottom: 24px;
+    }
+
+    .business-left .section-subtitle {
+      color: rgba(255, 255, 255, 0.85);
+      margin: 0;
+      margin-bottom: 40px;
+    }
+
+    .business-types {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .business-type {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 24px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+
+    .business-type:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: translateX(8px);
+    }
+
+    .business-type-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .business-type-info h4 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .business-type-info p {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.75);
+    }
+
+    .business-right {
+      padding: 60px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .testimonial-card {
+      max-width: 420px;
+    }
+
+    .testimonial-stars {
+      color: #f4a261;
+      font-size: 20px;
+      margin-bottom: 24px;
+    }
+
+    .testimonial-text {
+      font-size: 20px;
+      line-height: 1.6;
+      color: var(--neutral-700);
+      margin-bottom: 32px;
+      font-style: italic;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      justify-content: center;
+    }
+
+    .testimonial-avatar {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary-green), var(--accent-teal));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .testimonial-name {
+      font-weight: 700;
+      color: var(--neutral-900);
+      margin-bottom: 4px;
+    }
+
+    .testimonial-role {
+      font-size: 14px;
+      color: var(--neutral-500);
+    }
+
+    /* Card 4: Coverage */
+    .coverage-card .card-content {
+      padding: 80px 60px;
+      text-align: center;
+    }
+
+    .coverage-map {
+      margin: 60px auto;
+      max-width: 800px;
+      position: relative;
+    }
+
+    .coverage-stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-top: 48px;
+    }
+
+    .coverage-stat {
+      text-align: center;
+    }
+
+    .coverage-number {
+      font-size: 48px;
+      font-weight: 900;
+      color: var(--primary-green);
+      letter-spacing: -2px;
+    }
+
+    .coverage-label {
+      font-size: 16px;
+      color: var(--neutral-600);
+      font-weight: 600;
+      margin-top: 8px;
+    }
+
+    .district-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 40px;
+    }
+
+    .district-badge {
+      padding: 8px 16px;
+      background: var(--neutral-100);
+      border: 1px solid var(--neutral-200);
+      border-radius: 100px;
+      font-size: 13px;
+      color: var(--neutral-700);
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+
+    .district-badge:hover {
+      background: var(--primary-green);
+      color: white;
+      border-color: var(--primary-green);
+      transform: scale(1.05);
+    }
+
+    /* Card 5: CTA */
+    .cta-card .card-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .cta-left {
+      padding: 80px 60px;
+      background: linear-gradient(135deg, var(--neutral-900), var(--neutral-800));
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .cta-left .section-eyebrow {
+      color: var(--accent-teal);
+    }
+
+    .cta-left .section-title {
+      color: white;
+      font-size: 48px;
+      margin-bottom: 24px;
+    }
+
+    .cta-left .section-subtitle {
+      color: var(--neutral-400);
+      margin: 0;
+      margin-bottom: 40px;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 32px;
+      border-radius: 100px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: white;
+      color: var(--neutral-900);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: white;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: white;
+      transform: translateY(-4px);
+    }
+
+    .cta-right {
+      padding: 60px;
+      background: var(--neutral-50);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .powered-by {
+      text-align: center;
+      padding: 40px;
+      background: white;
+      border-radius: 24px;
+      border: 1px solid var(--neutral-200);
+      box-shadow: var(--shadow-sm);
+      max-width: 380px;
+    }
+
+    .powered-eyebrow {
+      font-size: 12px;
+      color: var(--neutral-500);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .powered-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .powered-logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary-green), var(--accent-teal));
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 22px;
+    }
+
+    .powered-logo-text {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--neutral-900);
+      letter-spacing: -0.5px;
+    }
+
+    .powered-desc {
+      font-size: 14px;
+      color: var(--neutral-600);
+      line-height: 1.5;
+      margin-bottom: 20px;
+    }
+
+    .powered-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary-green);
+      font-weight: 700;
+      font-size: 14px;
+      text-decoration: none;
+      transition: gap 0.3s;
+    }
+
+    .powered-link:hover {
+      gap: 12px;
+    }
+
+    /* Footer */
+    .ad-footer {
+      background: var(--neutral-900);
+      padding: 32px 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-left {
+      font-size: 14px;
+      color: var(--neutral-500);
+    }
+
+    .footer-left strong {
+      color: var(--neutral-300);
+    }
+
+    .footer-right {
+      display: flex;
+      gap: 24px;
+    }
+
+    .footer-link {
+      color: var(--neutral-400);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 600;
+      transition: color 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-link:hover {
+      color: white;
+    }
+
+    /* Scroll Arrow */
+    .scroll-arrow {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--neutral-400);
+      font-size: 13px;
+      font-weight: 600;
+      animation: bounceDown 2s ease-in-out infinite;
+      z-index: 10;
+    }
+
+    @keyframes bounceDown {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50% { transform: translateX(-50%) translateY(12px); }
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .hero-card .card-content,
+      .business-card .card-content,
+      .cta-card .card-content {
+        grid-template-columns: 1fr;
+      }
+
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .hero-headline {
+        font-size: 42px;
+      }
+
+      .section-title {
+        font-size: 36px;
+      }
+
+      .nav-dots {
+        display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .ad-card {
+        padding: 40px 20px;
+      }
+
+      .hero-left,
+      .hero-right,
+      .business-left,
+      .business-right,
+      .cta-left,
+      .cta-right,
+      .features-card .card-content,
+      .coverage-card .card-content {
+        padding: 40px 24px;
+      }
+
+      .hero-headline {
+        font-size: 32px;
+      }
+
+      .section-title {
+        font-size: 28px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stat-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .coverage-stats {
+        flex-wrap: wrap;
+        gap: 24px;
+      }
+
+      .ad-footer {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+        padding: 24px;
+      }
+
+      .cta-buttons {
+        flex-direction: column;
+      }
+
+      .btn {
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Scroll Progress -->
+  <div class="scroll-indicator">
+    <div class="scroll-progress" id="scrollProgress"></div>
+  </div>
+
+  <!-- Navigation Dots -->
+  <div class="nav-dots" id="navDots">
+    <div class="nav-dot active" data-label="MotorLink" data-index="0"></div>
+    <div class="nav-dot" data-label="Features" data-index="1"></div>
+    <div class="nav-dot" data-label="For Business" data-index="2"></div>
+    <div class="nav-dot" data-label="Coverage" data-index="3"></div>
+    <div class="nav-dot" data-label="Get Started" data-index="4"></div>
+  </div>
+
+  <!-- Ad Cards Container -->
+  <div class="ad-cards">
+    
+    <!-- Card 1: Hero -->
+    <section class="ad-card hero-card" data-index="0">
+      <div class="card-inner">
+        <div class="card-bg-pattern"></div>
+        <div class="card-content">
+          <div class="hero-left">
+            <div class="brand-logo">
+              <div class="logo-mark">
+                <i class="fas fa-car"></i>
+              </div>
+              <div class="logo-text">
+                <h1>MotorLink</h1>
+                <div class="byline">Malawi's Car Marketplace</div>
+              </div>
+            </div>
+
+            <h2 class="hero-headline">
+              The modern way to<br>
+              <span class="accent">buy, sell & rent</span><br>
+              vehicles in Malawi
+            </h2>
+
+            <p class="hero-subheadline">
+              A complete automotive ecosystem — from finding your perfect car to connecting with verified dealers, garages, and rental companies across all 28 districts.
+            </p>
+
+            <div class="hero-tags">
+              <span class="hero-tag"><i class="fas fa-shopping-cart"></i> Buy</span>
+              <span class="hero-tag"><i class="fas fa-tag"></i> Sell</span>
+              <span class="hero-tag"><i class="fas fa-key"></i> Rent</span>
+              <span class="hero-tag"><i class="fas fa-wrench"></i> Service</span>
+              <span class="hero-tag"><i class="fas fa-robot"></i> AI-Powered</span>
+            </div>
+
+            <a href="https://promanaged-it.com/motorlink/" target="_blank" class="cta-primary">
+              <span>Explore MotorLink</span>
+              <i class="fas fa-arrow-right"></i>
+            </a>
+          </div>
+
+          <div class="hero-right">
+            <div class="stat-grid">
+              <div class="stat-box">
+                <div class="stat-number">5,000+</div>
+                <div class="stat-label">Active Car Listings</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">200+</div>
+                <div class="stat-label">Verified Dealers</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">28</div>
+                <div class="stat-label">Districts Covered</div>
+              </div>
+              <div class="stat-box">
+                <div class="stat-number">FREE</div>
+                <div class="stat-label">To Get Started</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="scroll-arrow">
+        <span>Scroll to explore</span>
+        <i class="fas fa-chevron-down"></i>
+      </div>
+    </section>
+
+    <!-- Card 2: Features -->
+    <section class="ad-card features-card" data-index="1">
+      <div class="card-inner">
+        <div class="card-bg-pattern"></div>
+        <div class="card-content">
+          <div class="section-header">
+            <div class="section-eyebrow">Platform Features</div>
+            <h3 class="section-title">Everything you need, in one place</h3>
+            <p class="section-subtitle">
+              From AI-powered recommendations to mobile-optimized browsing — built for Malawi's automotive community.
+            </p>
+          </div>
+
+          <div class="features-grid">
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <i class="fas fa-brain"></i>
+              </div>
+              <h4 class="feature-name">AI Recommendations</h4>
+              <p class="feature-desc">Smart car matching that learns your preferences and browsing history to suggest perfect vehicles.</p>
+            </div>
+
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <i class="fas fa-search"></i>
+              </div>
+              <h4 class="feature-name">Advanced Search</h4>
+              <p class="feature-desc">Filter by make, model, price, location, year, fuel type, transmission and more with instant results.</p>
+            </div>
+
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <i class="fas fa-shield-alt"></i>
+              </div>
+              <h4 class="feature-name">Verified Businesses</h4>
+              <p class="feature-desc">Access certified dealers, garages, and car hire companies with transparent ratings and reviews.</p>
+            </div>
+
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <i class="fas fa-mobile-alt"></i>
+              </div>
+              <h4 class="feature-name">Mobile Optimized</h4>
+              <p class="feature-desc">Seamless experience on any device with advanced mobile filters and WhatsApp integration.</p>
+            </div>
+
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <i class="fas fa-camera"></i>
+              </div>
+              <h4 class="feature-name">Photo Listings</h4>
+              <p class="feature-desc">Upload up to 15 high-quality photos per listing with featured image selection and carousels.</p>
+            </div>
+
+            <div class="feature-item">
+              <div class="feature-icon-wrap">
+                <i class="fas fa-heart"></i>
+              </div>
+              <h4 class="feature-name">Saved Favorites</h4>
+              <p class="feature-desc">Bookmark cars you love, compare side-by-side, and get notified when prices drop.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 3: Business Types -->
+    <section class="ad-card business-card" data-index="2">
+      <div class="card-inner">
+        <div class="card-bg-pattern"></div>
+        <div class="card-content">
+          <div class="business-left">
+            <div class="section-eyebrow">For Businesses</div>
+            <h3 class="section-title">Built for every automotive business</h3>
+            <p class="section-subtitle">
+              Whether you're a dealer, garage, or rental company — MotorLink gives you the tools to grow.
+            </p>
+
+            <div class="business-types">
+              <div class="business-type">
+                <div class="business-type-icon"><i class="fas fa-store"></i></div>
+                <div class="business-type-info">
+                  <h4>Car Dealers</h4>
+                  <p>Manage inventory, showcase showrooms, get certified badges</p>
+                </div>
+              </div>
+
+              <div class="business-type">
+                <div class="business-type-icon"><i class="fas fa-tools"></i></div>
+                <div class="business-type-info">
+                  <h4>Garages & Workshops</h4>
+                  <p>List services, display specializations, offer 24/7 recovery</p>
+                </div>
+              </div>
+
+              <div class="business-type">
+                <div class="business-type-icon"><i class="fas fa-car-side"></i></div>
+                <div class="business-type-info">
+                  <h4>Car Hire Companies</h4>
+                  <p>Manage fleets, set rental rates, compare with competitors</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="business-right">
+            <div class="testimonial-card">
+              <div class="testimonial-stars">
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+                <i class="fas fa-star"></i>
+              </div>
+              <p class="testimonial-text">
+                "MotorLink transformed how we reach customers. Our inventory views increased 3x within the first month."
+              </p>
+              <div class="testimonial-author">
+                <div class="testimonial-avatar">CM</div>
+                <div>
+                  <div class="testimonial-name">Chisomo Motors</div>
+                  <div class="testimonial-role">Verified Dealer, Lilongwe</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 4: Coverage -->
+    <section class="ad-card coverage-card" data-index="3">
+      <div class="card-inner">
+        <div class="card-bg-pattern"></div>
+        <div class="card-content">
+          <div class="section-eyebrow">Nationwide Coverage</div>
+          <h3 class="section-title">All 28 districts of Malawi</h3>
+          <p class="section-subtitle">
+            From Blantyre to Mzuzu, Lilongwe to Mangochi — MotorLink connects buyers and sellers everywhere.
+          </p>
+
+          <div class="coverage-stats">
+            <div class="coverage-stat">
+              <div class="coverage-number">28</div>
+              <div class="coverage-label">Districts</div>
+            </div>
+            <div class="coverage-stat">
+              <div class="coverage-number">5</div>
+              <div class="coverage-label">Major Cities</div>
+            </div>
+            <div class="coverage-stat">
+              <div class="coverage-number">200+</div>
+              <div class="coverage-label">Business Partners</div>
+            </div>
+          </div>
+
+          <div class="district-grid">
+            <span class="district-badge">Blantyre</span>
+            <span class="district-badge">Lilongwe</span>
+            <span class="district-badge">Mzuzu</span>
+            <span class="district-badge">Zomba</span>
+            <span class="district-badge">Mangochi</span>
+            <span class="district-badge">Kasungu</span>
+            <span class="district-badge">Karonga</span>
+            <span class="district-badge">Salima</span>
+            <span class="district-badge">Nkhotakota</span>
+            <span class="district-badge">Dedza</span>
+            <span class="district-badge">Ntcheu</span>
+            <span class="district-badge">Thyolo</span>
+            <span class="district-badge">Mulanje</span>
+            <span class="district-badge">Nsanje</span>
+            <span class="district-badge">Chikwawa</span>
+            <span class="district-badge">Balaka</span>
+            <span class="district-badge">Machinga</span>
+            <span class="district-badge">Mwanza</span>
+            <span class="district-badge">Rumphi</span>
+            <span class="district-badge">Mzimba</span>
+            <span class="district-badge">Nkhata Bay</span>
+            <span class="district-badge">Chitipa</span>
+            <span class="district-badge">Dowa</span>
+            <span class="district-badge">Ntchisi</span>
+            <span class="district-badge">Mchinji</span>
+            <span class="district-badge">Likoma</span>
+            <span class="district-badge">Phalombe</span>
+            <span class="district-badge">Chiradzulu</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Card 5: CTA -->
+    <section class="ad-card cta-card" data-index="4">
+      <div class="card-inner">
+        <div class="card-bg-pattern"></div>
+        <div class="card-content">
+          <div class="cta-left">
+            <div class="section-eyebrow">Get Started Today</div>
+            <h3 class="section-title">Ready to find your<br>perfect car?</h3>
+            <p class="section-subtitle">
+              Join thousands of Malawians already using MotorLink to buy, sell, and rent vehicles. Free to start, no commitment required.
+            </p>
+
+            <div class="cta-buttons">
+              <a href="https://promanaged-it.com/motorlink/" target="_blank" class="btn btn-primary">
+                <i class="fas fa-car"></i>
+                <span>Browse Cars</span>
+              </a>
+              <a href="https://promanaged-it.com/motorlink/sell.html" target="_blank" class="btn btn-outline">
+                <i class="fas fa-plus-circle"></i>
+                <span>Sell Your Car</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="cta-right">
+            <div class="powered-by">
+              <div class="powered-eyebrow">Platform Built & Managed By</div>
+              <div class="powered-logo">
+                <div class="powered-logo-icon">
+                  <i class="fas fa-server"></i>
+                </div>
+                <div class="powered-logo-text">ProManaged IT</div>
+              </div>
+              <p class="powered-desc">
+                Professional IT solutions, web development, and managed hosting services. Powering Malawi's digital transformation.
+              </p>
+              <a href="https://promanaged-it.com" target="_blank" class="powered-link">
+                <span>Visit ProManaged IT</span>
+                <i class="fas fa-arrow-right"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="ad-footer">
+          <div class="footer-left">
+            <strong>MotorLink Malawi</strong> — Connecting Malawi's automotive community since 2025. 
+            Built with love by <strong>ProManaged IT</strong>.
+          </div>
+          <div class="footer-right">
+            <a href="https://promanaged-it.com/motorlink/" target="_blank" class="footer-link">
+              <i class="fas fa-globe"></i>
+              <span>Visit Site</span>
+            </a>
+            <a href="https://promanaged-it.com" target="_blank" class="footer-link">
+              <i class="fas fa-server"></i>
+              <span>ProManaged IT</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // Scroll progress indicator
+    const scrollProgress = document.getElementById('scrollProgress');
+    const navDots = document.querySelectorAll('.nav-dot');
+    const cards = document.querySelectorAll('.ad-card');
+
+    window.addEventListener('scroll', () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const scrollPercent = (scrollTop / docHeight) * 100;
+      scrollProgress.style.width = scrollPercent + '%';
+
+      // Update nav dots
+      let currentIndex = 0;
+      cards.forEach((card, index) => {
+        const rect = card.getBoundingClientRect();
+        if (rect.top < window.innerHeight / 2) {
+          currentIndex = index;
+        }
+      });
+
+      navDots.forEach((dot, i) => {
+        dot.classList.toggle('active', i === currentIndex);
+      });
+    });
+
+    // Nav dot click navigation
+    navDots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        const index = parseInt(dot.dataset.index);
+        cards[index].scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    // Intersection Observer for card animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.querySelector('.card-inner').classList.add('visible');
+        }
+      });
+    }, {
+      threshold: 0.2,
+      rootMargin: '-50px'
+    });
+
+    cards.forEach(card => observer.observe(card));
+
+    // Trigger first card immediately
+    setTimeout(() => {
+      cards[0].querySelector('.card-inner').classList.add('visible');
+    }, 300);
+
+    // Hide scroll arrow after scrolling
+    const scrollArrow = document.querySelector('.scroll-arrow');
+    let arrowHidden = false;
+
+    window.addEventListener('scroll', () => {
+      if (!arrowHidden && window.scrollY > 100) {
+        scrollArrow.style.opacity = '0';
+        scrollArrow.style.transition = 'opacity 0.3s';
+        arrowHidden = true;
+      }
+    });
+  </script>
+
+    <script src="js/page-transitions.js"></script>
+</body>
+</html>

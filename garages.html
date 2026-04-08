@@ -1,0 +1,408 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Garages & Service Centers - MotorLink Malawi</title>
+    <meta name="description" content="Find trusted car garages and service centers in Malawi. Professional automotive repair and maintenance services across all districts.">
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/garages.css">
+    <link rel="stylesheet" href="css/garage-service-cards.css">
+    <link rel="stylesheet" href="css/garages-page.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+    <link rel="stylesheet" href="css/unified-filters.css">
+    <link rel="stylesheet" href="css/mobile-filter-tray.css">
+
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+    <link rel="stylesheet" href="css/cookie-consent.css">
+    <link rel="stylesheet" href="css/animations.css">
+</head>
+
+<body>
+    <!-- Header with Fixed Mobile Menu -->
+    <header class="header">
+        <div class="container">
+            <div class="header-container">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                
+                <nav class="nav" id="mainNav">
+                    <a href="index.html">Home</a>
+                    <a href="car-database.html">Know Your Car</a>
+                    <a href="garages.html">Garages</a>
+                    <a href="dealers.html">Dealers</a>
+                    <a href="car-hire.html">Car Hire</a>
+                    <a href="sell.html">Sell Car</a>
+                </nav>
+                
+                <div class="user-menu" id="userMenu">
+                    <div id="userInfo" style="display: none;">
+                        <a href="profile.html" class="user-avatar-btn" title="My Profile" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </a>
+                        <button onclick="logout()" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    <div id="guestMenu">
+                        <a href="login.html" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="register.html" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+                
+                <button class="mobile-menu-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Car Garages & Service Centers</h1>
+            <p class="hero-subtitle">Find trusted garages and service centers across Malawi.</p>
+
+            <!-- Garage Stats -->
+            <div class="hero-stats">
+                <div class="hero-stat">
+                    <div class="hero-stat-number" id="totalGarages">Loading...</div>
+                    <div class="hero-stat-label">Service Centers</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-number" id="certifiedGarages">Loading...</div>
+                    <div class="hero-stat-label">Certified</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-number" id="emergencyGarages">Loading...</div>
+                    <div class="hero-stat-label">24/7 Emergency</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-number" id="districtsCount">Loading...</div>
+                    <div class="hero-stat-label">Districts</div>
+                </div>
+            </div>
+                <div class="quick-district-label">Popular Districts:</div>
+                <div class="quick-district-tags">
+                    <button class="district-tag" data-district="Blantyre">Blantyre</button>
+                    <button class="district-tag" data-district="Lilongwe">Lilongwe</button>
+                    <button class="district-tag" data-district="Mzuzu">Mzuzu</button>
+                    <button class="district-tag" data-district="Zomba">Zomba</button>
+                    <button class="district-tag" data-district="Mangochi">Mangochi</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Mobile Filter Tray Button (Floating Action Button) -->
+    <button class="mobile-filter-fab" id="mobileFilterFab" aria-label="Open filters">
+        <i class="fas fa-sliders-h"></i>
+    </button>
+
+    <!-- Mobile Nearby Garages Button (Floating Action Button) -->
+    <button class="mobile-nearby-fab" id="mobileNearbyFab" aria-label="Find nearby garages" title="Find garages near me">
+        <i class="fas fa-location-arrow"></i>
+        <span class="fab-text">Nearby</span>
+    </button>
+
+    <!-- Mobile Filter Tray Overlay -->
+    <div class="mobile-filter-overlay" id="mobileFilterOverlay"></div>
+
+    <!-- Mobile Filter Tray -->
+    <div class="mobile-filter-tray" id="mobileFilterTray" role="dialog" aria-label="Filter options">
+        <div class="mobile-filter-tray-header">
+            <h3><i class="fas fa-filter"></i> Filter Garages</h3>
+            <button class="mobile-filter-tray-close" id="mobileFilterTrayClose" aria-label="Close filters">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="mobile-filter-tray-content">
+            <!-- Filters will be populated here on mobile -->
+        </div>
+        <div class="mobile-filter-tray-actions">
+            <button type="button" class="btn btn-outline-primary btn-clear-filters-mobile">
+                <i class="fas fa-redo"></i> Clear All
+            </button>
+            <button type="button" class="btn btn-primary btn-apply-filters-mobile">
+                <i class="fas fa-check"></i> Apply
+            </button>
+        </div>
+    </div>
+
+    <!-- Enhanced Filters -->
+    <div class="garages-page-wrapper">
+    <div class="garages-page-container">
+        <div class="garage-filters-container">
+            <form id="garageFilterForm" class="garage-filters-form">
+            <div class="garage-filters-grid">
+                <div class="garage-filter-group filter-group">
+                    <label class="garage-filter-label filter-label"><i class="fas fa-search"></i> Search</label>
+                    <input type="text" id="garageSearchInput" class="garage-filter-input search-input filter-input" placeholder="Search garages...">
+                </div>
+
+                <div class="garage-filter-group filter-group">
+                    <label class="garage-filter-label filter-label"><i class="fas fa-map-marker-alt"></i> District</label>
+                    <select id="districtFilter" class="garage-filter-input filter-select">
+                        <option value="">All Districts</option>
+                    </select>
+                </div>
+                
+                <div class="garage-filter-group filter-group">
+                    <label class="garage-filter-label filter-label"><i class="fas fa-car"></i> Car Brand</label>
+                    <select id="carBrandFilter" class="garage-filter-input filter-select">
+                        <option value="">All Car Brands</option>
+                        <option value="Toyota">Toyota</option>
+                        <option value="Honda">Honda</option>
+                        <option value="Nissan">Nissan</option>
+                        <option value="Mercedes-Benz">Mercedes-Benz</option>
+                        <option value="BMW">BMW</option>
+                        <option value="Audi">Audi</option>
+                        <option value="Mazda">Mazda</option>
+                        <option value="Mitsubishi">Mitsubishi</option>
+                    </select>
+                </div>
+                
+                <div class="garage-filter-group filter-group">
+                    <label class="garage-filter-label filter-label"><i class="fas fa-tools"></i> Service Type</label>
+                    <select id="serviceFilter" class="garage-filter-input filter-select">
+                        <option value="">All Services</option>
+                        <option value="Engine Repair">Engine Repair</option>
+                        <option value="Brake Service">Brake Service</option>
+                        <option value="Oil Change">Oil Change</option>
+                        <option value="AC Repair">AC Repair</option>
+                        <option value="Transmission Service">Transmission Service</option>
+                        <option value="Electrical Repair">Electrical Repair</option>
+                    </select>
+                </div>
+
+                <div class="garage-filter-group filter-group">
+                    <label class="garage-filter-label filter-label"><i class="fas fa-ambulance"></i> Emergency Service</label>
+                    <select id="emergencyFilter" class="garage-filter-input filter-select">
+                        <option value="">All Services</option>
+                        <option value="Breakdown Recovery">Breakdown Recovery</option>
+                        <option value="Towing">Towing</option>
+                        <option value="Tire Replacement">Tire Replacement</option>
+                        <option value="Jump Start">Jump Start</option>
+                        <option value="Fuel Delivery">Fuel Delivery</option>
+                    </select>
+                </div>
+                
+                <div class="garage-filter-group filter-group">
+                    <label class="garage-filter-label filter-label"><i class="fas fa-sort"></i> Sort By</label>
+                    <select id="sortFilter" class="garage-filter-input filter-select">
+                        <option value="featured">Featured First</option>
+                        <option value="verified">Verified First</option>
+                        <option value="distance">Nearest First</option>
+                        <option value="experience">Most Experience</option>
+                        <option value="name">Name A-Z</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="garage-filter-actions filter-actions">
+                <button type="button" id="nearbyGaragesBtn" class="btn btn-success">
+                    <i class="fas fa-location-arrow"></i> Nearby (10km)
+                </button>
+                <button type="submit" id="applyFiltersBtn" class="btn btn-primary">
+                    <i class="fas fa-search"></i> Apply Filters
+                </button>
+                <button type="button" id="clearFiltersBtn" class="btn btn-outline-primary btn-clear-filters">
+                    <i class="fas fa-redo"></i> Clear All
+                </button>
+            </div>
+            </form>
+        </div>
+
+        <!-- Active Filters Display -->
+        <div id="activeFilters" class="active-filters-container" style="display: none;">
+            <div class="active-filters-label">Active Filters:</div>
+            <div id="activeFiltersList" class="active-filters-list"></div>
+        </div>
+
+        <!-- Search Status -->
+        <div id="searchStatus" class="search-status" style="display: none;">
+            <div class="search-status-content">
+                <i class="fas fa-info-circle"></i>
+                <span id="searchStatusText"></span>
+            </div>
+        </div>
+
+        <!-- Mobile Static Nearby Button -->
+        <div class="mobile-nearby-static-container">
+            <button class="mobile-nearby-static-btn" id="mobileNearbyStaticBtn" aria-label="Find nearby garages">
+                <div class="nearby-btn-icon">
+                    <i class="fas fa-location-arrow"></i>
+                </div>
+                <div class="nearby-btn-content">
+                    <div class="nearby-btn-title">Find Garages Near You</div>
+                    <div class="nearby-btn-subtitle">Tap to discover garages in your area</div>
+                </div>
+                <div class="nearby-btn-arrow">
+                    <i class="fas fa-chevron-right"></i>
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Results Count -->
+    <div class="container">
+        <div id="resultsCount" class="results-count" style="display: none;">
+            <div class="results-breakdown">
+                <span id="garageCount">0</span> garages found
+                <span id="databaseCount" class="count-badge database-count" style="cursor: pointer;" title="Jump to MotorLink garages">0 from MotorLink</span>
+                <span id="googleCount" class="count-badge google-count" style="cursor: pointer;" title="Jump to nearby garages">0 from nearby</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Garages Grid -->
+    <div class="container">
+        <div id="garagesGrid" class="garages-main-grid">
+            <div class="garage-loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <div>Loading garages...</div>
+            </div>
+        </div>
+    </div>
+    </div><!-- End garages-page-container -->
+    </div><!-- End garages-page-wrapper -->
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-car"></i> MotorLink Malawi</h4>
+                    <p>Your trusted partner for buying and selling cars in Malawi. We connect buyers and sellers in a safe, secure environment with the latest cars from trusted dealers across all 28 districts.</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="Follow us on Facebook" title="MotorLink Malawi Facebook">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Twitter" title="MotorLink Malawi Twitter">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Instagram" title="MotorLink Malawi Instagram">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" aria-label="Contact us on WhatsApp" title="MotorLink Malawi WhatsApp">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-link"></i> Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Browse Cars</a></li>
+                        <li><a href="sell.html">Sell Your Car</a></li>
+                        <li><a href="garages.html">Find Garages</a></li>
+                        <li><a href="dealers.html">Car Dealers</a></li>
+                        <li><a href="car-hire.html">Car Hire</a></li>
+                        <li><a href="car-database.html">Know Your Car</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-life-ring"></i> Support & Help</h4>
+                    <ul>
+                        <li><a href="help.html">Help Center</a></li>
+                        <li><a href="safety.html">Safety Tips</a></li>
+                        <li><a href="contact.html">Contact Us</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-phone"></i> Contact & Payment</h4>
+                    <p><i class="fas fa-envelope"></i> <strong>Email:</strong> <a href="mailto:info@motorlink.mw">info@motorlink.mw</a></p>
+                    <p><i class="fas fa-phone"></i> <strong>Phone:</strong> <a href="tel:+265991234567">+265 991 234 567</a></p>
+                    
+                    <div style="margin-top: 20px;">
+                        <h5><i class="fas fa-mobile-alt"></i> Mobile Money Payments</h5>
+                        <p><strong>Airtel Money:</strong> +265 991 234 567</p>
+                        <p><strong>TNM Mpamba:</strong> +265 881 765 432</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 MotorLink Malawi. All rights reserved. | Connecting Malawi's automotive community since 2025</p>
+                <p style="margin-top: 10px; font-size: 14px;">
+                    <i class="fas fa-shield-alt"></i> Safe Trading • 
+                    <i class="fas fa-mobile-alt"></i> Mobile Friendly • 
+                    <i class="fas fa-globe"></i> Hosted by <a href="https://promanaged-it.com" target="_blank" rel="noopener">ProManaged IT</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Emergency Modal -->
+    <div id="emergencyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-ambulance"></i> Emergency Breakdown Assistance</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="emergency-info">
+                    <p><strong>Need immediate help?</strong> Here are your options:</p>
+                    <div class="emergency-options">
+                        <div class="emergency-option">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <div>
+                                <h4>Find Nearest Garages</h4>
+                                <p>Locate all garages within 10km of your current location</p>
+                                <button class="btn btn-primary" id="modalFindNearbyBtn">Find Nearby Garages</button>
+                            </div>
+                        </div>
+                        <div class="emergency-option">
+                            <i class="fas fa-phone"></i>
+                            <div>
+                                <h4>24/7 Emergency Hotline</h4>
+                                <p>Call our emergency hotline for immediate assistance</p>
+                                <a href="tel:+265991234567" class="btn btn-danger">Call +265 991 234 567</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="config.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="js/footer-loader.js"></script>
+    <script src="script.js"></script>
+    <script src="js/garages-mobile-filter-tray.js"></script>
+    <script src="garages.js"></script>
+    <script src="js/cookie-consent.js"></script>
+
+    <script src="js/page-transitions.js"></script>
+</body>
+</html><script>
+// Connect static nearby button to existing nearby functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const staticNearbyBtn = document.getElementById('mobileNearbyStaticBtn');
+    const modalNearbyBtn = document.getElementById('modalFindNearbyBtn');
+    
+    if (staticNearbyBtn && modalNearbyBtn) {
+        staticNearbyBtn.addEventListener('click', function() {
+            // Trigger the same functionality as modal nearby button
+            modalNearbyBtn.click();
+        });
+    }
+});
+</script>

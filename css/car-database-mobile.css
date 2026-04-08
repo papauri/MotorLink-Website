@@ -1,0 +1,439 @@
+/**
+ * Car Database Mobile Styles
+ * Enhanced mobile responsiveness for Know Your Car page
+ */
+
+/* Mobile-specific styles for journey planner and vehicle management */
+@media (max-width: 768px) {
+    /* Journey Planner Form - Stack vertically on mobile */
+    .journey-form-container {
+        padding: 15px 0;
+        margin: 0 0 20px 0;
+    }
+    
+    .journey-form-container .form-row {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .journey-form-container .form-group {
+        width: 100% !important;
+        margin-bottom: 0;
+    }
+    
+    /* Vehicle Selection - Better mobile layout */
+    .journey-form-container .form-group label {
+        font-size: 0.9rem;
+        margin-bottom: 8px;
+        display: block;
+    }
+    
+    /* Vehicle selection container */
+    .vehicle-selection-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    /* Vehicle select row - Stack on mobile */
+    .vehicle-select-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .vehicle-select {
+        width: 100%;
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px;
+    }
+    
+    .add-vehicle-btn {
+        width: 100%;
+        padding: 12px;
+        font-size: 0.95rem;
+        white-space: normal;
+    }
+    
+    /* OR divider */
+    .vehicle-search-divider {
+        text-align: center;
+        margin: 5px 0;
+    }
+    
+    .vehicle-search-divider span {
+        font-weight: 600;
+        color: #666;
+        font-size: 0.9rem;
+    }
+    
+    /* Search row - Stack on mobile */
+    .vehicle-search-row {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .vehicle-search-input {
+        width: 100%;
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px;
+    }
+    
+    .vehicle-search-btn {
+        width: 100%;
+        padding: 12px;
+    }
+    
+    /* Search result display */
+    .vehicle-search-result {
+        font-size: 0.9rem;
+        padding: 12px;
+        margin-top: 5px;
+    }
+    
+    .vehicle-search-result-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .vehicle-search-result-info {
+        flex: 1;
+    }
+    
+    .vehicle-search-year {
+        color: #666;
+        margin-left: 5px;
+    }
+    
+    .vehicle-search-clear {
+        padding: 5px 10px;
+        flex-shrink: 0;
+    }
+    
+    /* Calculate button */
+    #calculateJourneyBtn {
+        width: 100%;
+        padding: 15px;
+        font-size: 1rem;
+        margin-top: 15px;
+    }
+    
+    /* Journey map - Better mobile sizing */
+    #journeyMap {
+        height: 300px !important;
+        margin-top: 15px;
+    }
+    
+    /* Fuel prices display - Stack on mobile */
+    #fuelPricesDisplay {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    /* Tabs - Better mobile display */
+    .tabs-container {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 0 10px;
+    }
+    
+    .tab-btn {
+        flex: 1 1 calc(50% - 4px);
+        min-width: calc(50% - 4px);
+        padding: 12px 8px;
+        font-size: 0.85rem;
+    }
+    
+    /* Tab content padding - ensure proper spacing */
+    .tab-content {
+        padding: 15px 10px;
+        min-height: 200px;
+        overflow-x: hidden;
+    }
+    
+    /* Ensure journey planner tab has proper spacing */
+    #journey-planner-tab {
+        padding: 15px 10px;
+    }
+    
+    /* Journey planner content container */
+    #journeyPlannerContent {
+        padding: 0;
+    }
+    
+    /* VIN Decoder tab - ensure it doesn't block other elements */
+    #vin-decoder-tab {
+        position: relative;
+        z-index: 1;
+        padding: 20px 12px 30px;
+    }
+    
+    /* Make sure tabs don't overlap content */
+    .container > .tabs-container {
+        margin-bottom: 20px;
+        padding: 0 12px;
+    }
+    
+    /* VIN Decoder search-container - Better mobile spacing */
+    #vin-decoder-tab .search-container {
+        margin: 0 auto 30px;
+        padding: 0 12px;
+        position: static;
+        max-width: 100%;
+    }
+    
+    #vin-decoder-tab .search-card {
+        padding: 24px 18px;
+        border-radius: 16px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* VIN Decoder header section - Better spacing */
+    #vin-decoder-tab .search-card > div:first-child {
+        margin-bottom: 24px;
+        padding: 0;
+    }
+    
+    #vin-decoder-tab .search-card i.fa-barcode {
+        font-size: 48px !important;
+        margin-bottom: 16px !important;
+    }
+    
+    #vin-decoder-tab .search-card h2 {
+        font-size: 1.5rem !important;
+        margin: 0 0 10px 0 !important;
+    }
+    
+    #vin-decoder-tab .search-card > div:first-child p {
+        font-size: 0.9rem !important;
+        line-height: 1.5 !important;
+        padding: 0 8px;
+    }
+    
+    /* VIN Input group - Better spacing */
+    #vin-decoder-tab .search-group {
+        margin-bottom: 20px;
+    }
+    
+    #vin-decoder-tab .search-group label {
+        font-size: 0.95rem;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    #vin-decoder-tab #vinInput {
+        font-size: 16px !important;
+        padding: 14px 12px !important;
+        letter-spacing: 1.5px !important;
+        border-radius: 8px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Info text below input */
+    #vin-decoder-tab .search-group > div[style*="margin-top"] {
+        font-size: 0.85rem !important;
+        padding: 8px 4px 0;
+        line-height: 1.4;
+    }
+    
+    /* Decode button - Better spacing */
+    #vin-decoder-tab .search-btn {
+        width: 100%;
+        padding: 14px 20px !important;
+        font-size: 1rem !important;
+        margin-top: 20px !important;
+        border-radius: 10px;
+    }
+    
+    /* VIN Results Container - Better spacing */
+    #vin-decoder-tab .results-container {
+        padding: 0 12px;
+        margin: 0 auto 30px;
+    }
+    
+    /* VIN Results */
+    #vinResults {
+        padding: 15px 0;
+        font-size: 0.9rem;
+        margin-top: 15px;
+    }
+    
+    #vinResults .vin-result-item {
+        padding: 12px;
+        margin-bottom: 12px;
+    }
+    
+    /* Specs card in results - Better mobile */
+    #vin-decoder-tab .specs-card {
+        padding: 20px 16px;
+        margin-bottom: 20px;
+    }
+    
+    #vin-decoder-tab .specs-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+    
+    /* Vehicle cards in My Vehicles */
+    .vehicle-card,
+    .vehicle-cards-container .vehicle-card {
+        margin-bottom: 15px;
+        padding: 15px;
+    }
+    
+    .vehicle-card > div:first-child {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .vehicle-card h3 {
+        font-size: 1.1rem;
+    }
+    
+    .vehicle-actions {
+        display: flex;
+        gap: 8px;
+        width: 100%;
+        justify-content: flex-end;
+    }
+    
+    .vehicle-actions .btn {
+        flex: 1;
+        max-width: 80px;
+        padding: 8px;
+    }
+    
+    /* Vehicle details grid - Stack on mobile */
+    .vehicle-card > div:last-child {
+        grid-template-columns: 1fr !important;
+        gap: 12px;
+    }
+    
+    /* Add Vehicle Modal - Better mobile */
+    .modal-dialog {
+        margin: 10px;
+        max-width: calc(100% - 20px);
+    }
+    
+    .modal-body {
+        padding: 20px 15px;
+    }
+    
+    .modal-body .form-group {
+        margin-bottom: 20px;
+    }
+    
+    .modal-body .form-group label {
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+    }
+    
+    .modal-body .form-control,
+    .modal-body select.form-control {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 12px;
+    }
+    
+    .modal-footer {
+        padding: 15px;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+        margin: 0;
+    }
+    
+    /* Hero section adjustments */
+    .hero h1 {
+        font-size: 1.8rem;
+    }
+    
+    .hero p {
+        font-size: 0.95rem;
+        padding: 0 10px;
+    }
+    
+    /* Login prompt */
+    .login-prompt {
+        padding: 30px 20px;
+    }
+    
+    .login-prompt h3 {
+        font-size: 1.3rem;
+    }
+    
+    .login-prompt p {
+        font-size: 0.95rem;
+        margin-bottom: 20px;
+    }
+    
+    .login-prompt .btn {
+        width: 100%;
+        padding: 12px;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+    .tab-btn {
+        flex: 1 1 100%;
+        min-width: 100%;
+        font-size: 0.8rem;
+        padding: 10px 6px;
+    }
+    
+    .journey-form-container {
+        padding: 10px 0;
+    }
+    
+    .modal-dialog {
+        margin: 5px;
+        max-width: calc(100% - 10px);
+    }
+    
+    .hero h1 {
+        font-size: 1.5rem;
+    }
+    
+    #vin-decoder-tab {
+        padding: 15px 8px 25px;
+    }
+    
+    #vin-decoder-tab .search-container {
+        padding: 0 8px;
+    }
+    
+    #vin-decoder-tab .search-card {
+        padding: 20px 14px;
+    }
+    
+    #vin-decoder-tab .search-card h2 {
+        font-size: 1.3rem !important;
+    }
+    
+    #vin-decoder-tab .search-card > div:first-child p {
+        font-size: 0.85rem !important;
+    }
+    
+    #vin-decoder-tab #vinInput {
+        font-size: 15px !important;
+        padding: 12px 10px !important;
+        letter-spacing: 1px !important;
+    }
+    
+    #vin-decoder-tab .search-btn {
+        padding: 12px 16px !important;
+        font-size: 0.95rem !important;
+    }
+}

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Hire Company - MotorLink Malawi</title>
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/car-hire.css">
+    <link rel="stylesheet" href="css/uniform-card-layouts.css">
+    <link rel="stylesheet" href="css/unified-info-sections.css">
+    <link rel="stylesheet" href="css/company-info-grid.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-container">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                <nav class="nav" id="mainNav">
+                    <a href="index.html">Home</a>
+                    <a href="car-database.html">Know Your Car</a>
+                    <a href="garages.html">Garages</a>
+                    <a href="dealers.html">Dealers</a>
+                    <a href="car-hire.html">Car Hire</a>
+                    <a href="sell.html">Sell Car</a>
+                </nav>
+                <div class="user-menu" id="userMenu">
+                    <div id="userInfo" style="display: none;">
+                        <a href="profile.html" class="user-avatar-btn" title="My Profile" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </a>
+                        <button onclick="logout()" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    <div id="guestMenu">
+                        <a href="login.html" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="register.html" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+                <button class="mobile-menu-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Company Header -->
+    <section class="company-header" id="companyHeader">
+        <div class="loading">
+            <i class="fas fa-spinner fa-spin"></i>
+        </div>
+    </section>
+
+    <!-- Fleet Section -->
+    <section class="fleet-section">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <i class="fas fa-car-side"></i> Available Fleet
+                </h2>
+                <p class="section-subtitle">Choose from our well-maintained vehicles</p>
+            </div>
+            <div id="fleetGrid" class="fleet-grid">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Loading vehicles...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Combined Company Information Grid -->
+    <section class="company-info-section" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 60px 0;">
+        <div class="container">
+            <h2 class="section-title" style="text-align: center; margin-bottom: 40px;">
+                <i class="fas fa-info-circle"></i> Company Information
+            </h2>
+            <div class="company-info-grid">
+                <!-- Contact Card -->
+                <div class="contact-card" id="contactCard">
+                    <div class="loading"><i class="fas fa-spinner fa-spin"></i></div>
+                </div>
+
+                <!-- Opening Hours Card -->
+                <div class="hours-card" id="hoursCard">
+                    <h3><i class="fas fa-clock"></i> Opening Hours</h3>
+                    <div id="hoursContent">
+                        <div class="loading"><i class="fas fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <!-- Services Offered -->
+                <div class="services-card" id="servicesCard">
+                    <h3><i class="fas fa-concierge-bell"></i> Our Services</h3>
+                    <div id="servicesContent">
+                        <div class="loading"><i class="fas fa-spinner fa-spin"></i></div>
+                    </div>
+                </div>
+
+                <!-- Map Container - Full Width -->
+                <div class="map-container-grid">
+                    <div id="companyMap">
+                        <div class="loading" style="height: 100%; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p>Loading map...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container"></div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="js/footer-loader.js"></script>
+    <script src="script.js"></script>
+    <script src="car-hire-company.js"></script>
+
+    <script src="js/page-transitions.js"></script>
+</body>
+</html>

@@ -1,0 +1,870 @@
+// ============================================================================
+// Car Detail Page - Individual Car Listing View
+// ============================================================================
+// Displays detailed information about a specific car listing
+// Includes image gallery, specifications, contact options, and similar cars
+// Uses global CONFIG from config.js for API endpoints
+// ============================================================================
+
+// Enhanced CarDetailManager with working image gallery
+class CarDetailManager {
+    constructor() {
+        this.listingId = this.getListingIdFromUrl();
+        this.currentImageIndex = 0;
+        this.listingImages = [];
+        this.isFullscreen = false;
+        this.init();
+    }
+
+    init() {
+        if (!this.listingId) {
+            this.showError('Invalid listing ID');
+            return;
+        }
+        this.loadCarDetail();
+    }
+
+    getListingIdFromUrl() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('id');
+    }
+
+    async loadCarDetail() {
+        try {
+            // Fetch user info if not already available
+            if (!this.getCurrentUser()) {
+                await this.fetchCurrentUser();
+            }
+            
+            const response = await fetch(`${CONFIG.API_URL}?action=listing&id=${this.listingId}`);
+            const data = await response.json();
+
+            if (data.success && data.listing) {
+                this.renderCarDetail(data.listing);
+                this.checkSavedStatus();
+            } else {
+                this.showError(data.message || 'Failed to load car details');
+            }
+        } catch (error) {
+            this.showError('Network error. Please try again.');
+        }
+    }
+
+    async fetchCurrentUser() {
+        try {
+            const response = await fetch(`${CONFIG.API_URL}?action=check_auth`, {
+                credentials: 'include'
+            });
+            const data = await response.json();
+            
+            if (data.success && data.authenticated && data.user) {
+                // Store in window.motorLink if it exists
+                if (window.motorLink) {
+                    window.motorLink.currentUser = data.user;
+                }
+                // Also store in localStorage
+                localStorage.setItem('motorlink_user', JSON.stringify(data.user));
+                localStorage.setItem('motorlink_authenticated', 'true');
+            }
+        } catch (error) {
+            // Silently fail - will use localStorage fallback
+        }
+    }
+
+    renderCarDetail(listing) {
+        const carContent = document.getElementById('carContent');
+        if (!carContent) return;
+
+        // Store listing data and images for gallery
+        this.currentListing = listing;
+        this.listingImages = listing.images || [];
+        
+        // Check if current user owns this listing
+        const currentUser = this.getCurrentUser();
+        const isOwnListing = currentUser && listing.user_id && parseInt(currentUser.id) === parseInt(listing.user_id);
+        
+        // Format price with commas
+        const formattedPrice = listing.price ? `MWK ${parseInt(listing.price).toLocaleString()}` : 'Price on request';
+        
+        // Generate HTML for images
+        let imagesHTML = '';
+        let thumbnailsHTML = '';
+        
+        if (this.listingImages.length > 0) {
+            imagesHTML = this.listingImages.map((image, index) => `
+                <img src="${CONFIG.API_URL}?action=image&id=${image.id}"
+                     alt="${listing.title}"
+                     class="main-image ${index === 0 ? 'active' : ''}"
+                     data-index="${index}"
+                     onerror="this.src='${CONFIG.BASE_URL}assets/images/car-placeholder.jpg'">
+            `).join('');
+
+            thumbnailsHTML = this.listingImages.map((image, index) => `
+                <img src="${CONFIG.API_URL}?action=image&id=${image.id}"
+                     alt="${listing.title}"
+                     class="thumbnail ${index === 0 ? 'active' : ''}"
+                     data-index="${index}"
+                     onerror="this.src='${CONFIG.BASE_URL}assets/images/car-placeholder.jpg'">
+            `).join('');
+        } else {
+            imagesHTML = '<div class="no-image"><i class="fas fa-car"></i><span>No Image Available</span></div>';
+            thumbnailsHTML = '';
+        }
+
+        // Generate HTML for car details
+        carContent.innerHTML = `
+            <div class="car-detail-grid">
+                <div class="car-content-main">
+                    <div class="image-gallery">
+                        <div class="main-image-container">
+                            ${imagesHTML}
+                            ${this.listingImages.length > 1 ? `
+                            <button class="gallery-nav gallery-nav-prev" id="galleryPrev">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button class="gallery-nav gallery-nav-next" id="galleryNext">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                            <div class="image-counter">
+                                <span id="currentImageNum">1</span> / <span id="totalImages">${this.listingImages.length}</span>
+                            </div>
+                            ` : ''}
+                            ${this.listingImages.length > 0 ? `
+                            <button class="fullscreen-toggle" id="fullscreenToggle">
+                                <i class="fas fa-expand"></i> Full Screen
+                            </button>
+                            ` : ''}
+                        </div>
+                        ${this.listingImages.length > 1 ? `
+                        <div class="thumbnail-strip">
+                            ${thumbnailsHTML}
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="car-info">
+                        <div class="car-header">
+                            <h1 class="car-title">${this.escapeHtml(listing.title)}</h1>
+                            <div class="car-price-section">
+                                <div class="car-price">${formattedPrice}</div>
+                                ${listing.negotiable == 1 ? '<div class="listing-badge">Negotiable</div>' : ''}
+                            </div>
+                            ${listing.reference_number ? `
+                                <div class="car-reference">Reference: ${listing.reference_number}</div>
+                                <div class="car-reference" style="margin-top: 4px;">ID: ${listing.id}</div>
+                            ` : `
+                                <div class="car-reference">ID: ${listing.id}</div>
+                            `}
+                        </div>
+                        
+                        <div class="car-details-grid">
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-calendar"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Year</div>
+                                    <div class="detail-value">${listing.year || 'N/A'}</div>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-road"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Mileage</div>
+                                    <div class="detail-value">${listing.mileage ? this.formatNumber(listing.mileage) + ' km' : 'N/A'}</div>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-gas-pump"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Fuel Type</div>
+                                    <div class="detail-value">${listing.fuel_type ? this.capitalize(listing.fuel_type) : 'N/A'}</div>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-cog"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Transmission</div>
+                                    <div class="detail-value">${listing.transmission ? this.capitalize(listing.transmission) : 'N/A'}</div>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-car"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Condition</div>
+                                    <div class="detail-value">${listing.condition_type ? this.capitalize(listing.condition_type.replace('_', ' ')) : 'N/A'}</div>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-palette"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Exterior Color</div>
+                                    <div class="detail-value">${listing.exterior_color || 'N/A'}</div>
+                                </div>
+                            </div>
+                            ${listing.interior_color ? `
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-couch"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Interior Color</div>
+                                    <div class="detail-value">${listing.interior_color}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                            ${listing.seats ? `
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-chair"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Seats</div>
+                                    <div class="detail-value">${listing.seats} Seats</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                            ${listing.doors ? `
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-door-open"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Doors</div>
+                                    <div class="detail-value">${listing.doors} Doors</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                            ${listing.engine_size ? `
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Engine Size</div>
+                                    <div class="detail-value">${listing.engine_size}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                            ${listing.drivetrain ? `
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-cogs"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Drivetrain</div>
+                                    <div class="detail-value">${listing.drivetrain ? listing.drivetrain.toUpperCase() : ''}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                        </div>
+                        
+                        ${listing.description ? `
+                            <div class="car-description">
+                                <h3>Description</h3>
+                                <p>${this.escapeHtml(listing.description)}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+                
+                <div class="car-sidebar">
+                    <div class="contact-card">
+                        <div class="contact-header">
+                            <h3>Seller Information</h3>
+                            <div class="seller-type">${listing.seller_type === 'dealer' ? 'Dealer' : listing.seller_type === 'garage' ? 'Garage' : listing.seller_type === 'car_hire' ? 'Car Hire' : 'Private Seller'}</div>
+                        </div>
+
+                        <div class="contact-details">
+                            ${listing.business_name ? `
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Business Name</div>
+                                    <div class="detail-value">${this.escapeHtml(listing.business_name)}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Contact Person</div>
+                                    <div class="detail-value">${this.escapeHtml(listing.contact_name || 'N/A')}</div>
+                                </div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-phone"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Phone</div>
+                                    <div class="detail-value">${this.escapeHtml(listing.contact_phone || 'N/A')}</div>
+                                </div>
+                            </div>
+                            ${listing.contact_email ? `
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Email</div>
+                                    <div class="detail-value">${this.escapeHtml(listing.contact_email)}</div>
+                                </div>
+                            </div>
+                            ` : ''}
+                            <div class="detail-item">
+                                <div class="detail-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="detail-content">
+                                    <div class="detail-label">Location</div>
+                                    <div class="detail-value">${this.escapeHtml(listing.location_name)}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-actions">
+                            ${listing.contact_phone ? `
+                                <a href="tel:${listing.contact_phone}" class="contact-btn primary">
+                                    <i class="fas fa-phone"></i> Call Seller
+                                </a>
+                            ` : ''}
+                            ${listing.contact_phone ? `
+                                <a href="https://wa.me/${listing.contact_phone.replace(/[^0-9]/g, '')}?text=Hi, I'm interested in your car listing: ${encodeURIComponent(listing.title)}"
+                                   class="contact-btn secondary" target="_blank">
+                                    <i class="fab fa-whatsapp"></i> WhatsApp
+                                </a>
+                            ` : ''}
+                            ${!isOwnListing && Number(listing.user_id) > 0 ? `
+                            <a href="chat_system.html?listing=${listing.id}&seller=${listing.user_id}" class="contact-btn outline">
+                                <i class="fas fa-comments"></i> Send Message
+                            </a>
+                            ` : ''}
+                            ${!isOwnListing ? `
+                            <button class="contact-btn save-btn" id="saveListingBtn" data-listing-id="${listing.id}" onclick="carDetailManager.toggleSave()">
+                                <i class="far fa-heart"></i> Save
+                            </button>
+                            ` : ''}
+                            ${!isOwnListing ? `
+                            <button class="contact-btn report-btn" onclick="carDetailManager.openReportModal(${listing.id})" title="Report this listing">
+                                <i class="fas fa-flag"></i> Report
+                            </button>
+                            ` : ''}
+                        </div>
+                        
+                        <div class="safety-tips">
+                            <h4><i class="fas fa-shield-alt"></i> Safety Tips</h4>
+                            <ul>
+                                <li>Meet in a public place</li>
+                                <li>Inspect the car thoroughly</li>
+                                <li>Verify all documents</li>
+                                <li>Never pay before seeing the car</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="car-meta-info">
+                        <div class="detail-item">
+                            <div class="detail-icon">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <div class="detail-content">
+                                <div class="detail-label">Views</div>
+                                <div class="detail-value">${listing.views_count || 0}</div>
+                            </div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-icon">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="detail-content">
+                                <div class="detail-label">Listed</div>
+                                <div class="detail-value">${this.timeAgo(listing.created_at)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            ${listing.user_id && (listing.seller_type === 'dealer' || listing.seller_type === 'garage' || listing.seller_type === 'car_hire') ? `
+            <div class="dealer-showroom-section" id="dealerShowroom">
+                <div class="showroom-header">
+                    <h2><i class="fas fa-store"></i> More from ${this.escapeHtml(listing.business_name || 'this seller')}</h2>
+                    ${listing.dealer_id ? `
+                        <a href="showroom.html?dealer_id=${listing.dealer_id}" class="view-all-link">
+                            View All Listings <i class="fas fa-arrow-right"></i>
+                        </a>
+                    ` : ''}
+                </div>
+                <div class="showroom-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Loading other listings...</p>
+                </div>
+                <div class="showroom-grid" id="showroomGrid"></div>
+            </div>
+            ` : ''}
+        `;
+
+        // Set up event listeners for the gallery
+        this.setupGalleryEvents();
+
+        // Load dealer's other listings if applicable
+        if (listing.user_id && (listing.seller_type === 'dealer' || listing.seller_type === 'garage' || listing.seller_type === 'car_hire')) {
+            this.loadDealerOtherListings(listing.user_id);
+        }
+    }
+
+    setupGalleryEvents() {
+        // Thumbnail click events
+        const thumbnails = document.querySelectorAll('.thumbnail');
+        thumbnails.forEach(thumb => {
+            thumb.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const index = parseInt(thumb.getAttribute('data-index'));
+                this.showImage(index);
+            });
+        });
+
+        // Navigation arrows click events
+        const prevBtn = document.getElementById('galleryPrev');
+        const nextBtn = document.getElementById('galleryNext');
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.prevImage();
+            });
+        }
+
+        if (nextBtn) {
+            nextBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.nextImage();
+            });
+        }
+
+        // Fullscreen toggle
+        const fullscreenToggle = document.getElementById('fullscreenToggle');
+        if (fullscreenToggle) {
+            fullscreenToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleFullscreen();
+            });
+        }
+
+        // Main image click to toggle fullscreen
+        const mainImageContainer = document.querySelector('.main-image-container');
+        if (mainImageContainer) {
+            mainImageContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('main-image')) {
+                    this.toggleFullscreen();
+                }
+            });
+        }
+
+        // Keyboard navigation - works outside fullscreen too for accessibility
+        document.addEventListener('keydown', (e) => {
+            // Check if user is typing in an input field
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            if (e.key === 'Escape' && this.isFullscreen) this.exitFullscreen();
+            if (e.key === 'ArrowRight') this.nextImage();
+            if (e.key === 'ArrowLeft') this.prevImage();
+        });
+
+        // Fullscreen change event
+        document.addEventListener('fullscreenchange', () => {
+            this.isFullscreen = !!(document.fullscreenElement || 
+                                 document.webkitFullscreenElement || 
+                                 document.msFullscreenElement);
+        });
+    }
+
+    showImage(index) {
+
+        // Update active states for main images
+        const mainImages = document.querySelectorAll('.main-image');
+        mainImages.forEach(img => img.classList.remove('active'));
+
+        // Show selected image
+        const selectedImage = document.querySelector(`.main-image[data-index="${index}"]`);
+        if (selectedImage) {
+            selectedImage.classList.add('active');
+        }
+
+        // Update active states for thumbnails
+        const thumbnails = document.querySelectorAll('.thumbnail');
+        thumbnails.forEach(thumb => thumb.classList.remove('active'));
+
+        const selectedThumb = document.querySelector(`.thumbnail[data-index="${index}"]`);
+        if (selectedThumb) {
+            selectedThumb.classList.add('active');
+            // Scroll thumbnail into view if needed
+            selectedThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+
+        // Update image counter
+        const currentImageNum = document.getElementById('currentImageNum');
+        if (currentImageNum) {
+            currentImageNum.textContent = index + 1;
+        }
+
+        this.currentImageIndex = index;
+    }
+
+    nextImage() {
+        if (this.listingImages.length === 0) return;
+        const nextIndex = (this.currentImageIndex + 1) % this.listingImages.length;
+        this.showImage(nextIndex);
+    }
+
+    prevImage() {
+        if (this.listingImages.length === 0) return;
+        const prevIndex = (this.currentImageIndex - 1 + this.listingImages.length) % this.listingImages.length;
+        this.showImage(prevIndex);
+    }
+
+    toggleFullscreen() {
+        if (this.isFullscreen) {
+            this.exitFullscreen();
+        } else {
+            this.enterFullscreen();
+        }
+    }
+
+    enterFullscreen() {
+        const mainImageContainer = document.querySelector('.main-image-container');
+        if (!mainImageContainer) return;
+        
+        if (mainImageContainer.requestFullscreen) {
+            mainImageContainer.requestFullscreen();
+        } else if (mainImageContainer.webkitRequestFullscreen) {
+            mainImageContainer.webkitRequestFullscreen();
+        } else if (mainImageContainer.msRequestFullscreen) {
+            mainImageContainer.msRequestFullscreen();
+        }
+        
+        this.isFullscreen = true;
+        const fullscreenToggle = document.getElementById('fullscreenToggle');
+        if (fullscreenToggle) {
+            fullscreenToggle.innerHTML = '<i class="fas fa-compress"></i> Exit Full Screen';
+        }
+    }
+
+    exitFullscreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+
+        this.isFullscreen = false;
+        const fullscreenToggle = document.getElementById('fullscreenToggle');
+        if (fullscreenToggle) {
+            fullscreenToggle.innerHTML = '<i class="fas fa-expand"></i> Full Screen';
+        }
+    }
+
+    async loadDealerOtherListings(userId) {
+        try {
+            const response = await fetch(`${CONFIG.API_URL}?action=dealer_other_listings&user_id=${userId}&current_listing_id=${this.listingId}&limit=6`);
+            const data = await response.json();
+
+            const loadingDiv = document.querySelector('.showroom-loading');
+            if (loadingDiv) loadingDiv.style.display = 'none';
+
+            if (data.success && data.listings && data.listings.length > 0) {
+                this.renderDealerListings(data.listings);
+            } else {
+                // Hide the section if no other listings
+                const showroomSection = document.getElementById('dealerShowroom');
+                if (showroomSection) showroomSection.style.display = 'none';
+            }
+        } catch (error) {
+            const loadingDiv = document.querySelector('.showroom-loading');
+            if (loadingDiv) loadingDiv.style.display = 'none';
+        }
+    }
+
+    renderDealerListings(listings) {
+        const grid = document.getElementById('showroomGrid');
+        if (!grid) return;
+
+        grid.innerHTML = listings.map(listing => {
+            const imageUrl = listing.featured_image_id
+                ? `${CONFIG.API_URL}?action=image&id=${listing.featured_image_id}`
+                : `${CONFIG.BASE_URL}assets/images/car-placeholder.jpg`;
+
+            const formattedPrice = listing.price ? `MWK ${parseInt(listing.price).toLocaleString()}` : 'Price on request';
+
+            return `
+                <div class="showroom-card" onclick="window.location.href='car.html?id=${listing.id}'">
+                    <div class="showroom-card-image">
+                        <img src="${imageUrl}" alt="${this.escapeHtml(listing.title)}"
+                             onerror="this.src='${CONFIG.BASE_URL}assets/images/car-placeholder.jpg'">
+                        ${listing.listing_type === 'featured' || listing.listing_type === 'premium' ? `
+                            <span class="listing-badge ${listing.listing_type}">${this.capitalize(listing.listing_type)}</span>
+                        ` : ''}
+                    </div>
+                    <div class="showroom-card-content">
+                        <h3 class="showroom-card-title">${this.escapeHtml(listing.title)}</h3>
+                        <div class="showroom-card-price">${formattedPrice}</div>
+                        <div class="showroom-card-details">
+                            <span><i class="fas fa-calendar"></i> ${listing.year || 'N/A'}</span>
+                            <span><i class="fas fa-road"></i> ${listing.mileage ? this.formatNumber(listing.mileage) + ' km' : 'N/A'}</span>
+                        </div>
+                        <div class="showroom-card-footer">
+                            <span><i class="fas fa-gas-pump"></i> ${listing.fuel_type ? this.capitalize(listing.fuel_type) : 'N/A'}</span>
+                            <span><i class="fas fa-cog"></i> ${listing.transmission ? this.capitalize(listing.transmission) : 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    showError(message) {
+        const carContent = document.getElementById('carContent');
+        if (carContent) {
+            carContent.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Error Loading Car</h3>
+                    <p>${message}</p>
+                    <button onclick="window.history.back()" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Go Back
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    // Utility functions
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    formatNumber(number) {
+        if (!number) return '0';
+        return new Intl.NumberFormat().format(number);
+    }
+
+    capitalize(str) {
+        if (!str) return '';
+        return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+    }
+
+    timeAgo(dateString) {
+        if (!dateString) return '';
+
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffInSeconds = Math.floor((now - date) / 1000);
+
+        if (diffInSeconds < 60) return 'just now';
+        if (diffInSeconds < 3600) return Math.floor(diffInSeconds / 60) + ' min ago';
+        if (diffInSeconds < 86400) return Math.floor(diffInSeconds / 3600) + ' hours ago';
+        if (diffInSeconds < 2592000) return Math.floor(diffInSeconds / 86400) + ' days ago';
+        return date.toLocaleDateString();
+    }
+
+    // Check if listing is saved and update button state
+    async checkSavedStatus() {
+        const savedListings = JSON.parse(localStorage.getItem('motorlink_favorites') || '[]');
+        const isSaved = savedListings.includes(parseInt(this.listingId));
+        this.updateSaveButton(isSaved);
+    }
+
+    updateSaveButton(isSaved) {
+        const btn = document.getElementById('saveListingBtn');
+        if (btn) {
+            if (isSaved) {
+                btn.innerHTML = '<i class="fas fa-heart"></i> Saved';
+                btn.classList.add('saved');
+            } else {
+                btn.innerHTML = '<i class="far fa-heart"></i> Save';
+                btn.classList.remove('saved');
+            }
+        }
+    }
+
+    async toggleSave() {
+        const btn = document.getElementById('saveListingBtn');
+        if (!btn) return;
+
+        const listingId = parseInt(this.listingId);
+        let savedListings = JSON.parse(localStorage.getItem('motorlink_favorites') || '[]');
+        const isSaved = savedListings.includes(listingId);
+
+        if (isSaved) {
+            // Remove from favorites
+            savedListings = savedListings.filter(id => id !== listingId);
+            this.showToast('Removed from saved cars', 'info');
+        } else {
+            // Add to favorites
+            savedListings.push(listingId);
+            this.showToast('Added to saved cars!', 'success');
+        }
+
+        localStorage.setItem('motorlink_favorites', JSON.stringify(savedListings));
+        this.updateSaveButton(!isSaved);
+
+        // Try to sync with server if logged in
+        try {
+            const storedAuth = localStorage.getItem('motorlink_authenticated');
+            if (storedAuth === 'true') {
+                await fetch(`${CONFIG.API_URL}?action=${isSaved ? 'unsave_listing' : 'save_listing'}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ listing_id: listingId })
+                });
+            }
+        } catch (error) {
+        }
+    }
+
+    showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            <span>${message}</span>
+        `;
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+            color: white;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => toast.remove(), 300);
+        }, 2500);
+    }
+
+    openReportModal(listingId) {
+        // Check if user is logged in
+        if (!window.app || !window.app.currentUser) {
+            // User is not logged in, redirect to login
+            if (confirm('You must be logged in to report a listing. Would you like to go to the login page?')) {
+                window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
+            }
+            return;
+        }
+        
+        const modal = document.getElementById('reportModal');
+        if (!modal) return;
+        
+        document.getElementById('reportListingId').value = listingId;
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // Setup form submit handler
+        const form = document.getElementById('reportForm');
+        form.onsubmit = (e) => this.handleReportSubmit(e);
+    }
+
+    getCurrentUser() {
+        // Try to get current user from window.motorLink (global app instance from script.js)
+        if (window.motorLink && window.motorLink.currentUser) {
+            return window.motorLink.currentUser;
+        }
+        
+        // Try window.app as fallback
+        if (window.app && window.app.currentUser) {
+            return window.app.currentUser;
+        }
+        
+        // Try localStorage as fallback
+        try {
+            const storedUser = localStorage.getItem('motorlink_user');
+            if (storedUser) {
+                return JSON.parse(storedUser);
+            }
+        } catch (e) {
+            // Invalid JSON
+        }
+        
+        return null;
+    }
+
+    closeReportModal() {
+        const modal = document.getElementById('reportModal');
+        if (!modal) return;
+        
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+        
+        // Reset form
+        const form = document.getElementById('reportForm');
+        if (form) form.reset();
+    }
+
+    async handleReportSubmit(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(e.target);
+        const reportData = {
+            listing_id: formData.get('listing_id'),
+            reason: formData.get('reason'),
+            details: formData.get('details'),
+            email: formData.get('email') || null
+        };
+
+        try {
+            const response = await fetch(`${CONFIG.API_URL}?action=report_listing`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify(reportData)
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                this.showToast('Report submitted successfully. Thank you for helping us keep MotorLink safe!', 'success');
+                this.closeReportModal();
+            } else {
+                this.showToast(data.message || 'Failed to submit report. Please try again.', 'error');
+            }
+        } catch (error) {
+            this.showToast('An error occurred. Please try again later.', 'error');
+        }
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    window.carDetailManager = new CarDetailManager();
+});

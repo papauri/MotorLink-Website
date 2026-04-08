@@ -1,0 +1,121 @@
+/**
+ * Mobile Footer Optimization
+ * Simplifies footer layout for mobile devices while keeping desktop unchanged
+ */
+
+/* ============================================================================
+   MOBILE FOOTER OPTIMIZATIONS (Screens <= 768px)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Hide non-essential footer sections on mobile */
+    .footer-section:nth-child(3),
+    .footer-section:nth-child(4) {
+        display: none !important;
+    }
+    
+    /* Make footer more compact on mobile */
+    .footer-content {
+        padding: 24px 0 16px !important;
+        gap: 20px !important;
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* First section - Company info - show but simplify */
+    .footer-section:nth-child(1) h4 {
+        font-size: 16px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .footer-section:nth-child(1) p {
+        font-size: 13px !important;
+        line-height: 1.5 !important;
+        margin-bottom: 12px !important;
+        /* Truncate long descriptions */
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    /* Social links - keep visible but compact */
+    .social-links {
+        gap: 10px !important;
+        margin-top: 12px !important;
+    }
+    
+    .social-links a {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 16px !important;
+    }
+    
+    /* Second section - Quick Links - keep visible */
+    .footer-section:nth-child(2) h4 {
+        font-size: 16px !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .footer-section:nth-child(2) ul {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px 12px;
+    }
+    
+    .footer-section:nth-child(2) ul li {
+        margin-bottom: 0 !important;
+    }
+    
+    .footer-section:nth-child(2) a {
+        font-size: 13px !important;
+        padding: 4px 0 !important;
+    }
+    
+    /* Footer bottom - simplify */
+    .footer-bottom {
+        padding: 16px 0 !important;
+        font-size: 11px !important;
+    }
+    
+    .footer-bottom p {
+        margin-bottom: 6px !important;
+        line-height: 1.4 !important;
+    }
+    
+    /* Hide verbose footer bottom info on very small screens */
+    .footer-bottom p:nth-child(2) {
+        display: none;
+    }
+}
+
+/* Extra small screens - further simplification */
+@media (max-width: 480px) {
+    .footer-content {
+        padding: 20px 0 12px !important;
+    }
+    
+    .footer-section:nth-child(1) p {
+        -webkit-line-clamp: 2;
+    }
+    
+    .footer-section:nth-child(2) ul {
+        grid-template-columns: 1fr;
+    }
+    
+    .social-links a {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 14px !important;
+    }
+}
+
+/* ============================================================================
+   DESKTOP - No Changes (Screens > 768px)
+   ============================================================================ */
+
+@media (min-width: 769px) {
+    /* Ensure all footer sections are visible on desktop */
+    .footer-section {
+        display: block !important;
+    }
+}

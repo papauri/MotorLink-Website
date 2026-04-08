@@ -1,0 +1,476 @@
+
+/* Dealers Page Styles - Clean Professional Design */
+:root {
+  --primary: #00c853;
+  --primary-dark: #00a843;
+  --primary-light: #4caf50;
+  --primary-bg: rgba(0, 200, 83, 0.08);
+  --text-primary: #212121;
+  --text-secondary: #424242;
+  --text-tertiary: #757575;
+  --text-white: #ffffff;
+  --bg-white: #ffffff;
+  --bg-light: #f8f9fa;
+  --border-light: #e0e0e0;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --border-radius: 8px;
+  --border-radius-lg: 12px;
+}
+
+/* ========================================
+   Filter Section - Simple Horizontal Bar
+======================================== */
+.dealers-filters {
+  background: var(--bg-white);
+  padding: 16px 20px;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  margin: -20px auto 24px;
+  max-width: 1200px;
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .dealers-filters {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-label i {
+  color: var(--primary);
+  margin-right: 4px;
+}
+
+.filter-select,
+.search-input {
+  width: 100%;
+  max-width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border-light);
+  border-radius: 6px;
+  font-size: 12px;
+  background: var(--bg-white);
+  color: var(--text-primary);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.filter-select:focus,
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-bg);
+}
+
+/* Filter Actions - Buttons */
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  padding-top: 4px;
+}
+
+@media (max-width: 767px) {
+  .filter-actions {
+    flex-direction: row;
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-light);
+  }
+}
+
+.filter-actions .btn {
+  height: 32px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  border: none;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+
+.filter-actions .btn-primary,
+.dealers-filters .btn-primary {
+  background: var(--primary);
+  color: var(--text-white);
+}
+
+.filter-actions .btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.filter-actions .btn-outline-primary,
+.dealers-filters .btn-outline-primary {
+  background: var(--bg-white);
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+
+.filter-actions .btn-outline-primary:hover {
+  background: var(--primary);
+  color: var(--text-white);
+}
+
+/* Mobile Filter Toggle */
+.mobile-filter-toggle {
+  display: none;
+  background: var(--primary);
+  color: var(--text-white);
+  border: none;
+  padding: 12px 20px;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 16px;
+  width: 100%;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 767px) {
+  .mobile-filter-toggle {
+    display: flex;
+  }
+
+  .dealers-filters {
+    display: none;
+    margin: 0 0 20px 0;
+  }
+
+  .dealers-filters.active {
+    display: flex;
+  }
+}
+
+/* ========================================
+   Results Header
+======================================== */
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-light);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.results-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.results-count {
+  color: var(--text-tertiary);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sort-controls label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* ========================================
+   Dealer Cards Grid - 2-3 per row
+======================================== */
+.dealers-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 48px;
+}
+
+@media (min-width: 480px) {
+  .dealers-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+}
+
+@media (min-width: 640px) {
+  .dealers-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dealers-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* NOTE: Individual dealer card styles moved to dealer-business-cards.css for unique styling */
+
+/* ========================================
+   Loading & Empty States
+======================================== */
+.loading-container {
+  text-align: center;
+  padding: 60px 16px;
+  color: var(--text-tertiary);
+  grid-column: 1 / -1;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-light);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 16px;
+  color: var(--text-tertiary);
+  grid-column: 1 / -1;
+}
+
+.empty-state i {
+  font-size: 3rem;
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.empty-state h3 {
+  font-size: 1.3rem;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* ========================================
+   Modal Styles
+======================================== */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background-color: var(--bg-white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.2);
+  animation: modalFadeIn 0.3s;
+  max-width: 500px;
+  width: 90%;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+  background: var(--bg-light);
+}
+
+.modal-body {
+  padding: 20px;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* ========================================
+   Responsive Design
+======================================== */
+@media (max-width: 480px) {
+  .dealers-hero h1 {
+    font-size: 1.6rem;
+  }
+
+  .dealers-stats {
+    gap: 20px;
+  }
+
+  .dealers-stat-number {
+    font-size: 1.6rem;
+  }
+}
+
+/* ========================================
+   STICKY FILTERS - DEALERS PAGE
+======================================== */
+
+.dealers-filters {
+    position: sticky;
+    top: 80px;
+    background: white;
+    z-index: 10;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 30px;
+    transition: box-shadow 0.3s ease;
+}
+
+.dealers-filters.scrolled {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* Ensure smooth scrolling behavior */
+.dealers-page-container {
+    scroll-behavior: smooth;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+    /* Hide dealers-filters on mobile - use mobile-filter-fab instead */
+    .dealers-filters,
+    .dealers-filters.scrolled {
+        display: none !important;
+        position: static !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+    
+    /* Ensure results header is visible on mobile - centered */
+    .results-header {
+        position: relative;
+        z-index: 15;
+        background: white;
+        padding: 16px 0;
+        margin-bottom: 20px;
+        text-align: center;
+        display: block;
+    }
+
+    .results-header > div {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Hide dealers-filters on mobile - use mobile-filter-fab instead */
+    .dealers-filters,
+    .dealers-filters.scrolled {
+        display: none !important;
+        position: static !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        overflow: hidden !important;
+    }
+
+    .results-header {
+        padding: 12px 0;
+        text-align: center;
+        display: block;
+    }
+
+    .results-header > div {
+        width: 100%;
+    }
+
+    .results-title {
+        font-size: 1.3rem;
+        margin-bottom: 6px;
+    }
+
+    .results-count {
+        font-size: 0.85rem;
+    }
+}
+
+/* ============================================================================
+   MOBILE FILTER OPTIMIZATION - Use mobile filter FAB instead of toggle
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Hide the old mobile filter toggle button - use mobile filter FAB instead */
+    .mobile-filter-toggle {
+        display: none !important;
+    }
+    
+    /* Hide the dealers-filters on mobile - they'll be shown in the mobile filter tray */
+    .dealers-filters {
+        display: none !important;
+    }
+}
+

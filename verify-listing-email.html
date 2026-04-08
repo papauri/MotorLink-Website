@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Listing Email - MotorLink Malawi</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f4f7fb 0%, #d8e5f7 100%);
+            color: #1f2937;
+            padding: 20px;
+        }
+        .card {
+            width: 100%;
+            max-width: 540px;
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+            padding: 28px;
+            text-align: center;
+        }
+        .icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 14px;
+            font-size: 30px;
+            color: #fff;
+            background: #2563eb;
+        }
+        .icon.success { background: #16a34a; }
+        .icon.error { background: #dc2626; }
+        h1 {
+            margin: 0 0 12px;
+            font-size: 26px;
+        }
+        p {
+            margin: 0 0 12px;
+            line-height: 1.5;
+            color: #4b5563;
+        }
+        .actions {
+            margin-top: 18px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            border: 0;
+            border-radius: 8px;
+            padding: 11px 18px;
+            font-weight: 700;
+            text-decoration: none;
+            color: #fff;
+            background: #2563eb;
+        }
+        .btn.secondary { background: #6b7280; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div id="statusIcon" class="icon"><i class="fas fa-spinner fa-spin"></i></div>
+        <h1 id="title">Verifying your listing email</h1>
+        <p id="message">Please wait while we validate your link.</p>
+        <div class="actions">
+            <a id="homeBtn" class="btn" href="index.html" style="display:none;">Go to Homepage</a>
+            <a id="sellBtn" class="btn secondary" href="sell.html" style="display:none;">Create Another Listing</a>
+        </div>
+    </div>
+
+    <script>
+        (async function verifyListingEmail() {
+            const params = new URLSearchParams(window.location.search);
+            const token = (params.get('token') || '').trim();
+
+            const statusIcon = document.getElementById('statusIcon');
+            const title = document.getElementById('title');
+            const message = document.getElementById('message');
+            const homeBtn = document.getElementById('homeBtn');
+            const sellBtn = document.getElementById('sellBtn');
+
+            if (!token) {
+                statusIcon.className = 'icon error';
+                statusIcon.innerHTML = '<i class="fas fa-times"></i>';
+                title.textContent = 'Invalid verification link';
+                message.textContent = 'This verification link is missing a token. Please submit your listing again.';
+                sellBtn.style.display = 'inline-block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`api.php?action=verify_listing_email&token=${encodeURIComponent(token)}`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    throw new Error(data.message || 'Verification failed');
+                }
+
+                statusIcon.className = 'icon success';
+                statusIcon.innerHTML = '<i class="fas fa-check"></i>';
+                title.textContent = 'Listing email verified';
+                message.textContent = data.message || 'Your listing is now queued for admin review.';
+                homeBtn.style.display = 'inline-block';
+                sellBtn.style.display = 'inline-block';
+            } catch (error) {
+                statusIcon.className = 'icon error';
+                statusIcon.innerHTML = '<i class="fas fa-times"></i>';
+                title.textContent = 'Verification failed';
+                message.textContent = error.message || 'Unable to verify this listing email link.';
+                sellBtn.style.display = 'inline-block';
+            }
+        })();
+    </script>
+</body>
+</html>

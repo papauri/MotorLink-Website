@@ -1,0 +1,654 @@
+/* ============================================================================
+   MOTORLINK ANIMATIONS - App-Like Animations for Web & Mobile
+   ============================================================================ */
+
+/* ============================================================================
+   PAGE TRANSITIONS
+   ============================================================================ */
+
+/* Page fade in animation */
+@keyframes pageFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Page slide in from right (for navigation) */
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Page slide out to left (for navigation) */
+@keyframes slideOutLeft {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+}
+
+/* Apply page transition */
+body {
+    animation: pageFadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================================
+   HERO SECTION ANIMATIONS
+   ============================================================================ */
+
+/* Hero title animation - Override common.css fadeInUp with more dynamic animation */
+.hero h1,
+.garage-hero h1,
+.dealers-hero h1,
+.car-hire-hero h1 {
+    animation: heroTitleSlide 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.2s backwards !important;
+}
+
+@keyframes heroTitleSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Hero subtitle animation - Override common.css fadeInUp */
+.hero-subtitle,
+.hero p,
+.garage-hero .hero-subtitle,
+.dealers-hero p,
+.car-hire-hero .hero-subtitle,
+.car-hire-hero p {
+    animation: heroSubtitleFade 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.4s backwards !important;
+}
+
+@keyframes heroSubtitleFade {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 0.95;
+        transform: translateY(0);
+    }
+}
+
+/* Hero stats animation - Override common.css fadeInUp */
+.hero-stats,
+.dealers-stats,
+.car-hire-stats {
+    animation: heroStatsFade 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.6s backwards !important;
+}
+
+@keyframes heroStatsFade {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Individual hero stat animation */
+.hero-stat,
+.dealers-stats > *,
+.car-hire-stats > * {
+    animation: heroStatPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+.hero-stat:nth-child(1),
+.dealers-stats > *:nth-child(1),
+.car-hire-stats > *:nth-child(1) {
+    animation-delay: 0.8s;
+}
+
+.hero-stat:nth-child(2),
+.dealers-stats > *:nth-child(2),
+.car-hire-stats > *:nth-child(2) {
+    animation-delay: 0.9s;
+}
+
+.hero-stat:nth-child(3),
+.dealers-stats > *:nth-child(3),
+.car-hire-stats > *:nth-child(3) {
+    animation-delay: 1.0s;
+}
+
+.hero-stat:nth-child(4),
+.dealers-stats > *:nth-child(4),
+.car-hire-stats > *:nth-child(4) {
+    animation-delay: 1.1s;
+}
+
+@keyframes heroStatPop {
+    from {
+        opacity: 0;
+        transform: scale(0.8) translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Hero stat hover/tap interaction */
+.hero-stat:hover,
+.hero-stat:active {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 8px 24px rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 768px) {
+    .hero-stat:active {
+        transform: translateY(-3px) scale(1.02);
+        transition: all 0.1s;
+    }
+}
+
+.hero-stat-number {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-block;
+}
+
+.hero-stat:hover .hero-stat-number,
+.hero-stat:active .hero-stat-number {
+    transform: scale(1.1);
+}
+
+/* ============================================================================
+   LOADING ANIMATIONS - App-Like
+   ============================================================================ */
+
+/* Main page loading overlay */
+.page-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-white);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 1;
+    transition: opacity 0.3s ease-out;
+}
+
+.page-loader.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* App-like loading spinner */
+.app-loader {
+    width: 60px;
+    height: 60px;
+    position: relative;
+    margin-bottom: 24px;
+}
+
+.app-loader-circle {
+    width: 100%;
+    height: 100%;
+    border: 4px solid rgba(0, 200, 83, 0.1);
+    border-top-color: var(--primary-green);
+    border-radius: 50%;
+    animation: appSpinner 0.8s linear infinite;
+}
+
+@keyframes appSpinner {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Pulse dots loader */
+.dots-loader {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+}
+
+.dots-loader span {
+    width: 12px;
+    height: 12px;
+    background: var(--primary-green);
+    border-radius: 50%;
+    animation: dotsBounce 1.4s ease-in-out infinite;
+}
+
+.dots-loader span:nth-child(1) {
+    animation-delay: 0s;
+}
+
+.dots-loader span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dots-loader span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes dotsBounce {
+    0%, 80%, 100% {
+        transform: scale(0.8);
+        opacity: 0.5;
+    }
+    40% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+}
+
+/* Content loading skeleton */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeletonShimmer 1.5s ease-in-out infinite;
+    border-radius: var(--border-radius);
+}
+
+@keyframes skeletonShimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Card loading animation */
+.card-loading,
+.car-card {
+    opacity: 0;
+    animation: cardSlideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes cardSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Staggered card animations */
+.card-loading:nth-child(1),
+.car-card:nth-child(1) { animation-delay: 0.05s; }
+.card-loading:nth-child(2),
+.car-card:nth-child(2) { animation-delay: 0.1s; }
+.card-loading:nth-child(3),
+.car-card:nth-child(3) { animation-delay: 0.15s; }
+.card-loading:nth-child(4),
+.car-card:nth-child(4) { animation-delay: 0.2s; }
+.card-loading:nth-child(5),
+.car-card:nth-child(5) { animation-delay: 0.25s; }
+.card-loading:nth-child(6),
+.car-card:nth-child(6) { animation-delay: 0.3s; }
+.card-loading:nth-child(7),
+.car-card:nth-child(7) { animation-delay: 0.35s; }
+.card-loading:nth-child(8),
+.car-card:nth-child(8) { animation-delay: 0.4s; }
+.card-loading:nth-child(9),
+.car-card:nth-child(9) { animation-delay: 0.45s; }
+.card-loading:nth-child(10),
+.car-card:nth-child(10) { animation-delay: 0.5s; }
+
+/* Car card hover/tap animation */
+.car-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.car-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+}
+
+.car-card:active {
+    transform: translateY(-4px) scale(0.98);
+    transition: all 0.1s;
+}
+
+@media (max-width: 768px) {
+    .car-card:active {
+        transform: translateY(-2px) scale(0.97);
+    }
+}
+
+/* ============================================================================
+   INTERACTIVE ANIMATIONS
+   ============================================================================ */
+
+/* Button ripple effect - Applied to all buttons */
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-outline-primary {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn::after,
+.btn-primary::after,
+.btn-secondary::after,
+.btn-outline-primary::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+    pointer-events: none;
+}
+
+.btn:active::after,
+.btn-primary:active::after,
+.btn-secondary:active::after,
+.btn-outline-primary:active::after {
+    width: 300px;
+    height: 300px;
+}
+
+/* Button hover enhancements */
+.btn:hover,
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 200, 83, 0.3);
+}
+
+.btn:active,
+.btn-primary:active {
+    transform: translateY(0) scale(0.98);
+    transition: all 0.1s;
+}
+
+/* Card hover/tap animation */
+.interactive-card,
+.dashboard-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.interactive-card:hover,
+.dashboard-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+
+.interactive-card:active,
+.dashboard-card:active {
+    transform: translateY(-4px) scale(0.98);
+    transition: all 0.1s;
+}
+
+/* Dashboard card arrow animation */
+.dashboard-card .card-arrow {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-card:hover .card-arrow {
+    transform: translateX(5px);
+    opacity: 1;
+}
+
+/* Dashboard card icon animation */
+.dashboard-card .card-icon {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dashboard-card:hover .card-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+/* Service card hover animation */
+.service-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.service-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 16px 40px rgba(0, 200, 83, 0.2);
+}
+
+.service-card:active {
+    transform: translateY(-4px) scale(0.98);
+}
+
+/* Icon bounce on hover */
+.icon-bounce:hover {
+    animation: iconBounce 0.6s ease;
+}
+
+@keyframes iconBounce {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-8px);
+    }
+}
+
+/* Number count-up animation */
+@keyframes countUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.count-up {
+    animation: countUp 0.5s ease-out;
+}
+
+/* ============================================================================
+   MOBILE-SPECIFIC ANIMATIONS (App-Like Feel)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Touch feedback */
+    .mobile-tap:active {
+        transform: scale(0.95);
+        opacity: 0.8;
+        transition: all 0.1s;
+    }
+    
+    /* Swipe hint animation */
+    .swipe-hint {
+        animation: swipeHint 2s ease-in-out infinite;
+    }
+    
+    @keyframes swipeHint {
+        0%, 100% {
+            transform: translateX(0);
+        }
+        50% {
+            transform: translateX(10px);
+        }
+    }
+    
+    /* Pull to refresh animation */
+    .pull-refresh {
+        opacity: 0;
+        transform: translateY(-20px);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .pull-refresh.active {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    
+    /* Mobile card stack animation */
+    .mobile-card-stack {
+        animation: mobileCardSlide 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    @keyframes mobileCardSlide {
+        from {
+            opacity: 0;
+            transform: translateX(-20px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+    }
+    
+    /* Hero animations on mobile */
+    .hero h1 {
+        animation-duration: 0.6s;
+    }
+    
+    .hero-subtitle {
+        animation-duration: 0.6s;
+        animation-delay: 0.3s;
+    }
+    
+    .hero-stats {
+        animation-duration: 0.6s;
+        animation-delay: 0.5s;
+    }
+    
+    .hero-stat {
+        animation-duration: 0.4s;
+    }
+    
+    .hero-stat:nth-child(1) { animation-delay: 0.7s; }
+    .hero-stat:nth-child(2) { animation-delay: 0.75s; }
+    .hero-stat:nth-child(3) { animation-delay: 0.8s; }
+    .hero-stat:nth-child(4) { animation-delay: 0.85s; }
+}
+
+/* ============================================================================
+   UTILITY ANIMATIONS
+   ============================================================================ */
+
+/* Fade in */
+.fade-in {
+    animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Slide up */
+.slide-up {
+    animation: slideUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Scale in */
+.scale-in {
+    animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Shake animation (for errors) */
+.shake {
+    animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes shake {
+    10%, 90% {
+        transform: translateX(-5px);
+    }
+    20%, 80% {
+        transform: translateX(5px);
+    }
+    30%, 50%, 70% {
+        transform: translateX(-5px);
+    }
+    40%, 60% {
+        transform: translateX(5px);
+    }
+}
+
+/* ============================================================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================================================ */
+
+/* Use GPU acceleration */
+.hero,
+.hero-stat,
+.card-loading,
+.interactive-card,
+.service-card {
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+

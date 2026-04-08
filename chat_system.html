@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - MotorLink Malawi</title>
+    <meta name="description" content="Chat with buyers and sellers on MotorLink Malawi">
+    <!-- Suppress browser extension console errors -->
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/common.css">
+    <!-- Suppress browser extension console errors -->
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/chat.css">
+    <!-- Suppress browser extension console errors -->
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Suppress browser extension console errors -->
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <!-- Suppress browser extension console errors -->
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <!-- Suppress browser extension console errors -->
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/price-redesign.css">
+    <!-- Suppress browser extension console errors -->
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+
+    <style>
+        /* Page-scoped hard overrides to neutralize cross-file mobile conflicts. */
+        body.chat-page {
+            height: 100dvh !important;
+            overflow: hidden !important;
+            padding-top: 70px !important;
+            margin: 0 !important;
+        }
+
+        body.chat-page .footer {
+            display: none !important;
+        }
+
+        body.chat-page .chat-container {
+            position: fixed !important;
+            top: 70px !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 16px !important;
+            height: auto !important;
+            max-height: none !important;
+            margin: 0 !important;
+            overflow: hidden !important;
+        }
+
+        body.chat-page .chat-area,
+        body.chat-page .conversations-sidebar {
+            min-height: 0 !important;
+        }
+
+        body.chat-page .messages-container {
+            min-height: 0 !important;
+            flex: 1 1 auto !important;
+            overflow-y: auto !important;
+            padding-bottom: 12px !important;
+        }
+
+        body.chat-page .message-input-container {
+            position: relative !important;
+            bottom: auto !important;
+            flex-shrink: 0 !important;
+            padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+            border-top: 1px solid #e0e0e0 !important;
+        }
+
+        body.chat-page .send-message-btn {
+            width: 40px !important;
+            height: 40px !important;
+            min-height: 40px !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1 !important;
+        }
+
+        body.chat-page .send-message-btn i {
+            margin: 0 !important;
+            line-height: 1 !important;
+        }
+
+        @media (max-width: 768px) {
+            body.chat-page {
+                padding-top: 64px !important;
+            }
+
+            body.chat-page .chat-container {
+                top: 64px !important;
+                bottom: 10px !important;
+            }
+        }
+    </style>
+</head>
+<body class="chat-page">
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-container">
+                <a href="index.html" class="logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                <nav class="nav" id="mainNav">
+                    <a href="index.html">Home</a>
+                    <a href="garages.html">Garages</a>
+                    <a href="dealers.html">Dealers</a>
+                    <a href="car-hire.html">Car Hire</a>
+                    <a href="car-database.html">Know Your Car</a>
+                    <a href="sell.html">Sell Car</a>
+                </nav>
+                <div class="user-menu" id="userMenu">
+                    <div id="userInfo" style="display: none;">
+                        <a href="profile.html" class="user-avatar-btn" title="My Profile" id="userAvatar">
+                            <i class="fas fa-user"></i>
+                        </a>
+                        <button onclick="logout()" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                    <div id="guestMenu">
+                        <a href="login.html" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                        <a href="register.html" class="btn btn-primary btn-sm">
+                            <i class="fas fa-user-plus"></i> Register
+                        </a>
+                    </div>
+                </div>
+                <button class="mobile-menu-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Chat Container -->
+    <div class="chat-container">
+        <!-- Conversations Sidebar -->
+        <div class="conversations-sidebar" id="conversationsSidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-comments"></i> Messages</h2>
+                <button class="new-message-btn" id="newMessageBtn" title="New Message">
+                    <i class="fas fa-edit"></i>
+                </button>
+            </div>
+
+            <div class="search-conversations">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Search conversations..." id="searchConversations">
+            </div>
+
+            <div class="conversations-list" id="conversationsList">
+                <!-- Conversations will be loaded here -->
+                <div class="loading-conversations">
+                    <div class="loading-spinner"></div>
+                    <p>Loading conversations...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area" id="chatArea">
+            <!-- Empty State -->
+            <div class="chat-empty-state" id="chatEmptyState">
+                <i class="fas fa-comments"></i>
+                <h3>Welcome to MotorLink Messages</h3>
+                <p>Select a conversation to start chatting or send a new message about a listing.</p>
+            </div>
+
+            <!-- Chat Header (hidden by default) -->
+            <div class="chat-header" id="chatHeader" style="display: none;">
+                <button class="back-to-list" id="backToList">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <div class="chat-user-info">
+                    <div class="chat-avatar" id="chatAvatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="chat-user-details">
+                        <h3 id="chatUserName">User Name</h3>
+                        <span class="chat-listing-info" id="chatListingInfo">
+                            <a href="#" id="chatListingLink">View Listing</a>
+                        </span>
+                    </div>
+                </div>
+                <div class="chat-actions">
+                    <button class="chat-action-btn" id="saveTranscriptBtn" title="Save Transcript">
+                        <i class="fas fa-download"></i>
+                    </button>
+                    <button class="chat-action-btn" id="viewListingBtn" title="View Listing">
+                        <i class="fas fa-car"></i>
+                    </button>
+                    <button class="chat-action-btn" id="deleteConversationBtn" title="Delete Conversation">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Container (hidden by default) -->
+            <div class="messages-container" id="messagesContainer" style="display: none;">
+                <div class="messages-list" id="messagesList">
+                    <!-- Messages will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Message Input (hidden by default) -->
+            <div class="message-input-container" id="messageInputContainer" style="display: none;">
+                <div class="message-input-wrapper">
+                    <textarea
+                        id="messageInput"
+                        placeholder="Type your message..."
+                        rows="1"
+                        maxlength="1000"
+                    ></textarea>
+                    <button class="send-message-btn" id="sendMessageBtn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                <div class="message-input-footer">
+                    <span class="char-count"><span id="charCount">0</span>/1000</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Message Modal -->
+    <div class="modal" id="newMessageModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>New Message</h3>
+                <button class="modal-close" id="closeNewMessageModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Listing (Optional)</label>
+                    <select id="selectListing">
+                        <option value="">Select a listing to inquire about...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Recipient</label>
+                    <input type="text" id="recipientSearch" placeholder="Search by name or email...">
+                    <div class="recipient-results" id="recipientResults"></div>
+                </div>
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea id="newMessageText" rows="4" placeholder="Write your message..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelNewMessage">Cancel</button>
+                <button class="btn btn-primary" id="sendNewMessage">Send Message</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Required Modal -->
+    <div class="modal" id="loginRequiredModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h3>Login Required</h3>
+                <button class="modal-close" id="closeLoginModal">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align: center; padding: 30px;">
+                <i class="fas fa-lock" style="font-size: 48px; color: #ccc; margin-bottom: 20px;"></i>
+                <p>Please log in to access your messages.</p>
+            </div>
+            <div class="modal-footer">
+                <a href="login.html" class="btn btn-primary">Login</a>
+                <a href="register.html" class="btn btn-outline">Register</a>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4><i class="fas fa-car"></i> MotorLink Malawi</h4>
+                    <p>Your trusted partner for buying and selling cars in Malawi. We connect buyers and sellers in a safe, secure environment with the latest cars from trusted dealers across all 28 districts.</p>
+                    <div class="social-links">
+                        <a href="#" aria-label="Follow us on Facebook" title="MotorLink Malawi Facebook">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Twitter" title="MotorLink Malawi Twitter">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" aria-label="Follow us on Instagram" title="MotorLink Malawi Instagram">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" aria-label="Contact us on WhatsApp" title="MotorLink Malawi WhatsApp">
+                            <i class="fab fa-whatsapp"></i>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-link"></i> Quick Links</h4>
+                    <ul>
+                        <li><a href="index.html">Browse Cars</a></li>
+                        <li><a href="sell.html">Sell Your Car</a></li>
+                        <li><a href="garages.html">Find Garages</a></li>
+                        <li><a href="dealers.html">Car Dealers</a></li>
+                        <li><a href="car-hire.html">Car Hire</a></li>
+                        <li><a href="car-database.html">Know Your Car</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-life-ring"></i> Support & Help</h4>
+                    <ul>
+                        <li><a href="help.html">Help Center</a></li>
+                        <li><a href="safety.html">Safety Tips</a></li>
+                        <li><a href="contact.html">Contact Us</a></li>
+                        <li><a href="terms.html">Terms of Service</a></li>
+                    </ul>
+                </div>
+                
+                <div class="footer-section">
+                    <h4><i class="fas fa-phone"></i> Contact & Payment</h4>
+                    <p><i class="fas fa-envelope"></i> <strong>Email:</strong> <a href="mailto:info@motorlink.mw">info@motorlink.mw</a></p>
+                    <p><i class="fas fa-phone"></i> <strong>Phone:</strong> <a href="tel:+265991234567">+265 991 234 567</a></p>
+                    
+                    <div style="margin-top: 20px;">
+                        <h5><i class="fas fa-mobile-alt"></i> Mobile Money Payments</h5>
+                        <p><strong>Airtel Money:</strong> +265 991 234 567</p>
+                        <p><strong>TNM Mpamba:</strong> +265 881 765 432</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2025 MotorLink Malawi. All rights reserved. | Connecting Malawi's automotive community since 2025</p>
+                <p style="margin-top: 10px; font-size: 14px;">
+                    <i class="fas fa-shield-alt"></i> Safe Trading • 
+                    <i class="fas fa-mobile-alt"></i> Mobile Friendly • 
+                    <i class="fas fa-globe"></i> Hosted by <a href="https://promanaged-it.com" target="_blank" rel="noopener">ProManaged IT</a>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="script.js"></script>
+    <script src="js/chat.js"></script>
+
+    <script src="js/page-transitions.js"></script>
+</body>
+</html>

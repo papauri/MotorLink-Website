@@ -1,0 +1,613 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sell Your Car - MotorLink Malawi</title>
+    <meta name="description" content="Sell your car quickly and safely on MotorLink Malawi. Create professional listings with photos and reach thousands of potential buyers.">
+    <script src="js/suppress-extension-errors.js"></script>
+
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/sell.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <link rel="stylesheet" href="css/price-redesign.css">
+
+    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/mobile-page-indicator.css">
+</head>
+<body>
+    <!-- Authentication Required Screen -->
+    <div id="authRequired" class="auth-required hidden">
+        <div class="auth-card">
+            <div class="auth-icon">
+                <i class="fas fa-car-side"></i>
+            </div>
+            <h2>Start Selling Your Car</h2>
+            <p>To create the best possible listing and protect both buyers and sellers, we recommend creating an account first.</p>
+            
+            <ul class="auth-features">
+                <li><i class="fas fa-check"></i>Manage multiple listings easily</li>
+                <li><i class="fas fa-check"></i>Track inquiries and messages</li>
+                <li><i class="fas fa-check"></i>Edit listings anytime</li>
+                <li><i class="fas fa-check"></i>Verified seller badge</li>
+            </ul>
+
+            <div class="auth-actions">
+                <a href="register.html" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Create Account
+                </a>
+                <a href="login.html?redirect=sell.html" class="btn btn-outline-primary">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </a>
+            </div>
+
+            <!-- Guest Option -->
+            <div class="guest-option">
+                <h3><i class="fas fa-user-clock"></i> Continue as Guest</h3>
+                <p class="guest-description">
+                    You can create a listing without an account. We'll need your contact information so buyers can reach you. 
+                    Your listing will be reviewed before going live.
+                </p>
+                <button onclick="enableGuestSelling()" class="btn btn-outline-primary guest-button">
+                    <i class="fas fa-user-clock"></i> Continue as Guest
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Header (always visible) -->
+    <header class="header">
+            <div class="container">
+                <div class="header-container">
+                    <a href="index.html" class="logo">
+                        <i class="fas fa-car"></i> MotorLink
+                    </a>
+                    <nav class="nav" id="mainNav">
+                        <a href="index.html">Home</a>
+                        <a href="car-database.html">Know Your Car</a>
+                        <a href="garages.html">Garages</a>
+                        <a href="dealers.html">Dealers</a>
+                        <a href="car-hire.html">Car Hire</a>
+                        <a href="sell.html">Sell Car</a>
+                    </nav>
+                    <div class="user-menu" id="userMenu">
+                        <div id="userInfo" class="user-info" style="display: none;">
+                            <a href="profile.html" class="user-avatar-btn" title="My Profile" id="userAvatar">
+                                <i class="fas fa-user"></i>
+                            </a>
+                            <button onclick="logout()" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-sign-out-alt"></i> Logout
+                            </button>
+                        </div>
+                        <div id="guestMenu" class="guest-menu">
+                            <a href="login.html" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-sign-in-alt"></i> Login
+                            </a>
+                            <a href="register.html" class="btn btn-primary btn-sm">
+                                <i class="fas fa-user-plus"></i> Register
+                            </a>
+                        </div>
+                    </div>
+                    <button class="mobile-menu-toggle" id="mobileToggle">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+    <!-- Main Sell Form -->
+    <div id="sellForm" class="hidden">
+        <!-- Hero Section -->
+        <section class="hero">
+            <div class="container">
+                <h1>Sell Your Car</h1>
+                <p class="hero-subtitle">Create professional listings and reach thousands of potential buyers across Malawi.</p>
+                
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="hero-stat-number"><i class="fas fa-users"></i></div>
+                        <div class="hero-stat-label">Thousands of Buyers</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-number"><i class="fas fa-bolt"></i></div>
+                        <div class="hero-stat-label">Quick Approval</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-number"><i class="fas fa-shield-alt"></i></div>
+                        <div class="hero-stat-label">Safe & Secure</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-number"><i class="fas fa-hand-holding-usd"></i></div>
+                        <div class="hero-stat-label">Free Listings</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Unique Listings Reminder -->
+        <div class="container" style="margin-top: -20px; margin-bottom: 20px;">
+            <div class="unique-listing-reminder">
+                <div class="reminder-icon">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <div class="reminder-content">
+                    <h3>Keep your ads unique!</h3>
+                    <p>One active listing per car - edit or delete old ones to avoid confusion. Unique listings get more views! 
+                    <a href="terms.html" target="_blank">Learn more <i class="fas fa-external-link-alt"></i></a></p>
+                </div>
+                <button class="reminder-dismiss" onclick="this.parentElement.style.display='none'" aria-label="Dismiss">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Form Container -->
+        <div class="container">
+            <div class="sell-container">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+
+                <div class="form-container">
+                    <!-- Guest Notice -->
+                    <div id="guestNotice" class="guest-notice hidden">
+                        <div class="guest-notice-header">
+                            <i class="fas fa-user-clock"></i>
+                            <strong>Guest Listing</strong>
+                        </div>
+                        <p>Your listing will be reviewed within 2-4 hours before going live. We'll email you once it's approved.</p>
+                    </div>
+
+                    <!-- Step Indicator -->
+                    <div class="step-indicator">
+                        <div class="step active" data-step="1" id="step1">
+                            <i class="fas fa-car"></i> Car Details
+                        </div>
+                        <div class="step" data-step="2" id="step2">
+                            <i class="fas fa-camera"></i> Photos
+                        </div>
+                        <div class="step" data-step="3" id="step3">
+                            <i class="fas fa-crown"></i> Listing Type
+                        </div>
+                        <div class="step" data-step="4" id="step4">
+                            <i class="fas fa-check-circle"></i> Review
+                        </div>
+                    </div>
+
+                    <form id="sellCarForm">
+                        <!-- Step 1: Car Information -->
+                        <div class="form-step active" data-step="1">
+                            <h2><i class="fas fa-car"></i>Car Information</h2>
+                            <p>Tell us about your car so buyers can find exactly what they're looking for.</p>
+
+                            <!-- Guest Contact Fields -->
+                            <div id="guestContactFields" class="guest-contact-fields hidden">
+                                <h4><i class="fas fa-user-clock"></i> Your Contact Information</h4>
+                                <p class="guest-contact-description">Since you're listing as a guest, buyers will need this information to contact you.</p>
+                                
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Your Full Name <span class="required">*</span></label>
+                                        <input type="text" name="seller_name" class="form-control" placeholder="e.g., John Doe">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Phone Number <span class="required">*</span></label>
+                                        <input type="tel" name="seller_phone" class="form-control" placeholder="+265 99 123 4567">
+                                    </div>
+                                </div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Email Address <span class="required">*</span></label>
+                                        <input type="email" name="seller_email" class="form-control" placeholder="john@example.com">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>WhatsApp Number</label>
+                                        <input type="tel" name="seller_whatsapp" class="form-control" placeholder="+265 99 123 4567">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Make <span class="required">*</span></label>
+                                    <select name="make_id" class="form-control" id="makeSelect">
+                                        <option value="">Select Make</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Model <span class="required">*</span></label>
+                                    <select name="model_id" class="form-control" id="modelSelect">
+                                        <option value="">Select Make First</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Year <span class="required">*</span></label>
+                                    <select name="year" class="form-control" id="yearSelect">
+                                        <option value="">Select Year</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Price (MWK) <span class="required">*</span></label>
+                                    <input type="number" id="priceInput" name="price" class="form-control" placeholder="e.g., 25000000">
+                                    <div class="form-hint">Set a competitive price to attract more buyers (minimum: MWK 100,000)</div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="negotiable" id="negotiable" value="1">
+                                    <span>Price is negotiable</span>
+                                </label>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Mileage (KM)</label>
+                                    <input type="number" name="mileage" class="form-control" placeholder="e.g., 50000" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>Location <span class="required">*</span></label>
+                                    <select name="location_id" class="form-control" id="locationSelect">
+                                        <option value="">Select Location</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Fuel Type <span class="required">*</span></label>
+                                    <select name="fuel_type" class="form-control">
+                                        <option value="">Select Fuel Type</option>
+                                        <option value="petrol">Petrol</option>
+                                        <option value="diesel">Diesel</option>
+                                        <option value="hybrid">Hybrid</option>
+                                        <option value="electric">Electric</option>
+                                        <option value="lpg">LPG</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Transmission <span class="required">*</span></label>
+                                    <select name="transmission" class="form-control">
+                                        <option value="">Select Transmission</option>
+                                        <option value="manual">Manual</option>
+                                        <option value="automatic">Automatic</option>
+                                        <option value="cvt">CVT</option>
+                                        <option value="semi-automatic">Semi-Automatic</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Condition <span class="required">*</span></label>
+                                    <select name="condition_type" class="form-control" id="conditionSelect">
+                                        <option value="">Select Condition</option>
+                                        <option value="excellent">Excellent - Like new, no issues</option>
+                                        <option value="very_good">Very Good - Minor wear, well maintained</option>
+                                        <option value="good">Good - Some wear, reliable</option>
+                                        <option value="fair">Fair - Visible wear, needs minor work</option>
+                                        <option value="poor">Poor - Significant wear, needs repairs</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Exterior Color</label>
+                                    <input type="text" name="exterior_color" class="form-control" placeholder="e.g., White, Black, Silver">
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Interior Color (Optional)</label>
+                                    <input type="text" name="interior_color" class="form-control" placeholder="e.g., Black, Beige, Gray">
+                                </div>
+                                <div class="form-group">
+                                    <label>Engine Capacity (Optional)</label>
+                                    <select name="engine_size" class="form-control" id="engineSizeSelect" disabled>
+                                        <option value="">Select Model First...</option>
+                                    </select>
+                                    <small class="form-hint">Available engine sizes for selected model</small>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Fuel Tank Capacity (Optional)</label>
+                                    <select name="fuel_tank_capacity" class="form-control" id="fuelTankCapacitySelect" disabled>
+                                        <option value="">Select Model First...</option>
+                                    </select>
+                                    <small class="form-hint">Available fuel tank capacities for selected model</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>Drivetrain (Optional)</label>
+                                    <select name="drivetrain" class="form-control" id="drivetrainSelect" disabled>
+                                        <option value="">Select Model First...</option>
+                                    </select>
+                                    <small class="form-hint">Available drivetrain options for selected model</small>
+                                </div>
+                            </div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Number of Doors (Optional)</label>
+                                    <select name="doors" class="form-control">
+                                        <option value="">Select Doors</option>
+                                        <option value="2">2 Doors</option>
+                                        <option value="3">3 Doors</option>
+                                        <option value="4">4 Doors</option>
+                                        <option value="5">5 Doors</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Number of Seats (Optional)</label>
+                                    <select name="seats" class="form-control">
+                                        <option value="">Select Seats</option>
+                                        <option value="2">2 Seats</option>
+                                        <option value="4">4 Seats</option>
+                                        <option value="5">5 Seats</option>
+                                        <option value="6">6 Seats</option>
+                                        <option value="7">7 Seats</option>
+                                        <option value="8">8 Seats</option>
+                                        <option value="9+">9+ Seats</option>
+                                    </select>
+                                </div>
+                            </div>
+
+
+                            <div class="form-group">
+                                <label>Listing Title <span class="required">*</span></label>
+                                <input type="text" name="title" id="titleInput" class="form-control" placeholder="e.g., 2020 Toyota Hilux - Excellent Condition" maxlength="100">
+                                <div class="form-hint">Auto-generated from your selections above • Max 100 characters • Edit as needed</div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea name="description" class="form-control" rows="4" placeholder="Describe your car's history, maintenance record, special features, recent repairs, etc. Be honest and detailed to attract serious buyers." maxlength="1000"></textarea>
+                                <div class="form-hint">Detailed descriptions get more inquiries • Max 1000 characters</div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Photo Upload -->
+                        <div class="form-step" data-step="2">
+                            <h2><i class="fas fa-camera"></i>Upload Photos</h2>
+                            <p>High-quality photos get <strong>3x more views</strong>! Upload at least 6 photos showing different angles of your car.</p>
+
+                            <!-- Featured Photo Info -->
+                            <div class="featured-photo-info">
+                                <i class="fas fa-star"></i>
+                                <strong>Select a Featured Photo:</strong> Click the "Set as Featured" button on the photo you want as your main image.
+                            </div>
+
+                            <!-- Photo Upload Status -->
+                            <div class="photo-upload-status">
+                                <h4><i class="fas fa-checklist"></i> Photo Requirements</h4>
+                                <div class="photo-status-item">
+                                    <div class="photo-status-icon required" id="minPhotosStatus"><i class="fas fa-exclamation"></i></div>
+                                    <div>Minimum 6 photos required</div>
+                                </div>
+                                <div class="photo-status-item">
+                                    <div class="photo-status-icon pending" id="featuredPhotoStatus"><i class="fas fa-star"></i></div>
+                                    <div>Featured photo selected</div>
+                                </div>
+                            </div>
+
+                            <!-- Photo Upload Area -->
+                            <div class="photo-upload-area" id="photoUploadArea">
+                                <div class="upload-icon">
+                                    <i class="fas fa-camera"></i>
+                                </div>
+                                <div class="upload-title">Click here or drag photos to upload</div>
+                                <div class="upload-instructions">
+                                    <strong>Minimum 6 photos required</strong><br>
+                                    Maximum 15 photos allowed<br>
+                                    JPG, PNG, WEBP formats<br>
+                                    Maximum 5MB per photo<br>
+                                    <strong class="multiple-enabled">✓ Multiple selection enabled</strong>
+                                </div>
+                                <input type="file" id="photoInput" name="images[]" multiple accept="image/jpeg,image/png,image/jpg,image/webp">
+                                <button type="button" class="btn btn-primary" id="photoUploadButton">
+                                    <i class="fas fa-upload"></i> Choose Photos
+                                </button>
+                            </div>
+
+                            <div class="photo-tips">
+                                <h4><i class="fas fa-lightbulb"></i> Photo Tips</h4>
+                                <ul>
+                                    <li><strong>Front view</strong> - Make sure the car is clean and well-lit</li>
+                                    <li><strong>Interior</strong> - Show dashboard, seats, and steering wheel</li>
+                                    <li><strong>Engine bay</strong> - Clean engine shows good maintenance</li>
+                                    <li><strong>All sides</strong> - Include rear, left, and right views</li>
+                                    <li><strong>Wheels & tires</strong> - Close-up shots of tire condition</li>
+                                    <li><strong>Any issues</strong> - Be transparent about any damage</li>
+                                </ul>
+                            </div>
+
+                            <div class="photo-grid" id="photoGrid"></div>
+                            <div class="photo-counter" id="photoCounter">0 of 6 minimum photos uploaded</div>
+                        </div>
+
+                        <!-- Step 3: Listing Type -->
+                        <div class="form-step" data-step="3">
+                            <h2><i class="fas fa-crown"></i>Choose Listing Type</h2>
+                            <p>Select the best listing package for your needs. Featured listings get more visibility and faster results.</p>
+
+                            <div class="listing-types">
+                                <div class="listing-type-card selected" data-type="free" onclick="selectListingType('free')">
+                                    <div class="listing-type-badge">Most Popular</div>
+                                    <h3><i class="fas fa-gift"></i>Free Listing</h3>
+                                    <div class="listing-type-price free">FREE</div>
+                                    <ul>
+                                        <li><i class="fas fa-check"></i> 30 days visibility</li>
+                                        <li><i class="fas fa-check"></i> Up to 10 photos</li>
+                                        <li><i class="fas fa-check"></i> Contact information shown</li>
+                                        <li><i class="fas fa-check"></i> Standard search results</li>
+                                        <li><i class="fas fa-check"></i> Basic listing features</li>
+                                    </ul>
+                                </div>
+                                <div class="listing-type-card" data-type="featured" onclick="selectListingType('featured')">
+                                    <div class="listing-type-badge featured">Recommended</div>
+                                    <h3><i class="fas fa-star"></i>Featured Listing</h3>
+                                    <div class="listing-type-price featured">MWK 15,000</div>
+                                    <ul>
+                                        <li><i class="fas fa-star"></i> <strong>Priority placement</strong></li>
+                                        <li><i class="fas fa-star"></i> Featured badge display</li>
+                                        <li><i class="fas fa-star"></i> <strong>5x more views</strong></li>
+                                        <li><i class="fas fa-star"></i> Up to 15 photos</li>
+                                        <li><i class="fas fa-star"></i> Extended 45-day visibility</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <input type="hidden" name="listing_type" id="listingTypeInput" value="free">
+                        </div>
+
+                        <!-- Step 4: Review -->
+                        <div class="form-step" data-step="4">
+                            <h2><i class="fas fa-check-circle"></i>Review & Submit</h2>
+                            <p>Please review your listing details before submitting. Your listing will be reviewed by our team before going live.</p>
+
+                            <div class="review-section">
+                                <div class="review-card">
+                                    <h3>Car Details</h3>
+                                    <div id="reviewCarDetails"></div>
+                                </div>
+                                <div class="review-card">
+                                    <h3>Photos</h3>
+                                    <div id="reviewPhotos"></div>
+                                </div>
+                                <div class="review-card">
+                                    <h3>Listing Type</h3>
+                                    <div id="reviewListingType"></div>
+                                </div>
+                                <div class="review-card">
+                                    <h3>Contact Information</h3>
+                                    <div id="reviewContactInfo"></div>
+                                </div>
+                            </div>
+
+                            <div class="review-process">
+                                <h3><i class="fas fa-shield-alt"></i> Review Process</h3>
+                                <p>
+                                    Once you submit, our team will review your listing within 2-4 hours. We check all details and photos for quality and accuracy. 
+                                    You'll receive an email notification once your listing is approved and goes live.
+                                </p>
+                                
+                                <!-- Review Confirmation -->
+                                <div class="review-confirmation" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid var(--primary-orange);">
+                                    <label style="display: flex; align-items: center; cursor: pointer; font-weight: 500;">
+                                        <input type="checkbox" id="reviewConfirmCheckbox" style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
+                                        <span>I have reviewed all the information above and confirm it is accurate and complete</span>
+                                    </label>
+                                </div>
+                                
+                                <!-- Submit Button (only in review section) -->
+                                <div style="margin-top: 30px; text-align: center;">
+                                    <button type="button" id="submitBtn" class="btn btn-primary btn-lg" style="min-width: 200px; padding: 12px 30px; font-size: 16px; font-weight: 600;">
+                                        <i class="fas fa-paper-plane"></i> Submit Listing
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Navigation Buttons -->
+                        <div class="form-navigation">
+                            <button type="button" id="prevBtn" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Previous
+                            </button>
+                            <div class="navigation-spacer"></div>
+                            <button type="button" id="nextBtn" class="btn btn-primary">
+                                Next <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer (always visible) -->
+    <footer class="footer" role="contentinfo">
+            <div class="container">
+                <div class="footer-content">
+                    <div class="footer-section">
+                        <h4><i class="fas fa-car"></i> MotorLink Malawi</h4>
+                        <p>Your trusted partner for buying and selling cars in Malawi. We connect buyers and sellers in a safe, secure environment with the latest cars from trusted dealers across all 28 districts.</p>
+                        <div class="social-links">
+                            <a href="#" aria-label="Follow us on Facebook" title="MotorLink Malawi Facebook">
+                                <i class="fab fa-facebook-f"></i>
+                            </a>
+                            <a href="#" aria-label="Follow us on Twitter" title="MotorLink Malawi Twitter">
+                                <i class="fab fa-twitter"></i>
+                            </a>
+                            <a href="#" aria-label="Follow us on Instagram" title="MotorLink Malawi Instagram">
+                                <i class="fab fa-instagram"></i>
+                            </a>
+                            <a href="#" aria-label="Contact us on WhatsApp" title="MotorLink Malawi WhatsApp">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <div class="footer-section">
+                        <h4><i class="fas fa-link"></i> Quick Links</h4>
+                        <ul>
+                            <li><a href="index.html">Browse Cars</a></li>
+                            <li><a href="sell.html">Sell Your Car</a></li>
+                            <li><a href="garages.html">Find Garages</a></li>
+                            <li><a href="dealers.html">Car Dealers</a></li>
+                            <li><a href="car-hire.html">Car Hire</a></li>
+                            <li><a href="car-database.html">Know Your Car</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="footer-section">
+                        <h4><i class="fas fa-life-ring"></i> Support & Help</h4>
+                        <ul>
+                            <li><a href="help.html">Help Center</a></li>
+                            <li><a href="safety.html">Safety Tips</a></li>
+                            <li><a href="contact.html">Contact Us</a></li>
+                            <li><a href="terms.html">Terms of Service</a></li>
+                        </ul>
+                    </div>
+                    
+                    <div class="footer-section">
+                        <h4><i class="fas fa-phone"></i> Contact & Payment</h4>
+                        <p><i class="fas fa-envelope"></i> <strong>Email:</strong> <a href="mailto:info@motorlink.mw">info@motorlink.mw</a></p>
+                        <p><i class="fas fa-phone"></i> <strong>Phone:</strong> <a href="tel:+265991234567">+265 991 234 567</a></p>
+                        
+                        <div style="margin-top: 20px;">
+                            <h5><i class="fas fa-mobile-alt"></i> Mobile Money Payments</h5>
+                            <p><strong>Airtel Money:</strong> +265 991 234 567</p>
+                            <p><strong>TNM Mpamba:</strong> +265 881 765 432</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer-bottom">
+                    <p>&copy; 2025 MotorLink Malawi. All rights reserved. | Connecting Malawi's automotive community since 2025</p>
+                    <p style="margin-top: 10px; font-size: 14px;">
+                        <i class="fas fa-shield-alt"></i> Safe Trading • 
+                        <i class="fas fa-mobile-alt"></i> Mobile Friendly • 
+                        <i class="fas fa-globe"></i> Hosted by <a href="https://promanaged-it.com" target="_blank" rel="noopener">ProManaged IT</a>
+                    </p>
+                </div>
+            </div>
+        </footer>
+
+    <!-- JavaScript -->
+    <script src="config.js"></script>
+    <script src="js/mobile-menu.js"></script>
+    <script src="js/footer-loader.js"></script>
+    <script src="script.js"></script>
+    <script src="js/form-helpers.js"></script>
+    <script src="js/model-variations.js"></script>
+    <script src="sell.js"></script>
+
+
+    <script src="js/page-transitions.js"></script>
+</body>
+</html>

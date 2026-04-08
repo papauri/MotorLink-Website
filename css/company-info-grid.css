@@ -1,0 +1,630 @@
+/**
+ * Combined Company Information Grid
+ * Amazing responsive grid layout combining services, contact, hours, location, and map
+ */
+
+.company-info-section {
+    padding: 60px 0;
+}
+
+.company-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    align-items: start;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Uniform Cards - All 3 cards same width and height */
+.company-info-grid .services-card,
+.company-info-grid .contact-card,
+.company-info-grid .hours-card {
+    grid-column: span 1;
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+}
+
+.company-info-grid .services-card:hover,
+.company-info-grid .contact-card:hover,
+.company-info-grid .hours-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Uniform Content Container - All cards fill their containers equally */
+.company-info-grid .contact-card,
+.company-info-grid .hours-card,
+.company-info-grid .services-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Content wrapper for uniform width */
+.company-info-grid .contact-card > *,
+.company-info-grid .hours-card > *,
+.company-info-grid .services-card > * {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* Standardized Font Sizes for All Card Content */
+.company-info-grid .contact-card p,
+.company-info-grid .hours-card p,
+.company-info-grid .services-card p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #555;
+    width: 100%;
+    word-wrap: break-word;
+}
+
+.company-info-grid .contact-card strong,
+.company-info-grid .hours-card strong,
+.company-info-grid .services-card strong {
+    font-size: 0.85rem;
+    color: #333;
+    display: block;
+    width: 100%;
+}
+
+.company-info-grid .contact-card .contact-info-item,
+.company-info-grid .hours-card .hours-row,
+.company-info-grid .services-card .service-item {
+    font-size: 0.9rem;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.company-info-grid .contact-card i,
+.company-info-grid .hours-card i,
+.company-info-grid .services-card i {
+    font-size: 1rem;
+    flex-shrink: 0;
+    min-width: 20px;
+}
+
+/* Contact Actions - Full width matching hours-card style */
+.company-info-grid .contact-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.company-info-grid .quick-action-btn {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-align: center;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    background: #f8f9fa;
+    color: #333;
+    border: 1px solid #e0e0e0;
+}
+
+.company-info-grid .quick-action-btn.whatsapp {
+    background: #25d366;
+    color: white;
+    border-color: #25d366;
+}
+
+.company-info-grid .quick-action-btn.whatsapp:hover {
+    background: #128c7e;
+    border-color: #128c7e;
+    transform: translateY(-2px);
+}
+
+.company-info-grid .quick-action-btn.phone {
+    background: #00a651;
+    color: white;
+    border-color: #00a651;
+}
+
+.company-info-grid .quick-action-btn.phone:hover {
+    background: #008f45;
+    border-color: #008f45;
+    transform: translateY(-2px);
+}
+
+.company-info-grid .quick-action-btn.website {
+    background: #0066cc;
+    color: white;
+    border-color: #0066cc;
+}
+
+.company-info-grid .quick-action-btn.website:hover {
+    background: #0052a3;
+    border-color: #0052a3;
+    transform: translateY(-2px);
+}
+
+.company-info-grid .quick-action-btn:not(.whatsapp):not(.phone):not(.website):hover {
+    background: #e9ecef;
+    border-color: #00a651;
+    color: #00a651;
+    transform: translateY(-2px);
+}
+
+/* Fancy Services Grid - Matching contact/hours card height */
+.company-info-grid .services-grid {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.company-info-grid .service-item.fancy {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.company-info-grid .service-item.fancy::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(180deg, #00a651 0%, #008f45 100%);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 10px rgba(0, 166, 81, 0.3);
+}
+
+.company-info-grid .service-item.fancy:hover {
+    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
+    border-color: #00a651;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 166, 81, 0.2);
+}
+
+.company-info-grid .service-item.fancy:hover::before {
+    width: 6px;
+    box-shadow: 0 0 15px rgba(0, 166, 81, 0.5);
+}
+
+.company-info-grid .service-item.fancy.special {
+    background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
+    border-color: #ffc107;
+    position: relative;
+}
+
+.company-info-grid .service-item.fancy.special::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+    border-radius: 0 10px 0 50%;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+.company-info-grid .service-item.fancy.special::before {
+    background: linear-gradient(180deg, #ffc107 0%, #ffb300 100%);
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
+}
+
+.company-info-grid .service-item.fancy.special:hover {
+    border-color: #ffb300;
+    box-shadow: 0 8px 25px rgba(255, 193, 7, 0.3);
+}
+
+.company-info-grid .service-item.fancy.special:hover::after {
+    width: 25px;
+    height: 25px;
+    opacity: 1;
+}
+
+/* Service Icon - Enhanced */
+.company-info-grid .service-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #00a651 0%, #008f45 100%);
+    color: white;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    box-shadow: 0 3px 10px rgba(0, 166, 81, 0.3);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.company-info-grid .service-icon::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.3) 50%, transparent 70%);
+    transform: rotate(45deg);
+    transition: all 0.6s ease;
+    opacity: 0;
+}
+
+.company-info-grid .service-icon.premium {
+    background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+    color: #000;
+    box-shadow: 0 3px 10px rgba(255, 193, 7, 0.4);
+}
+
+.company-info-grid .service-item.fancy:hover .service-icon {
+    transform: scale(1.15) rotate(8deg);
+    box-shadow: 0 5px 15px rgba(0, 166, 81, 0.4);
+}
+
+.company-info-grid .service-item.fancy:hover .service-icon::before {
+    opacity: 1;
+    transform: rotate(45deg) translate(50%, 50%);
+}
+
+.company-info-grid .service-item.fancy:hover .service-icon.premium {
+    box-shadow: 0 5px 15px rgba(255, 193, 7, 0.5);
+}
+
+/* Service Content */
+.company-info-grid .service-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-width: 0;
+}
+
+.company-info-grid .service-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #333;
+    word-wrap: break-word;
+    flex: 1;
+    line-height: 1.3;
+}
+
+.company-info-grid .service-badge {
+    padding: 3px 6px;
+    border-radius: 10px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    flex-shrink: 0;
+    margin-left: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.company-info-grid .service-badge:not(.premium) {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.company-info-grid .service-badge.premium {
+    background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+    color: #000;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+/* Services Empty State */
+.company-info-grid .services-empty {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    text-align: center;
+    flex: 1;
+}
+
+.company-info-grid .empty-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8f9fa;
+    color: #999;
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+    border: 2px dashed #e0e0e0;
+}
+
+.company-info-grid .services-empty p {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+}
+
+/* Hours Grid - Full width */
+.company-info-grid .hours-grid {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.company-info-grid .hour-item {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.company-info-grid .hour-item:hover {
+    background: #e9ecef;
+}
+
+.company-info-grid .hour-item .day {
+    font-weight: 600;
+    color: #333;
+    flex-shrink: 0;
+    min-width: 80px;
+}
+
+.company-info-grid .hour-item .time {
+    color: #666;
+    text-align: right;
+}
+
+.company-info-grid .hour-item .time.closed {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+/* Social Links - Full width */
+.company-info-grid .dealer-social-section {
+    width: 100%;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.company-info-grid .social-links {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.company-info-grid .social-link {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    color: white;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.company-info-grid .social-link.facebook {
+    background: #1877f2;
+}
+
+.company-info-grid .social-link.instagram {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+}
+
+.company-info-grid .social-link.twitter {
+    background: #1da1f2;
+}
+
+.company-info-grid .social-link.linkedin {
+    background: #0077b5;
+}
+
+.company-info-grid .social-link:hover {
+    transform: translateY(-2px) scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Map Container - Spans Full Width (3 columns) */
+.company-info-grid .map-container-grid {
+    grid-column: span 3;
+    background: white;
+    padding: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    min-height: 400px;
+}
+
+.company-info-grid .map-container-grid #companyMap {
+    height: 100%;
+    min-height: 400px;
+    border-radius: 12px;
+}
+
+/* Card Headings - Uniform */
+.company-info-grid h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.company-info-grid h3 i {
+    color: #00a651;
+    font-size: 1.2rem;
+}
+
+.company-info-grid h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+    margin: 16px 0 10px 0;
+}
+
+/* Button Styles */
+.company-info-grid .btn-directions {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #00a651 0%, #008f45 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.company-info-grid .btn-directions:hover {
+    background: linear-gradient(135deg, #008f45 0%, #007a3a 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 166, 81, 0.3);
+}
+
+.company-info-grid .btn-directions i {
+    font-size: 16px;
+}
+
+/* Loading State */
+.company-info-grid .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    color: #95a5a6;
+}
+
+.company-info-grid .loading i {
+    font-size: 32px;
+    margin-bottom: 12px;
+}
+
+/* Tablet Layout (2 columns) */
+@media (max-width: 1024px) {
+    .company-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+
+    .company-info-grid .services-card,
+    .company-info-grid .contact-card,
+    .company-info-grid .hours-card {
+        grid-column: span 1;
+        min-height: 350px;
+    }
+
+    .company-info-grid .map-container-grid {
+        grid-column: span 2;
+        min-height: 350px;
+    }
+}
+
+/* Mobile Layout (1 column) */
+@media (max-width: 768px) {
+    .company-info-section {
+        padding: 40px 0;
+    }
+
+    .company-info-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    .company-info-grid .services-card,
+    .company-info-grid .contact-card,
+    .company-info-grid .hours-card,
+    .company-info-grid .map-container-grid {
+        grid-column: span 1;
+    }
+
+    .company-info-grid .services-card,
+    .company-info-grid .contact-card,
+    .company-info-grid .hours-card {
+        padding: 18px;
+        min-height: auto;
+    }
+
+    .company-info-grid .map-container-grid {
+        min-height: 300px;
+    }
+
+    .company-info-grid .map-container-grid #companyMap {
+        min-height: 300px;
+    }
+
+    .company-info-grid h3 {
+        font-size: 1.1rem;
+    }
+
+    .company-info-grid .btn-directions {
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+}
+
+/* Small Mobile Optimization */
+@media (max-width: 480px) {
+    .company-info-section {
+        padding: 32px 0;
+    }
+
+    .company-info-grid {
+        gap: 12px;
+    }
+
+    .company-info-grid .services-card,
+    .company-info-grid .contact-card,
+    .company-info-grid .hours-card {
+        padding: 16px;
+    }
+
+    .company-info-grid .map-container-grid {
+        min-height: 250px;
+    }
+
+    .company-info-grid .map-container-grid #companyMap {
+        min-height: 250px;
+    }
+}
