@@ -1,7 +1,7 @@
 # API Keys and Sensitive Configuration
 config.js
 config-api-keys.php
-admin/admin-config.php
+admin/admin-secrets.local.php
 
 # IDE
 .vscode/

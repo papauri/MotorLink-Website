@@ -21,6 +21,7 @@ class MotorLink {
     }
     
     init() {
+        this.checkMaintenanceMode();
         
         this.checkAuthentication();
         this.setupEventListeners();
@@ -34,6 +35,46 @@ class MotorLink {
                 this.startTour();
             }
         }, 2000);
+    }
+
+    async checkMaintenanceMode() {
+        try {
+            const path = window.location.pathname.toLowerCase();
+            if (path.includes('/admin/') || path.endsWith('/maintenance.html') || path.endsWith('maintenance.html')) {
+                return;
+            }
+
+            const configUrl = `${CONFIG.API_URL}${CONFIG.API_URL.includes('?') ? '&' : '?'}action=get_public_client_config`;
+            const configResponse = await fetch(configUrl, {
+                method: 'GET',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const configData = await configResponse.json();
+
+            const maintenanceEnabled = !!configData?.config?.maintenance_enabled;
+            if (!maintenanceEnabled) {
+                return;
+            }
+
+            const authResponse = await fetch(`${CONFIG.API_URL}${CONFIG.API_URL.includes('?') ? '&' : '?'}action=check_auth`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const authData = await authResponse.json();
+
+            const isAdmin = !!(authData?.authenticated && authData?.user?.type === 'admin');
+            if (isAdmin) {
+                return;
+            }
+
+            const message = encodeURIComponent(configData?.config?.maintenance_message || 'We are currently performing scheduled maintenance. Please check back shortly.');
+            window.location.href = `${CONFIG.BASE_URL}maintenance.html?message=${message}`;
+        } catch (error) {
+            // Non-fatal: if guard check fails, API layer still enforces maintenance mode.
+            console.warn('Maintenance guard check failed:', error);
+        }
     }
 
     // ============================================================================

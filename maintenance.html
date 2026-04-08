@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance - MotorLink Malawi</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="css/mobile-enhancements.css">
+    <link rel="stylesheet" href="css/mobile-redesign.css">
+    <style>
+        body {
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f3f7f4 0%, #dbeee2 100%);
+            color: #1f2937;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 24px;
+        }
+
+        .maintenance-card {
+            max-width: 680px;
+            width: 100%;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 18px 40px rgba(10, 35, 24, 0.14);
+            padding: 32px;
+            text-align: center;
+            border: 1px solid rgba(16, 185, 129, 0.16);
+        }
+
+        .maintenance-icon {
+            width: 76px;
+            height: 76px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #10b981;
+            color: #fff;
+            font-size: 32px;
+            margin-bottom: 16px;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: 1.9rem;
+        }
+
+        p {
+            margin: 0 0 12px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+
+        .status-note {
+            margin-top: 18px;
+            font-size: 0.95rem;
+            color: #065f46;
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+
+        .actions {
+            margin-top: 22px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            min-height: 42px;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: #10b981;
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: #111827;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="maintenance-card">
+        <div class="maintenance-icon">!</div>
+        <h1>MotorLink is under maintenance</h1>
+        <p id="maintenanceMessage">We are currently performing scheduled maintenance. Please check back shortly.</p>
+        <div class="status-note">Admin users can still sign in and manage the platform during maintenance mode.</div>
+        <div class="actions">
+            <a class="btn btn-primary" href="index.html">Retry</a>
+            <a class="btn btn-secondary" href="login.html">Admin Login</a>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            const message = params.get('message');
+            if (message) {
+                document.getElementById('maintenanceMessage').textContent = message;
+            }
+        })();
+    </script>
+</body>
+</html>

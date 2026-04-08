@@ -347,6 +347,18 @@ try {
             handleGetSettings($db);
             break;
 
+        case 'get_admin_db_credentials':
+            handleGetAdminDbCredentials($db);
+            break;
+
+        case 'test_admin_db_credentials':
+            handleTestAdminDbCredentials($db);
+            break;
+
+        case 'save_admin_db_credentials':
+            handleSaveAdminDbCredentials($db);
+            break;
+
         case 'get_system_info':
             handleGetSystemInfo($db);
             break;
@@ -505,7 +517,11 @@ function requireSuperAdmin($db) {
     $adminId = $_SESSION['admin_id'] ?? null;
     if (!$adminId) {
         http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Super admin access required.']);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Super admin access required.',
+            'code' => 'SUPER_ADMIN_REQUIRED'
+        ]);
         exit();
     }
     
@@ -515,7 +531,11 @@ function requireSuperAdmin($db) {
     
     if (!$admin || $admin['role'] !== 'super_admin') {
         http_response_code(403);
-        echo json_encode(['success' => false, 'message' => 'Super admin access required. Only super administrators can access this feature.']);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Super admin access required. Only super administrators can access this feature.',
+            'code' => 'SUPER_ADMIN_REQUIRED'
+        ]);
         exit();
     }
 }
@@ -5541,5 +5561,202 @@ function handleSetAIChatEnabled($db) {
     } catch (Exception $e) {
         error_log("handleSetAIChatEnabled error: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Failed to update global AI chat status']);
+    }
+}
+
+/**
+ * Fetch admin DB credentials from site_settings for admin settings UI.
+ * Password value is not returned; only whether it is configured.
+ */
+function handleGetAdminDbCredentials($db) {
+    requireSuperAdmin($db);
+
+    try {
+        $keys = ['admin_db_host', 'admin_db_user', 'admin_db_pass', 'admin_db_name'];
+        $placeholders = implode(',', array_fill(0, count($keys), '?'));
+        $stmt = $db->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ($placeholders)");
+        $stmt->execute($keys);
+
+        $values = [
+            'admin_db_host' => '',
+            'admin_db_user' => '',
+            'admin_db_pass' => '',
+            'admin_db_name' => ''
+        ];
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $values[$row['setting_key']] = (string)($row['setting_value'] ?? '');
+        }
+
+        echo json_encode([
+            'success' => true,
+            'credentials' => [
+                'host' => $values['admin_db_host'],
+                'user' => $values['admin_db_user'],
+                'name' => $values['admin_db_name'],
+                'has_password' => $values['admin_db_pass'] !== ''
+            ]
+        ]);
+        exit();
+    } catch (Exception $e) {
+        error_log('handleGetAdminDbCredentials error: ' . $e->getMessage());
+        sendAdminError('Failed to load admin DB credentials', 'ADMIN_DB_CREDENTIALS_LOAD_FAILED', 500);
+    }
+}
+
+/**
+ * Test admin DB credentials without persisting.
+ */
+function handleTestAdminDbCredentials($db) {
+    requireSuperAdmin($db);
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendAdminError('POST method required', 'INVALID_METHOD', 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $host = trim((string)($input['host'] ?? ''));
+    $user = trim((string)($input['user'] ?? ''));
+    $name = trim((string)($input['name'] ?? ''));
+    $password = (string)($input['password'] ?? '');
+
+    if ($host === '' || $user === '' || $name === '') {
+        sendAdminError('Host, username, and database name are required', 'ADMIN_DB_TEST_INPUT_REQUIRED', 400);
+    }
+
+    if ($password === '') {
+        try {
+            $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'admin_db_pass' LIMIT 1");
+            $stmt->execute();
+            $password = (string)($stmt->fetchColumn() ?: '');
+        } catch (Exception $e) {
+            // Keep empty and fail with clear error below.
+        }
+    }
+
+    if ($password === '') {
+        sendAdminError('Password is required for test connection', 'ADMIN_DB_TEST_PASSWORD_REQUIRED', 400);
+    }
+
+    try {
+        $testDb = new PDO(
+            "mysql:host={$host};dbname={$name};charset=utf8mb4",
+            $user,
+            $password,
+            [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_TIMEOUT => 8
+            ]
+        );
+
+        $version = $testDb->query('SELECT VERSION() as v')->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Connection successful',
+            'meta' => [
+                'server_version' => $version['v'] ?? 'unknown'
+            ]
+        ]);
+        exit();
+    } catch (Exception $e) {
+        error_log('handleTestAdminDbCredentials error: ' . $e->getMessage());
+        sendAdminError('Connection failed. Please verify host, database, username, and password.', 'ADMIN_DB_TEST_FAILED', 400);
+    }
+}
+
+/**
+ * Save admin DB credentials in site_settings.
+ */
+function handleSaveAdminDbCredentials($db) {
+    requireSuperAdmin($db);
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendAdminError('POST method required', 'INVALID_METHOD', 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $host = trim((string)($input['host'] ?? ''));
+    $user = trim((string)($input['user'] ?? ''));
+    $name = trim((string)($input['name'] ?? ''));
+    $password = (string)($input['password'] ?? '');
+    $skipTest = !empty($input['skip_test']);
+
+    if ($host === '' || $user === '' || $name === '') {
+        sendAdminError('Host, username, and database name are required', 'ADMIN_DB_SAVE_INPUT_REQUIRED', 400);
+    }
+
+    if (!$skipTest) {
+        $testPassword = $password;
+        if ($testPassword === '') {
+            $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'admin_db_pass' LIMIT 1");
+            $stmt->execute();
+            $testPassword = (string)($stmt->fetchColumn() ?: '');
+        }
+
+        if ($testPassword === '') {
+            sendAdminError('Password is required to verify credentials before save', 'ADMIN_DB_SAVE_PASSWORD_REQUIRED', 400);
+        }
+
+        try {
+            $verify = new PDO(
+                "mysql:host={$host};dbname={$name};charset=utf8mb4",
+                $user,
+                $testPassword,
+                [
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                    PDO::ATTR_EMULATE_PREPARES => false,
+                    PDO::ATTR_TIMEOUT => 8
+                ]
+            );
+            $verify->query('SELECT 1');
+        } catch (Exception $e) {
+            error_log('handleSaveAdminDbCredentials test failed: ' . $e->getMessage());
+            sendAdminError('Connection test failed. Credentials were not saved.', 'ADMIN_DB_SAVE_TEST_FAILED', 400);
+        }
+    }
+
+    try {
+        $values = [
+            'admin_db_host' => $host,
+            'admin_db_user' => $user,
+            'admin_db_name' => $name
+        ];
+
+        if ($password !== '') {
+            $values['admin_db_pass'] = $password;
+        }
+
+        $db->beginTransaction();
+
+        foreach ($values as $key => $value) {
+            $stmt = $db->prepare("INSERT INTO site_settings (setting_key, setting_value, setting_group, setting_type, description, is_public)
+                                  VALUES (?, ?, 'security', 'string', ?, 0)
+                                  ON DUPLICATE KEY UPDATE
+                                  setting_value = VALUES(setting_value),
+                                  setting_group = VALUES(setting_group),
+                                  setting_type = VALUES(setting_type),
+                                  description = VALUES(description),
+                                  is_public = VALUES(is_public)");
+            $stmt->execute([$key, $value, 'Admin DB credential setting: ' . $key]);
+        }
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Admin DB credentials saved successfully. New connections will use these settings.',
+            'password_updated' => $password !== ''
+        ]);
+        exit();
+    } catch (Exception $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log('handleSaveAdminDbCredentials error: ' . $e->getMessage());
+        sendAdminError('Failed to save admin DB credentials', 'ADMIN_DB_SAVE_FAILED', 500);
     }
 }

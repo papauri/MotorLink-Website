@@ -458,6 +458,68 @@ function requireAdmin() {
 }
 
 /**
+ * Check whether current request should bypass maintenance lock.
+ */
+function isMaintenanceBypassAction($action) {
+    $allowed = [
+        'check_auth',
+        'login',
+        'logout',
+        'get_public_client_config',
+        'site_settings',
+        'get_site_settings',
+        'request_password_reset',
+        'reset_password',
+        'verify_listing_email'
+    ];
+
+    return in_array($action, $allowed, true);
+}
+
+/**
+ * Read maintenance mode state from settings table.
+ */
+function getMaintenanceModeState($db) {
+    $state = [
+        'enabled' => false,
+        'message' => 'We are currently performing scheduled maintenance. Please check back shortly.'
+    ];
+
+    try {
+        $stmt = $db->query("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('maintenance_enabled', 'maintenance_message')");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            if ($row['setting_key'] === 'maintenance_enabled') {
+                $state['enabled'] = filter_var($row['setting_value'], FILTER_VALIDATE_BOOLEAN);
+            } elseif ($row['setting_key'] === 'maintenance_message' && !empty($row['setting_value'])) {
+                $state['message'] = (string)$row['setting_value'];
+            }
+        }
+    } catch (Exception $e) {
+        error_log('Maintenance state load warning: ' . $e->getMessage());
+    }
+
+    return $state;
+}
+
+/**
+ * Enforce maintenance lock for non-admin users and non-whitelisted actions.
+ */
+function enforceMaintenanceMode($db, $action) {
+    $maintenance = getMaintenanceModeState($db);
+    if (!$maintenance['enabled']) {
+        return;
+    }
+
+    // Admin sessions bypass maintenance mode.
+    $isAdminSession = !empty($_SESSION['user_type']) && $_SESSION['user_type'] === 'admin';
+    if ($isAdminSession || isMaintenanceBypassAction($action)) {
+        return;
+    }
+
+    sendErrorWithCode($maintenance['message'], 'MAINTENANCE_MODE', 503);
+}
+
+/**
  * Generate unique reference number for listings
  */
 function generateReferenceNumber($db) {
@@ -523,6 +585,9 @@ try {
     if (empty($action)) {
         sendError('No action specified', 400);
     }
+
+    // Enforce one-click maintenance mode globally at API layer.
+    enforceMaintenanceMode($db, $action);
 
     // Route to appropriate handler
     switch ($action) {
@@ -6876,6 +6941,10 @@ function getPublicClientConfig($db) {
                 $config[$row['setting_key']] = (string)($row['setting_value'] ?? '');
             }
         }
+
+        $maintenance = getMaintenanceModeState($db);
+        $config['maintenance_enabled'] = (bool)$maintenance['enabled'];
+        $config['maintenance_message'] = (string)$maintenance['message'];
 
         sendSuccess(['config' => $config]);
     } catch (Exception $e) {

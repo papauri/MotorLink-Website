@@ -5124,10 +5124,10 @@ async function saveGeneralSettings() {
     };
 
     try {
-        const response = await admin.apiCall('save_settings', {
+        const response = await admin.apiCall('save_settings', 'POST', {
             category: 'general',
             settings: settings
-        }, 'POST');
+        });
 
         if (response.success) {
             admin.showAlert('success', response.message);
@@ -5153,10 +5153,10 @@ async function saveListingSettings() {
     };
 
     try {
-        const response = await admin.apiCall('save_settings', {
+        const response = await admin.apiCall('save_settings', 'POST', {
             category: 'listing',
             settings: settings
-        }, 'POST');
+        });
 
         if (response.success) {
             admin.showAlert('success', response.message);
@@ -5178,10 +5178,10 @@ async function saveUserSettings() {
     };
 
     try {
-        const response = await admin.apiCall('save_settings', {
+        const response = await admin.apiCall('save_settings', 'POST', {
             category: 'user',
             settings: settings
-        }, 'POST');
+        });
 
         if (response.success) {
             admin.showAlert('success', response.message);
@@ -5206,10 +5206,10 @@ async function saveEmailSettings() {
     };
 
     try {
-        const response = await admin.apiCall('save_settings', {
+        const response = await admin.apiCall('save_settings', 'POST', {
             category: 'email',
             settings: settings
-        }, 'POST');
+        });
 
         if (response.success) {
             admin.showAlert('success', response.message);
@@ -5238,10 +5238,10 @@ async function saveSecuritySettings() {
     };
 
     try {
-        const response = await admin.apiCall('save_settings', {
+        const response = await admin.apiCall('save_settings', 'POST', {
             category: 'security',
             settings: settings
-        }, 'POST');
+        });
 
         if (response.success) {
             admin.showAlert('success', response.message);
@@ -5252,6 +5252,90 @@ async function saveSecuritySettings() {
     } catch (error) {
         admin.showAlert('error', 'Error saving settings: ' + error.message);
         debugLog('Error saving security settings:', error);
+    }
+}
+
+function getAdminDbCredentialsPayload() {
+    return {
+        host: document.getElementById('admin-db-host')?.value?.trim() || '',
+        name: document.getElementById('admin-db-name')?.value?.trim() || '',
+        user: document.getElementById('admin-db-user')?.value?.trim() || '',
+        password: document.getElementById('admin-db-pass')?.value || ''
+    };
+}
+
+function setAdminDbStatus(message, isError = false) {
+    const statusEl = document.getElementById('admin-db-status');
+    if (!statusEl) return;
+    statusEl.textContent = message || '';
+    statusEl.style.color = isError ? '#b91c1c' : '#166534';
+}
+
+async function loadAdminDbCredentials() {
+    try {
+        const response = await admin.apiCall('get_admin_db_credentials', 'GET', null);
+        if (!response.success || !response.credentials) {
+            throw new Error(response.message || 'Failed to load admin DB credentials');
+        }
+
+        document.getElementById('admin-db-host').value = response.credentials.host || '';
+        document.getElementById('admin-db-name').value = response.credentials.name || '';
+        document.getElementById('admin-db-user').value = response.credentials.user || '';
+        document.getElementById('admin-db-pass').value = '';
+        setAdminDbStatus(response.credentials.has_password ? 'Password is configured. Leave password blank to keep it unchanged.' : 'No password is currently configured.', false);
+    } catch (error) {
+        setAdminDbStatus(error.message || 'Failed to load admin DB credentials', true);
+    }
+}
+
+async function testAdminDbCredentials() {
+    const payload = getAdminDbCredentialsPayload();
+
+    if (!payload.host || !payload.name || !payload.user) {
+        admin.showAlert('error', 'Host, database name, and username are required');
+        return;
+    }
+
+    setAdminDbStatus('Testing database connection...', false);
+
+    try {
+        const response = await admin.apiCall('test_admin_db_credentials', 'POST', payload);
+        if (!response.success) {
+            throw new Error(response.message || 'Connection test failed');
+        }
+
+        const version = response.meta?.server_version ? ` (Server: ${response.meta.server_version})` : '';
+        setAdminDbStatus(`Connection successful${version}`, false);
+        admin.showAlert('success', 'Admin DB connection test passed');
+    } catch (error) {
+        setAdminDbStatus(error.message || 'Connection test failed', true);
+        admin.showAlert('error', error.message || 'Admin DB connection test failed');
+    }
+}
+
+async function saveAdminDbCredentials() {
+    const payload = getAdminDbCredentialsPayload();
+    payload.skip_test = !!document.getElementById('admin-db-skip-test')?.checked;
+
+    if (!payload.host || !payload.name || !payload.user) {
+        admin.showAlert('error', 'Host, database name, and username are required');
+        return;
+    }
+
+    setAdminDbStatus('Saving credentials...', false);
+
+    try {
+        const response = await admin.apiCall('save_admin_db_credentials', 'POST', payload);
+        if (!response.success) {
+            throw new Error(response.message || 'Failed to save admin DB credentials');
+        }
+
+        document.getElementById('admin-db-pass').value = '';
+        setAdminDbStatus('Credentials saved successfully. New admin connections will use these settings.', false);
+        admin.showAlert('success', response.message || 'Admin DB credentials saved');
+    } catch (error) {
+        setAdminDbStatus(error.message || 'Failed to save admin DB credentials', true);
+        admin.showAlert('error', error.message || 'Failed to save admin DB credentials');
     }
 }
 
@@ -5267,13 +5351,13 @@ async function toggleMaintenanceMode() {
     }
 
     try {
-        const response = await admin.apiCall('save_settings', {
+        const response = await admin.apiCall('save_settings', 'POST', {
             category: 'maintenance',
             settings: {
                 enabled: isEnabled,
                 message: message
             }
-        }, 'POST');
+        });
 
         if (response.success) {
             admin.showAlert(isEnabled ? 'warning' : 'success',
@@ -5290,11 +5374,20 @@ async function toggleMaintenanceMode() {
     }
 }
 
+function previewMaintenanceMode() {
+    const message = (document.getElementById('maintenance-message')?.value || '').trim();
+    const encodedMessage = encodeURIComponent(
+        message || "We're currently performing scheduled maintenance. We'll be back shortly!"
+    );
+    const previewUrl = `../maintenance.html?message=${encodedMessage}`;
+    window.open(previewUrl, '_blank', 'noopener');
+}
+
 async function exportDatabaseBackup() {
     admin.showAlert('info', 'Preparing database backup...');
 
     try {
-        const response = await admin.apiCall('export_database', {}, 'POST');
+        const response = await admin.apiCall('export_database', 'POST', {});
 
         if (response.success) {
             // Create download
@@ -5324,7 +5417,7 @@ async function exportAllData() {
     admin.showAlert('info', 'Exporting all data as JSON...');
 
     try {
-        const response = await admin.apiCall('export_database', {}, 'POST');
+        const response = await admin.apiCall('export_database', 'POST', {});
 
         if (response.success) {
             // Create download
@@ -5401,11 +5494,16 @@ async function loadSettings() {
             if (settings['maintenance_enabled'] !== undefined) document.getElementById('maintenance-mode').checked = settings['maintenance_enabled'];
             if (settings['maintenance_message']) document.getElementById('maintenance-message').value = settings['maintenance_message'];
 
+            // Admin DB credentials are managed separately in site_settings.
+            await loadAdminDbCredentials();
+
         } else {
             debugLog('No settings found or error loading settings');
+            await loadAdminDbCredentials();
         }
     } catch (error) {
         debugLog('Error loading settings:', error);
+        await loadAdminDbCredentials();
     }
 }
 

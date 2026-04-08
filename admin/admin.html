@@ -1327,6 +1327,50 @@
                             </button>
                         </div>
 
+                        <!-- Admin DB Credentials -->
+                        <div class="settings-card">
+                            <h3><i class="fas fa-database"></i> Admin DB Credentials</h3>
+                            <p class="form-text" style="margin-bottom: 12px;">
+                                Super admin only. These credentials are stored in <strong>site_settings</strong> and used by admin bootstrap.
+                            </p>
+
+                            <div class="form-group">
+                                <label for="admin-db-host">DB Host</label>
+                                <input type="text" id="admin-db-host" class="form-control" placeholder="localhost or remote host">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="admin-db-name">DB Name</label>
+                                <input type="text" id="admin-db-name" class="form-control" placeholder="database name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="admin-db-user">DB Username</label>
+                                <input type="text" id="admin-db-user" class="form-control" autocomplete="username">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="admin-db-pass">DB Password</label>
+                                <input type="password" id="admin-db-pass" class="form-control" autocomplete="new-password" placeholder="Leave blank to keep existing password">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="admin-db-skip-test">
+                                    <input type="checkbox" id="admin-db-skip-test">
+                                    Skip connection test when saving (not recommended)
+                                </label>
+                            </div>
+
+                            <div id="admin-db-status" class="form-text" style="margin-bottom: 12px;"></div>
+
+                            <button type="button" class="btn btn-secondary" onclick="testAdminDbCredentials()">
+                                <i class="fas fa-plug"></i> Test Connection
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="saveAdminDbCredentials()">
+                                <i class="fas fa-save"></i> Save Admin DB Credentials
+                            </button>
+                        </div>
+
                         <!-- System Info -->
                         <div class="settings-card">
                             <h3><i class="fas fa-server"></i> System Information</h3>
@@ -1374,6 +1418,9 @@
                             </div>
                             <button class="btn btn-warning" onclick="toggleMaintenanceMode()">
                                 <i class="fas fa-tools"></i> Toggle Maintenance Mode
+                            </button>
+                            <button class="btn btn-secondary" onclick="previewMaintenanceMode()" style="margin-left: 8px;">
+                                <i class="fas fa-eye"></i> Preview Maintenance Page
                             </button>
                         </div>
 
