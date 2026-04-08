@@ -115,6 +115,8 @@ class FavoritesManager {
         this.updateStats();
 
         grid.innerHTML = this.listings.map(listing => {
+            const isSold = String(listing.status || '').toLowerCase() === 'sold';
+
             // Get image URL
             let imageUrl = '';
             if (listing.featured_image) {
@@ -131,12 +133,17 @@ class FavoritesManager {
             }
 
             return `
-                <div class="car-card" data-id="${listing.id}" onclick="window.location.href='car.html?id=${listing.id}'">
+                <div class="car-card ${isSold ? 'is-sold' : ''}" data-id="${listing.id}" onclick="window.location.href='car.html?id=${listing.id}'">
                     <div class="car-image">
                         ${imageUrl
                             ? `<img src="${imageUrl}" alt="${this.escapeHtml(listing.title)}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
                                <div class="placeholder" style="display: none;"><i class="fas fa-car"></i></div>`
                             : '<div class="placeholder"><i class="fas fa-car"></i></div>'}
+                        ${isSold ? `
+                            <div class="sold-badge" title="This car is marked as sold">
+                                <i class="fas fa-tag"></i> SOLD
+                            </div>
+                        ` : ''}
                         <button class="remove-btn" onclick="event.stopPropagation(); favoritesManager.removeFavorite(${listing.id})" title="Remove from saved">
                             <i class="fas fa-heart"></i>
                         </button>
@@ -156,6 +163,9 @@ class FavoritesManager {
                         <a href="car.html?id=${listing.id}" class="btn btn-primary">
                             <i class="fas fa-eye"></i> View Details
                         </a>
+                        <button class="btn btn-outline-danger" onclick="favoritesManager.removeFavorite(${listing.id})" title="Remove from saved">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
                         ${listing.contact_phone ? `
                             <a href="tel:${listing.contact_phone}" class="btn btn-outline-primary">
                                 <i class="fas fa-phone"></i> Call

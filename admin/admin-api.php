@@ -359,6 +359,14 @@ try {
             handleGetActivityLogs($db);
             break;
 
+        case 'get_listing_reports':
+            handleGetListingReports($db);
+            break;
+
+        case 'update_listing_report_status':
+            handleUpdateListingReportStatus($db);
+            break;
+
         case 'get_ai_chat_settings':
             handleGetAIChatSettings($db);
             break;
@@ -471,9 +479,23 @@ function requireAdmin() {
         error_log("Admin session check failed - no active admin session");
 
         http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Admin access required. Please login.']);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Admin access required. Please login.',
+            'code' => 'ADMIN_AUTH_REQUIRED'
+        ]);
         exit();
     }
+}
+
+function sendAdminError($message, $errorCode, $httpCode = 400) {
+    http_response_code($httpCode);
+    echo json_encode([
+        'success' => false,
+        'message' => $message,
+        'code' => $errorCode
+    ]);
+    exit();
 }
 
 function requireSuperAdmin($db) {
@@ -4121,6 +4143,200 @@ function handleGetActivityLogs($db) {
         echo json_encode(['success' => false, 'message' => 'Failed to load activity logs']);
         exit();
     }
+}
+
+/**
+ * Get listing reports for admin review.
+ */
+function handleGetListingReports($db) {
+    requireAdmin();
+
+    try {
+        $schemaWarnings = ensureListingReportsSchema($db);
+
+        $where = ["1=1"];
+        $params = [];
+
+        if (!empty($_GET['status'])) {
+            $where[] = "lr.status = ?";
+            $params[] = $_GET['status'];
+        }
+
+        if (!empty($_GET['reason'])) {
+            $where[] = "lr.reason = ?";
+            $params[] = $_GET['reason'];
+        }
+
+        if (!empty($_GET['search'])) {
+            $where[] = "(l.title LIKE ? OR lr.details LIKE ? OR lr.reporter_email LIKE ? OR ru.email LIKE ?)";
+            $term = '%' . $_GET['search'] . '%';
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+            $params[] = $term;
+        }
+
+        $limit = isset($_GET['limit']) ? max(1, min(500, (int)$_GET['limit'])) : 200;
+        $whereClause = implode(' AND ', $where);
+
+        $sql = "SELECT lr.id, lr.listing_id, lr.user_id, lr.reason, lr.details, lr.reporter_email, lr.reporter_ip,
+                       lr.status, lr.admin_notes, lr.reviewed_by, lr.reviewed_at, lr.created_at,
+                       l.title AS listing_title, l.status AS listing_status, l.approval_status,
+                       ru.email AS reporter_user_email, ru.full_name AS reporter_user_name,
+                       au.full_name AS reviewed_by_name
+                FROM listing_reports lr
+                LEFT JOIN car_listings l ON lr.listing_id = l.id
+                LEFT JOIN users ru ON lr.user_id = ru.id
+                LEFT JOIN admin_users au ON lr.reviewed_by = au.id
+                WHERE {$whereClause}
+                ORDER BY CASE WHEN lr.status = 'pending' THEN 0 ELSE 1 END, lr.created_at DESC
+                LIMIT ?";
+
+        $params[] = $limit;
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $counts = ['pending' => 0, 'reviewed' => 0, 'dismissed' => 0];
+        foreach ($reports as $r) {
+            $key = strtolower((string)($r['status'] ?? 'pending'));
+            if (isset($counts[$key])) {
+                $counts[$key]++;
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'reports' => $reports,
+            'stats' => $counts,
+            'warnings' => $schemaWarnings
+        ]);
+        exit();
+    } catch (Exception $e) {
+        error_log('handleGetListingReports error: ' . $e->getMessage());
+        sendAdminError('Failed to load listing reports', 'REPORTS_LOAD_FAILED', 500);
+    }
+}
+
+/**
+ * Update listing report review status.
+ */
+function handleUpdateListingReportStatus($db) {
+    requireAdmin();
+
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendAdminError('POST method required', 'INVALID_METHOD', 405);
+    }
+
+    try {
+        $schemaWarnings = ensureListingReportsSchema($db);
+        $input = json_decode(file_get_contents('php://input'), true);
+        $reportId = isset($input['report_id']) ? (int)$input['report_id'] : 0;
+        $status = trim((string)($input['status'] ?? ''));
+        $notes = trim((string)($input['admin_notes'] ?? ''));
+
+        if ($reportId <= 0) {
+            sendAdminError('Report ID is required', 'REPORT_ID_REQUIRED', 400);
+        }
+
+        $allowed = ['pending', 'reviewed', 'dismissed'];
+        if (!in_array($status, $allowed, true)) {
+            sendAdminError('Invalid report status', 'INVALID_REPORT_STATUS', 400);
+        }
+
+        $adminId = $_SESSION['admin_id'] ?? null;
+        $stmt = $db->prepare("UPDATE listing_reports
+                              SET status = ?, admin_notes = ?, reviewed_by = ?, reviewed_at = NOW()
+                              WHERE id = ?");
+        $stmt->execute([$status, $notes !== '' ? $notes : null, $adminId, $reportId]);
+
+        if ($stmt->rowCount() === 0) {
+            sendAdminError('Report not found or unchanged', 'REPORT_NOT_FOUND_OR_UNCHANGED', 404);
+        }
+
+        logActivity(
+            $db,
+            'listing_report_updated',
+            'Listing report status updated',
+            'Report ID: ' . $reportId . ', Status: ' . $status,
+            $adminId
+        );
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Report status updated successfully',
+            'warnings' => $schemaWarnings
+        ]);
+        exit();
+    } catch (Exception $e) {
+        error_log('handleUpdateListingReportStatus error: ' . $e->getMessage());
+        sendAdminError('Failed to update report status', 'REPORT_STATUS_UPDATE_FAILED', 500);
+    }
+}
+
+/**
+ * Ensure listing reports table and review columns exist.
+ */
+function ensureListingReportsSchema($db) {
+    $warnings = [];
+
+    $db->exec("CREATE TABLE IF NOT EXISTS listing_reports (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        listing_id INT NOT NULL,
+        user_id INT NOT NULL,
+        reason VARCHAR(100) NOT NULL,
+        details TEXT NOT NULL,
+        reporter_email VARCHAR(255) DEFAULT NULL,
+        reporter_ip VARCHAR(45) DEFAULT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        admin_notes TEXT DEFAULT NULL,
+        reviewed_by INT DEFAULT NULL,
+        reviewed_at DATETIME DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_listing_id (listing_id),
+        INDEX idx_user_id (user_id),
+        UNIQUE KEY uniq_listing_user_report (listing_id, user_id),
+        INDEX idx_status (status),
+        INDEX idx_created_at (created_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+    $schemaUpgrades = [
+        "ALTER TABLE listing_reports ADD COLUMN admin_notes TEXT DEFAULT NULL",
+        "ALTER TABLE listing_reports ADD COLUMN reviewed_by INT DEFAULT NULL",
+        "ALTER TABLE listing_reports ADD COLUMN reviewed_at DATETIME DEFAULT NULL"
+    ];
+
+    foreach ($schemaUpgrades as $sql) {
+        try {
+            $db->exec($sql);
+        } catch (Exception $e) {
+            // Ignore if column already exists.
+        }
+    }
+
+    try {
+        $db->exec("ALTER TABLE listing_reports ADD UNIQUE KEY uniq_listing_user_report (listing_id, user_id)");
+    } catch (Exception $e) {
+        $message = strtolower($e->getMessage());
+
+        if (strpos($message, 'duplicate key name') !== false) {
+            return $warnings;
+        }
+
+        if (strpos($message, 'duplicate entry') !== false || strpos($message, '1062') !== false) {
+            $warnings[] = [
+                'code' => 'SCHEMA_DUPLICATE_REPORTS_PRESENT',
+                'message' => 'Duplicate listing reports already exist. Resolve duplicates before uniqueness can be fully enforced in admin schema backfill.'
+            ];
+        } else {
+            $warnings[] = [
+                'code' => 'SCHEMA_BACKFILL_WARNING',
+                'message' => 'Listing report uniqueness backfill could not be applied automatically.'
+            ];
+        }
+    }
+
+    return $warnings;
 }
 
 // ===== ACTIVITY LOGGING FUNCTION =====

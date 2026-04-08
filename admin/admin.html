@@ -135,6 +135,9 @@
                     <a href="#" class="nav-item" data-section="cars">
                         <i class="fas fa-car"></i> Car Listings
                     </a>
+                    <a href="#" class="nav-item" data-section="reports">
+                        <i class="fas fa-flag"></i> Listing Reports
+                    </a>
                     <a href="#" class="nav-item" data-section="pending-cars">
                         <i class="fas fa-clock"></i> Pending Cars
                     </a>
@@ -1609,6 +1612,71 @@
                                 <i class="fas fa-info-circle"></i> <strong>Note:</strong> Learning runs automatically when users ask questions that require internet research. Manual triggers are for bulk learning. Daily limits apply to both automatic and manual learning.
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Listing Reports Section -->
+                <div class="content-section" id="reports-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-flag"></i> Listing Reports</h2>
+                        <div>
+                            <button class="btn btn-primary" onclick="admin.loadListingReports()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="listingReportsIssues" style="display: none; margin-bottom: 16px;"></div>
+
+                    <div class="filter-bar" style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <div class="form-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select id="reportStatusFilter" class="form-control" onchange="admin.loadListingReports()">
+                                    <option value="">All</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="reviewed">Reviewed</option>
+                                    <option value="dismissed">Dismissed</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Reason</label>
+                                <select id="reportReasonFilter" class="form-control" onchange="admin.loadListingReports()">
+                                    <option value="">All</option>
+                                    <option value="spam">Spam</option>
+                                    <option value="fraud">Fraud</option>
+                                    <option value="incorrect">Incorrect Info</option>
+                                    <option value="stolen">Stolen Vehicle</option>
+                                    <option value="inappropriate">Inappropriate</option>
+                                    <option value="sold">Already Sold</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Search</label>
+                                <input type="text" id="reportSearch" class="form-control" placeholder="Search listing/reporter/details" onkeyup="admin.loadListingReports()">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="data-table" id="listingReportsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Listing</th>
+                                    <th>Reason</th>
+                                    <th>Reporter</th>
+                                    <th>Details</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="listingReportsTableBody">
+                                <tr><td colspan="8" class="text-center">Loading...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

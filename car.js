@@ -773,7 +773,8 @@ class CarDetailManager {
 
     openReportModal(listingId) {
         // Check if user is logged in
-        if (!window.app || !window.app.currentUser) {
+        const currentUser = this.getCurrentUser();
+        if (!currentUser) {
             // User is not logged in, redirect to login
             if (confirm('You must be logged in to report a listing. Would you like to go to the login page?')) {
                 window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);

@@ -200,6 +200,20 @@ function sendError($message, $code = 500) {
 }
 
 /**
+ * Send error response with stable client-friendly error code and exit
+ */
+function sendErrorWithCode($message, $errorCode, $code = 500) {
+    http_response_code($code);
+    echo json_encode([
+        'success' => false,
+        'message' => $message,
+        'code' => $errorCode,
+        'timestamp' => date('Y-m-d H:i:s')
+    ]);
+    exit;
+}
+
+/**
  * Send success response and exit
  */
 function sendSuccess($data = [], $code = 200) {
@@ -411,14 +425,16 @@ function getCurrentUser($required = true) {
         'email' => $_SESSION['email'] ?? null,
         'type' => $_SESSION['user_type'] ?? null
     ];
-    
-    // If required is false, return user data (even if null)
-    if (!$required) {
-        return $user['id'] ? $user : null;
+
+    if (!empty($user['id'])) {
+        return $user;
     }
-    
-    // Otherwise return as before
-    return $user;
+
+    if ($required) {
+        sendError('Authentication required', 401);
+    }
+
+    return null;
 }
 
 /**
@@ -3655,7 +3671,9 @@ function getFavorites($db) {
             INNER JOIN car_makes m ON l.make_id = m.id
             INNER JOIN car_models mo ON l.model_id = mo.id
             INNER JOIN locations loc ON l.location_id = loc.id
-            WHERE sl.user_id = ? AND l.status = 'active' AND l.approval_status = 'approved'
+                        WHERE sl.user_id = ?
+                            AND l.approval_status = 'approved'
+                            AND l.status IN ('active', 'sold')
             ORDER BY sl.created_at DESC
         ");
         $stmt->execute([$user['id']]);
@@ -3680,13 +3698,48 @@ function reportListing($db) {
     try {
         // Require user to be logged in
         $user = getCurrentUser(true); // Require authentication
+
+        // Ensure reporting storage exists before any report queries.
+        $db->exec("CREATE TABLE IF NOT EXISTS listing_reports (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            listing_id INT NOT NULL,
+            user_id INT NOT NULL,
+            reason VARCHAR(100) NOT NULL,
+            details TEXT NOT NULL,
+            reporter_email VARCHAR(255) DEFAULT NULL,
+            reporter_ip VARCHAR(45) DEFAULT NULL,
+            status VARCHAR(50) DEFAULT 'pending',
+            admin_notes TEXT DEFAULT NULL,
+            reviewed_by INT DEFAULT NULL,
+            reviewed_at DATETIME DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_listing_id (listing_id),
+            INDEX idx_user_id (user_id),
+            UNIQUE KEY uniq_listing_user_report (listing_id, user_id),
+            INDEX idx_status (status),
+            INDEX idx_created_at (created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        // Backfill uniqueness rule for older schemas.
+        try {
+            $db->exec("ALTER TABLE listing_reports ADD UNIQUE KEY uniq_listing_user_report (listing_id, user_id)");
+        } catch (Exception $e) {
+            // Ignore if the key already exists or legacy duplicates prevent creation.
+        }
+
+        // Ensure report_count column exists for listing-level counters.
+        try {
+            $db->exec("ALTER TABLE car_listings ADD COLUMN report_count INT DEFAULT 0");
+        } catch (Exception $e) {
+            // Ignore if the column already exists.
+        }
         
         // Get JSON input
         $input = json_decode(file_get_contents('php://input'), true);
         
         // Validate required fields
         if (empty($input['listing_id']) || empty($input['reason']) || empty($input['details'])) {
-            sendError('Missing required fields: listing_id, reason, and details are required', 400);
+            sendErrorWithCode('Missing required fields: listing_id, reason, and details are required', 'MISSING_REPORT_FIELDS', 400);
             return;
         }
 
@@ -3697,7 +3750,7 @@ function reportListing($db) {
         
         // Validate details length
         if (strlen($details) < 10) {
-            sendError('Please provide at least 10 characters in your report details', 400);
+            sendErrorWithCode('Please provide at least 10 characters in your report details', 'REPORT_DETAILS_TOO_SHORT', 400);
             return;
         }
 
@@ -3707,13 +3760,13 @@ function reportListing($db) {
         $listing = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$listing) {
-            sendError('Listing not found', 404);
+            sendErrorWithCode('Listing not found', 'LISTING_NOT_FOUND', 404);
             return;
         }
 
         // Cannot report your own listing
         if ($listing['user_id'] == $user['id']) {
-            sendError('Cannot report your own listing', 400);
+            sendErrorWithCode('Cannot report your own listing', 'CANNOT_REPORT_OWN_LISTING', 400);
             return;
         }
 
@@ -3723,19 +3776,18 @@ function reportListing($db) {
         // Get reporter IP
         $reporterIp = $_SERVER['REMOTE_ADDR'] ?? null;
 
-        // Check for duplicate reports (same user within last hour)
+        // Enforce one report per user per listing.
         $stmt = $db->prepare("
             SELECT COUNT(*) as count 
             FROM listing_reports 
             WHERE listing_id = ? 
             AND user_id = ?
-            AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
         ");
         $stmt->execute([$listingId, $userId]);
         $recent = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($recent['count'] > 0) {
-            sendError('You have already reported this listing recently. Please wait before submitting another report.', 429);
+            sendErrorWithCode('You have already reported this listing.', 'REPORT_ALREADY_EXISTS', 409);
             return;
         }
 
@@ -3775,6 +3827,16 @@ function reportListing($db) {
                 'report_count' => $reportCount
             ]);
 
+        } catch (PDOException $e) {
+            $db->rollBack();
+
+            // Handle race conditions when unique key exists.
+            if ($e->getCode() === '23000') {
+                sendErrorWithCode('You have already reported this listing.', 'REPORT_ALREADY_EXISTS', 409);
+                return;
+            }
+
+            throw $e;
         } catch (Exception $e) {
             $db->rollBack();
             throw $e;
@@ -3782,7 +3844,7 @@ function reportListing($db) {
 
     } catch (Exception $e) {
         error_log("reportListing error: " . $e->getMessage());
-        sendError('Failed to submit report. Please try again.', 500);
+        sendErrorWithCode('Failed to submit report. Please try again.', 'REPORT_SUBMIT_FAILED', 500);
     }
 }
 

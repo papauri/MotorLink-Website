@@ -813,13 +813,9 @@ footer.footer .container {
    ============================================================================ */
 
 @media (max-width: 768px) {
-    /* Remove excessive margins */
-    * {
-        margin: 0 !important;
-    }
-
-    /* Restore necessary margins */
-    .hero, .section, .card, .listing-card {
+    /* Keep vertical rhythm predictable without zeroing every element. */
+    .hero, .section, .card, .listing-card,
+    .filter-section, .sidebar, .modal-content, .table-responsive {
         margin-bottom: 16px !important;
     }
 
@@ -850,15 +846,88 @@ footer.footer .container {
    ============================================================================ */
 
 @media (max-width: 768px) {
-    * {
-        transition: none !important;
-    }
-
-    button, .btn, a, input, select {
+    button, .btn, a, input, select, textarea {
         transition: all 0.2s ease !important;
     }
 
     .card, .car-card, .dealer-card {
         transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    }
+}
+
+/* ============================================================================
+   MOBILE-FIRST STABILITY & PERFORMANCE LAYER (SAFE)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    html {
+        -webkit-text-size-adjust: 100%;
+        text-size-adjust: 100%;
+        scroll-padding-top: 76px;
+    }
+
+    body {
+        overflow-x: hidden;
+        text-rendering: optimizeLegibility;
+    }
+
+    /* Keep touch targets accessible across pages. */
+    button,
+    .btn,
+    .mobile-menu-toggle,
+    .nav a,
+    .category-tab,
+    .filter-btn,
+    .search-btn {
+        min-height: 44px !important;
+    }
+
+    /* Prevent iOS zoom when focusing form controls. */
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* Reserve compositor work for interactive controls only. */
+    .btn,
+    .mobile-menu-toggle,
+    .car-card,
+    .listing-card,
+    .dealer-card {
+        will-change: transform;
+    }
+
+    /* Improve perceived performance on long card lists. */
+    .listings-grid > *,
+    .cars-grid > *,
+    .dealers-grid > *,
+    .garages-grid > * {
+        content-visibility: auto;
+        contain-intrinsic-size: 320px;
+    }
+
+    /* Notch-safe spacing for modern devices. */
+    .header,
+    .footer,
+    .main-content,
+    .container {
+        padding-left: max(16px, env(safe-area-inset-left)) !important;
+        padding-right: max(16px, env(safe-area-inset-right)) !important;
+    }
+
+    .footer {
+        padding-bottom: max(24px, env(safe-area-inset-bottom)) !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

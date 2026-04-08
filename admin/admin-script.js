@@ -269,6 +269,7 @@ class AdminDashboard {
         const titles = {
             'dashboard': 'Dashboard',
             'cars': 'Car Listings',
+            'reports': 'Listing Reports',
             'pending-cars': 'Pending Cars',
             'rejected-cars': 'Rejected Cars',
             'payments': 'Payments',
@@ -581,6 +582,9 @@ class AdminDashboard {
         switch (section) {
             case 'cars':
                 this.loadCars();
+                break;
+            case 'reports':
+                this.loadListingReports();
                 break;
             case 'pending-cars':
                 this.loadPendingCars();
@@ -4096,6 +4100,168 @@ async filterMakesModels() {
 
     // ===== ACTIVITY LOGS FUNCTIONS =====
 
+    async loadListingReports() {
+        try {
+            const filters = {};
+            const status = document.getElementById('reportStatusFilter')?.value;
+            const reason = document.getElementById('reportReasonFilter')?.value;
+            const search = document.getElementById('reportSearch')?.value;
+
+            if (status) filters.status = status;
+            if (reason) filters.reason = reason;
+            if (search) filters.search = search;
+
+            const response = await this.apiCall('get_listing_reports', 'GET', filters);
+            this.renderListingReportsIssues(response.warnings || []);
+
+            if (response.success && response.reports) {
+                this.displayListingReports(response.reports);
+            } else {
+                const apiError = new Error(response.message || 'Failed to load listing reports');
+                apiError.code = response.code || 'REPORTS_LOAD_FAILED';
+                throw apiError;
+            }
+        } catch (error) {
+            this.renderListingReportsIssues([
+                {
+                    code: error.code || 'REPORTS_LOAD_FAILED',
+                    message: error.message || 'Failed to load listing reports'
+                }
+            ]);
+
+            const tbody = document.getElementById('listingReportsTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">Error loading listing reports</td></tr>';
+            }
+
+            this.showAlert('error', this.formatIssueText(error.message || 'Failed to load listing reports', error.code));
+        }
+    }
+
+    displayListingReports(reports) {
+        const tbody = document.getElementById('listingReportsTableBody');
+        if (!tbody) return;
+
+        if (!reports || reports.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No listing reports found</td></tr>';
+            return;
+        }
+
+        const reasonLabels = {
+            spam: 'Spam',
+            fraud: 'Fraud',
+            incorrect: 'Incorrect Info',
+            stolen: 'Stolen Vehicle',
+            inappropriate: 'Inappropriate',
+            sold: 'Already Sold',
+            other: 'Other'
+        };
+
+        tbody.innerHTML = reports.map(report => {
+            const listingLink = report.listing_id
+                ? `<a href="../car.html?id=${report.listing_id}" target="_blank" rel="noopener">#${report.listing_id}</a>`
+                : 'N/A';
+
+            const canReview = report.status === 'pending';
+            const details = this.escapeHtml(report.details || '');
+
+            return `
+                <tr>
+                    <td>#${report.id}</td>
+                    <td>
+                        <div>${listingLink}</div>
+                        <div class="small text-muted">${this.escapeHtml(report.listing_title || 'Unknown listing')}</div>
+                    </td>
+                    <td><span class="badge badge-info">${this.escapeHtml(reasonLabels[report.reason] || report.reason || 'Other')}</span></td>
+                    <td>
+                        <div>${this.escapeHtml(report.reporter_user_name || 'User')}</div>
+                        <div class="small text-muted">${this.escapeHtml(report.reporter_email || report.reporter_user_email || '-')}</div>
+                    </td>
+                    <td class="small">${details.length > 140 ? details.substring(0, 140) + '...' : details}</td>
+                    <td><span class="badge badge-${report.status === 'pending' ? 'warning' : (report.status === 'reviewed' ? 'success' : 'secondary')}">${this.escapeHtml(report.status || 'pending')}</span></td>
+                    <td class="small">${this.formatDate(report.created_at)}</td>
+                    <td>
+                        ${canReview ? `
+                            <button class="btn btn-sm btn-success" onclick="admin.resolveListingReport(${report.id}, 'reviewed')">Review</button>
+                            <button class="btn btn-sm btn-outline" onclick="admin.resolveListingReport(${report.id}, 'dismissed')">Dismiss</button>
+                        ` : '<span class="small text-muted">Completed</span>'}
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    async resolveListingReport(reportId, status) {
+        const statusLabel = status === 'reviewed' ? 'reviewed' : 'dismissed';
+        const notePrompt = status === 'reviewed'
+            ? 'Optional admin note for this review:'
+            : 'Optional reason for dismissal:';
+        const adminNotes = prompt(notePrompt, '') || '';
+
+        try {
+            const response = await this.apiCall('update_listing_report_status', 'POST', {
+                report_id: reportId,
+                status: statusLabel,
+                admin_notes: adminNotes
+            });
+
+            if (response.success) {
+                this.renderListingReportsIssues(response.warnings || []);
+                this.showAlert('success', response.message || 'Report updated');
+                this.loadListingReports();
+            } else {
+                const apiError = new Error(response.message || 'Failed to update report');
+                apiError.code = response.code || 'REPORT_STATUS_UPDATE_FAILED';
+                throw apiError;
+            }
+        } catch (error) {
+            this.renderListingReportsIssues([
+                {
+                    code: error.code || 'REPORT_STATUS_UPDATE_FAILED',
+                    message: error.message || 'Failed to update listing report'
+                }
+            ]);
+            this.showAlert('error', this.formatIssueText(error.message || 'Failed to update listing report', error.code));
+        }
+    }
+
+    renderListingReportsIssues(issues = []) {
+        const issuesContainer = document.getElementById('listingReportsIssues');
+        if (!issuesContainer) return;
+
+        const normalized = (issues || [])
+            .filter(Boolean)
+            .map(issue => {
+                if (typeof issue === 'string') {
+                    return { message: issue, code: null };
+                }
+                return {
+                    message: issue.message || 'Issue detected while loading listing reports.',
+                    code: issue.code || null
+                };
+            });
+
+        if (normalized.length === 0) {
+            issuesContainer.innerHTML = '';
+            issuesContainer.style.display = 'none';
+            return;
+        }
+
+        issuesContainer.innerHTML = normalized.map(issue => `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                ${this.escapeHtml(issue.message)}
+                ${issue.code ? `<strong> (${this.escapeHtml(issue.code)})</strong>` : ''}
+            </div>
+        `).join('');
+        issuesContainer.style.display = 'block';
+    }
+
+    formatIssueText(message, code) {
+        if (!code) return message;
+        return `${message} (${code})`;
+    }
+
     async loadActivityLogs() {
         try {
             const filters = {};
@@ -4253,15 +4419,30 @@ async filterMakesModels() {
 
         try {
             const response = await fetch(url, options);
-            
+            let result = null;
+
+            try {
+                result = await response.json();
+            } catch (parseError) {
+                const apiError = new Error(`Invalid API response (${response.status})`);
+                apiError.code = 'INVALID_API_RESPONSE';
+                throw apiError;
+            }
+
             // Check if response is unauthorized
             if (response.status === 401 || response.status === 403) {
                 debugLog('Unauthorized access, clearing session');
                 this.clearSessionAndShowLogin();
-                throw new Error('Admin access required');
+                const authError = new Error(result.message || 'Admin access required');
+                authError.code = result.code || 'ADMIN_AUTH_REQUIRED';
+                throw authError;
             }
-            
-            const result = await response.json();
+
+            if (!response.ok) {
+                const requestError = new Error(result.message || `Request failed with status ${response.status}`);
+                requestError.code = result.code || 'ADMIN_REQUEST_FAILED';
+                throw requestError;
+            }
 
             debugLog(`API Response for ${action}:`, result);
             

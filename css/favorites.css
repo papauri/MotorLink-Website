@@ -44,6 +44,16 @@
     cursor: pointer;
 }
 
+.car-card.is-sold {
+    opacity: 0.82;
+    border-color: rgba(107, 114, 128, 0.45);
+    box-shadow: 0 12px 24px rgba(17, 24, 39, 0.12), 0 2px 8px rgba(17, 24, 39, 0.08);
+}
+
+.car-card.is-sold .car-image img {
+    filter: grayscale(100%);
+}
+
 .car-card:hover {
     transform: translateY(-8px) scale(1.01);
     border-color: rgba(0, 168, 67, 0.35);
@@ -55,6 +65,23 @@
     height: 180px;
     background: var(--bg-light);
     overflow: hidden;
+}
+
+.sold-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(55, 65, 81, 0.92);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 2;
 }
 
 .car-image img {
@@ -152,6 +179,16 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
+}
+
+.car-actions .btn-outline-danger {
+    border: 1px solid #ef4444;
+    color: #dc2626;
+    background: #fff;
+}
+
+.car-actions .btn-outline-danger:hover {
+    background: #fef2f2;
 }
 
 /* Loading State */

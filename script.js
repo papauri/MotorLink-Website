@@ -431,6 +431,7 @@ class MotorLink {
         tabs.forEach(tab => {
             tab.addEventListener('click', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 
                 // Update active tab
                 tabs.forEach(t => t.classList.remove('active'));
@@ -444,67 +445,8 @@ class MotorLink {
     }
     
     async applyFilterWithLoading(filterName, value) {
-        // Get listings grid only - don't touch the section container
-        const listingsGrid = document.querySelector('.listings-grid');
-        
-        if (!listingsGrid) {
-            this.applyFilter(filterName, value);
-            return;
-        }
-        
-        // Store current grid height to prevent collapse
-        const currentGridHeight = listingsGrid.offsetHeight;
-        const minGridHeight = Math.max(currentGridHeight, 400);
-        
-        // Set min-height ONLY on the grid to prevent size changes
-        listingsGrid.style.minHeight = `${minGridHeight}px`;
-        
-        // Show loader overlay BEFORE applying filter - position relative to grid
-        const existingLoader = listingsGrid.querySelector('.listings-loader-overlay');
-        if (existingLoader) {
-            existingLoader.remove();
-        }
-        
-        const loaderOverlay = document.createElement('div');
-        loaderOverlay.className = 'listings-loader-overlay';
-        loaderOverlay.innerHTML = `
-            <div class="listings-loader-content">
-                <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #00c853; margin-bottom: 16px;"></i>
-                <p style="color: #666; font-size: 1.1rem; font-weight: 500;">Loading cars...</p>
-            </div>
-        `;
-        
-        // Ensure grid position is relative for overlay positioning
-        if (getComputedStyle(listingsGrid).position === 'static') {
-            listingsGrid.style.position = 'relative';
-        }
-        
-        // Add loader to grid, not section
-        listingsGrid.appendChild(loaderOverlay);
-        
-        // Force a reflow to ensure styles are applied
-        void listingsGrid.offsetHeight;
-        
-        // Apply filter AFTER setting min-height and showing loader
+        // Category tabs are instant client-side filter controls. Keep the page static.
         this.applyFilter(filterName, value);
-        
-        // Wait for listings to load
-        let checkCount = 0;
-        const maxChecks = 100; // 10 seconds max
-        const checkLoaded = setInterval(() => {
-            checkCount++;
-            if ((!this.isLoading && listingsGrid.children.length > 0) || checkCount >= maxChecks) {
-                clearInterval(checkLoaded);
-                // Remove loader overlay
-                if (loaderOverlay.parentNode) {
-                    loaderOverlay.remove();
-                }
-                // Reset min-height after content is loaded
-                setTimeout(() => {
-                    listingsGrid.style.minHeight = '';
-                }, 300);
-            }
-        }, 100);
     }
     
     setupPagination() {
@@ -584,6 +526,11 @@ class MotorLink {
             // Only include credentials when appropriate (not in GitHub Codespaces)
             if (CONFIG.USE_CREDENTIALS) {
                 options.credentials = 'include';
+            }
+
+            // Category/filter listing requests should not trigger the full-page transition loader.
+            if (action === 'listings') {
+                options.headers['X-Skip-Global-Loader'] = '1';
             }
 
             if (method === 'GET' && Object.keys(params).length > 0) {
@@ -1061,35 +1008,10 @@ class MotorLink {
                 minHeightSet = true;
             }
             
-            // Show loader overlay instead of replacing content - position relative to grid
-            let loaderOverlay = null;
+            // Keep filtering in-place without dimming overlays.
             if (resetPage) {
                 this.currentPage = 1;
                 this.hasMorePages = true;
-                
-                // Remove existing loader if any
-                const existingLoader = listingsGrid.querySelector('.listings-loader-overlay');
-                if (existingLoader) {
-                    existingLoader.remove();
-                }
-                
-                // Create loader overlay
-                loaderOverlay = document.createElement('div');
-                loaderOverlay.className = 'listings-loader-overlay';
-                loaderOverlay.innerHTML = `
-                    <div class="listings-loader-content">
-                        <i class="fas fa-spinner fa-spin" style="font-size: 48px; color: #00c853; margin-bottom: 16px;"></i>
-                        <p style="color: #666; font-size: 1.1rem; font-weight: 500;">Loading cars...</p>
-                    </div>
-                `;
-                
-                // Ensure grid position is relative for overlay positioning
-                if (getComputedStyle(listingsGrid).position === 'static') {
-                    listingsGrid.style.position = 'relative';
-                }
-                
-                // Add loader to grid, not section
-                listingsGrid.appendChild(loaderOverlay);
             }
             
             try {
@@ -1104,11 +1026,6 @@ class MotorLink {
                     
                     // Apply recommendation boosting based on user viewing history
                     listings = this.applyRecommendationBoosting(listings);
-                    
-                    // Remove loader overlay before rendering
-                    if (loaderOverlay && loaderOverlay.parentNode) {
-                        loaderOverlay.remove();
-                    }
                     
                     // Always render (replace) listings for pagination
                     this.renderListings(listings);
@@ -1140,10 +1057,6 @@ class MotorLink {
                     throw new Error(response.message || 'Failed to load listings');
                 }
             } catch (error) {
-                // Remove loader on error
-                if (loaderOverlay && loaderOverlay.parentNode) {
-                    loaderOverlay.remove();
-                }
                 this.showError(error.message || 'Failed to load listings');
             } finally {
                 this.isLoading = false;
