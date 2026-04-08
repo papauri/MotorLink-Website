@@ -74,6 +74,7 @@ class CarDetailManager {
     renderCarDetail(listing) {
         const carContent = document.getElementById('carContent');
         if (!carContent) return;
+        const inlinePlaceholder = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22 viewBox=%220 0 400 300%22%3E%3Crect width=%22400%22 height=%22300%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%22200%22 y=%22150%22 text-anchor=%22middle%22 font-family=%22Arial,sans-serif%22 font-size=%2216%22 fill=%226b7280%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
 
         // Store listing data and images for gallery
         this.currentListing = listing;
@@ -96,7 +97,7 @@ class CarDetailManager {
                      alt="${listing.title}"
                      class="main-image ${index === 0 ? 'active' : ''}"
                      data-index="${index}"
-                     onerror="this.src='${CONFIG.BASE_URL}assets/images/car-placeholder.jpg'">
+                     onerror="this.onerror=null;this.src='${inlinePlaceholder}';">
             `).join('');
 
             thumbnailsHTML = this.listingImages.map((image, index) => `
@@ -104,7 +105,7 @@ class CarDetailManager {
                      alt="${listing.title}"
                      class="thumbnail ${index === 0 ? 'active' : ''}"
                      data-index="${index}"
-                     onerror="this.src='${CONFIG.BASE_URL}assets/images/car-placeholder.jpg'">
+                     onerror="this.onerror=null;this.src='${inlinePlaceholder}';">
             `).join('');
         } else {
             imagesHTML = '<div class="no-image"><i class="fas fa-car"></i><span>No Image Available</span></div>';
@@ -605,11 +606,12 @@ class CarDetailManager {
     renderDealerListings(listings) {
         const grid = document.getElementById('showroomGrid');
         if (!grid) return;
+        const inlinePlaceholder = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22 viewBox=%220 0 400 300%22%3E%3Crect width=%22400%22 height=%22300%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%22200%22 y=%22150%22 text-anchor=%22middle%22 font-family=%22Arial,sans-serif%22 font-size=%2216%22 fill=%226b7280%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
 
         grid.innerHTML = listings.map(listing => {
             const imageUrl = listing.featured_image_id
                 ? `${CONFIG.API_URL}?action=image&id=${listing.featured_image_id}`
-                : `${CONFIG.BASE_URL}assets/images/car-placeholder.jpg`;
+                : inlinePlaceholder;
 
             const formattedPrice = listing.price ? `MWK ${parseInt(listing.price).toLocaleString()}` : 'Price on request';
 
@@ -617,7 +619,7 @@ class CarDetailManager {
                 <div class="showroom-card" onclick="window.location.href='car.html?id=${listing.id}'">
                     <div class="showroom-card-image">
                         <img src="${imageUrl}" alt="${this.escapeHtml(listing.title)}"
-                             onerror="this.src='${CONFIG.BASE_URL}assets/images/car-placeholder.jpg'">
+                             onerror="this.onerror=null;this.src='${inlinePlaceholder}';">
                         ${listing.listing_type === 'featured' || listing.listing_type === 'premium' ? `
                             <span class="listing-badge ${listing.listing_type}">${this.capitalize(listing.listing_type)}</span>
                         ` : ''}

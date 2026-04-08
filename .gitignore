@@ -1,5 +1,4 @@
 # API Keys and Sensitive Configuration
-config.js
 config-api-keys.php
 admin/admin-secrets.local.php
 
@@ -22,4 +21,6 @@ node_modules/
 .env
 .env.local
 .env.*.local
-*.jpg
+
+# Runtime user uploads
+uploads/**

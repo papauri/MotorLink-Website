@@ -222,6 +222,7 @@ function renderCompanyHeader(company) {
 
 function renderFleet(data) {
     const grid = document.getElementById('fleetGrid');
+    const inlinePlaceholder = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22260%22 viewBox=%220 0 400 260%22%3E%3Crect width=%22400%22 height=%22260%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%22200%22 y=%22130%22 text-anchor=%22middle%22 font-family=%22Arial,sans-serif%22 font-size=%2216%22 fill=%226b7280%22%3EVehicle image unavailable%3C/text%3E%3C/svg%3E';
     
     if (!data || data.length === 0) {
         grid.innerHTML = '<div class="no-vehicles"><i class="fas fa-car"></i><p>No vehicles available at the moment</p></div>';
@@ -230,7 +231,7 @@ function renderFleet(data) {
     
     grid.innerHTML = data.map(vehicle => {
         const features = vehicle.features ? JSON.parse(vehicle.features) : [];
-        const imageSrc = vehicle.image ? `uploads/${vehicle.image}` : 'assets/images/car-placeholder.jpg';
+        const imageSrc = vehicle.image ? `uploads/${vehicle.image}` : inlinePlaceholder;
         
         // Check status - either from status field or is_available field
         const status = vehicle.status || (vehicle.is_available == 1 ? 'available' : 'rented');
@@ -251,7 +252,7 @@ function renderFleet(data) {
         return `
             <div class="fleet-card ${!isAvailable ? 'unavailable' : ''}">
                 <div class="fleet-image">
-                    <img src="${imageSrc}" alt="${escapeHtml(vehicle.vehicle_name)}" loading="lazy">
+                    <img src="${imageSrc}" alt="${escapeHtml(vehicle.vehicle_name)}" loading="lazy" onerror="this.onerror=null;this.src='${inlinePlaceholder}';">
                     ${statusBadge}
                     ${vehicle.registration_number ? `<div class="reg-badge">${escapeHtml(vehicle.registration_number)}</div>` : ''}
                 </div>

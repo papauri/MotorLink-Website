@@ -25,7 +25,7 @@
         USE_CREDENTIALS: true
     };
 
-    console.warn('config.js missing - using runtime fallback CONFIG');
+    // Intentionally silent in production to avoid console noise.
 })();
 
 // ============================================================================
@@ -1430,6 +1430,7 @@ class MotorLink {
         }
         
         createListingHTML(listing) {
+            const inlinePlaceholder = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22 viewBox=%220 0 400 300%22%3E%3Crect width=%22400%22 height=%22300%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%22200%22 y=%22150%22 text-anchor=%22middle%22 font-family=%22Arial,sans-serif%22 font-size=%2216%22 fill=%226b7280%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
             // Check for is_featured and is_premium flags
             const isFeatured = listing.is_featured == 1;
             const isPremium = listing.is_premium == 1;
@@ -1449,12 +1450,11 @@ class MotorLink {
             let images = [];
             let featuredImageId = listing.featured_image_id || null;
 
-            // Add featured image first if available
-            if (listing.featured_image) {
-                images.push(`${CONFIG.BASE_URL}uploads/${listing.featured_image}`);
-            } else if (featuredImageId) {
-                // Featured image via BLOB API
+            // Prefer API-served image first because it gracefully falls back if file is missing.
+            if (featuredImageId) {
                 images.push(`${CONFIG.API_URL}?action=image&id=${featuredImageId}`);
+            } else if (listing.featured_image) {
+                images.push(`${CONFIG.BASE_URL}uploads/${listing.featured_image}`);
             }
 
             // Add remaining images from images array (skip if it's the featured image)
@@ -1483,7 +1483,7 @@ class MotorLink {
 
             // Fallback to placeholder if no images at all
             if (images.length === 0) {
-                images.push(`${CONFIG.BASE_URL}assets/images/car-placeholder.jpg`);
+                images.push(inlinePlaceholder);
             }
 
             // Limit to 5 images for carousel performance
@@ -1500,7 +1500,7 @@ class MotorLink {
                 const slidesHTML = images.map((img, idx) => `
                     <div class="car-image-slide" data-index="${idx}">
                         <img src="${img}" alt="${this.escapeHtml(listing.title)}"
-                             onerror="this.src='${CONFIG.BASE_URL}assets/images/car-placeholder.jpg'">
+                             onerror="this.onerror=null;this.src='${inlinePlaceholder}';">
                     </div>
                 `).join('');
 
@@ -1528,7 +1528,7 @@ class MotorLink {
                 carouselHTML = `
                     <img src="${images[0]}" alt="${this.escapeHtml(listing.title)}"
                          style="width: 100%; height: 100%; object-fit: cover;"
-                         onerror="this.src='${CONFIG.BASE_URL}assets/images/car-placeholder.jpg'">
+                         onerror="this.onerror=null;this.src='${inlinePlaceholder}';">
                 `;
             }
 
@@ -3513,6 +3513,7 @@ class ShowroomManager {
         const carsGrid = document.getElementById('carsGrid');
         const emptyState = document.getElementById('emptyState');
         const totalCarsCount = document.getElementById('totalCarsCount');
+        const inlinePlaceholder = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22 viewBox=%220 0 400 300%22%3E%3Crect width=%22400%22 height=%22300%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%22200%22 y=%22150%22 text-anchor=%22middle%22 font-family=%22Arial,sans-serif%22 font-size=%2216%22 fill=%226b7280%22%3EImage unavailable%3C/text%3E%3C/svg%3E';
 
         if (totalCarsCount) totalCarsCount.textContent = this.allCars.length;
 
@@ -3527,9 +3528,11 @@ class ShowroomManager {
         if (emptyState) emptyState.style.display = 'none';
 
         carsGrid.innerHTML = cars.map(car => {
-            const imageUrl = car.featured_image ?
-                `${CONFIG.BASE_URL}uploads/${car.featured_image}` :
-                (car.primary_image || '');
+            const imageUrl = car.featured_image_id
+                ? `${CONFIG.API_URL}?action=image&id=${car.featured_image_id}`
+                : (car.featured_image
+                    ? `${CONFIG.BASE_URL}uploads/${car.featured_image}`
+                    : (car.primary_image || inlinePlaceholder));
 
             // Check for is_featured and is_premium flags
             const isFeatured = car.is_featured == 1;
@@ -3561,7 +3564,7 @@ class ShowroomManager {
                 <div class="car-card" data-id="${car.id}">
                     <div class="car-image">
                         ${imageUrl ? 
-                            `<img src="${imageUrl}" alt="${car.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            `<img src="${imageUrl}" alt="${car.title}" onerror="this.onerror=null;this.src='${inlinePlaceholder}';">
                              <i class="fas fa-car" style="display: none;"></i>` :
                             '<i class="fas fa-car"></i>'
                         }
