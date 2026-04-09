@@ -1326,104 +1326,111 @@ function createGarageCard(garage) {
         html += `<div class="garage-status-indicator status-spacer" aria-hidden="true">Status</div>`;
     }
 
-    let infoRowCount = 0;
+    const buildGarageInfoRow = (options) => {
+        const {
+            hasData,
+            icon,
+            label,
+            value,
+            rowClass = '',
+            clickable = false,
+            dataAddress = '',
+            extraAttrs = '',
+            title = ''
+        } = options;
+
+        if (!hasData) {
+            return `<div class="garage-info-row placeholder" aria-hidden="true">
+                <div class="icon"></div>
+                <div class="content">
+                    <span class="label">&nbsp;</span>
+                    <span class="value">&nbsp;</span>
+                </div>
+            </div>`;
+        }
+
+        const classes = ['garage-info-row'];
+        if (rowClass) classes.push(rowClass);
+        if (clickable) classes.push('clickable');
+
+        const safeDataAddress = dataAddress ? `data-address="${escapeHtml(dataAddress)}"` : '';
+        const safeTitle = title ? `title="${escapeHtml(title)}"` : '';
+
+        return `<div class="${classes.join(' ')}" ${safeDataAddress} ${extraAttrs} ${safeTitle}>
+            <div class="icon"><i class="${icon}"></i></div>
+            <div class="content">
+                <span class="label">${label}</span>
+                <span class="value">${value}</span>
+            </div>
+        </div>`;
+    };
     
     // Description
     if (hasDescription) {
         html += `<div class="garage-description">${escapeHtml(garage.description)}</div>`;
     }
     
-    // Operating hours
-    if (todayHours) {
-        html += `<div class="garage-info-row">
-            <div class="icon"><i class="fas fa-clock"></i></div>
-            <div class="content">
-                <span class="label">Hours Today</span>
-                <span class="value">${escapeHtml(todayHours)}</span>
-            </div>
-        </div>`;
-        infoRowCount++;
-    }
-    
-    // Phone
-    if (hasPhone) {
-        html += `<div class="garage-info-row">
-            <div class="icon"><i class="fas fa-phone"></i></div>
-            <div class="content">
-                <span class="label">Phone</span>
-                <span class="value"><a href="tel:${garage.phone}">${garage.phone}</a></span>
-            </div>
-        </div>`;
-        infoRowCount++;
-    }
-    
-    // Email
-    if (hasEmail && !isFromGoogle) {
-        html += `<div class="garage-info-row">
-            <div class="icon"><i class="fas fa-envelope"></i></div>
-            <div class="content">
-                <span class="label">Email</span>
-                <span class="value"><a href="mailto:${garage.email}">${garage.email}</a></span>
-            </div>
-        </div>`;
-        infoRowCount++;
-    }
-    
-    // Emergency/Recovery
-    if (hasRecoveryNumber) {
-        html += `<div class="garage-info-row emergency">
-            <div class="icon"><i class="fas fa-ambulance"></i></div>
-            <div class="content">
-                <span class="label">Emergency Hotline</span>
-                <span class="value"><a href="tel:${garage.recovery_number}">${garage.recovery_number}</a></span>
-            </div>
-        </div>`;
-        infoRowCount++;
-    }
-    
-    // Website
+    // Fixed info-row slots keep rows perfectly aligned across cards.
+    html += buildGarageInfoRow({
+        hasData: !!todayHours,
+        icon: 'fas fa-clock',
+        label: 'Hours Today',
+        value: escapeHtml(todayHours || '')
+    });
+
+    html += buildGarageInfoRow({
+        hasData: hasPhone,
+        icon: 'fas fa-phone',
+        label: 'Phone',
+        value: hasPhone ? `<a href="tel:${garage.phone}">${garage.phone}</a>` : ''
+    });
+
+    html += buildGarageInfoRow({
+        hasData: hasEmail && !isFromGoogle,
+        icon: 'fas fa-envelope',
+        label: 'Email',
+        value: hasEmail && !isFromGoogle ? `<a href="mailto:${garage.email}">${garage.email}</a>` : ''
+    });
+
+    html += buildGarageInfoRow({
+        hasData: hasRecoveryNumber,
+        icon: 'fas fa-ambulance',
+        label: 'Emergency Hotline',
+        value: hasRecoveryNumber ? `<a href="tel:${garage.recovery_number}">${garage.recovery_number}</a>` : '',
+        rowClass: 'emergency'
+    });
+
     if (hasWebsite) {
         const displayUrl = garage.website.replace(/^https?:\/\/(www\.)?/, '');
-        html += `<div class="garage-info-row">
-            <div class="icon"><i class="fas fa-globe"></i></div>
-            <div class="content">
-                <span class="label">Website</span>
-                <span class="value"><a href="${garage.website}" target="_blank" rel="noopener">${displayUrl}</a></span>
-            </div>
-        </div>`;
-        infoRowCount++;
-    }
-    
-    // Address - clickable to open maps
-    if (hasAddress) {
-        const addressClickHandler = isFromGoogle && garage.location 
-            ? `data-lat="${garage.location.lat}" data-lng="${garage.location.lng}"`
-            : '';
-        html += `<div class="garage-info-row clickable garage-address-link" 
-            data-address="${escapeHtml(fullAddress)}" 
-            ${addressClickHandler}
-            title="Click to open in Google Maps">
-            <div class="icon"><i class="fas fa-map-marker-alt"></i></div>
-            <div class="content">
-                <span class="label">Address</span>
-                <span class="value">${escapeHtml(garage.address)} <i class="fas fa-external-link-alt" style="font-size: 0.75rem; margin-left: 4px; opacity: 0.7;"></i></span>
-            </div>
-        </div>`;
-        infoRowCount++;
+        html += buildGarageInfoRow({
+            hasData: true,
+            icon: 'fas fa-globe',
+            label: 'Website',
+            value: `<a href="${garage.website}" target="_blank" rel="noopener">${displayUrl}</a>`
+        });
+    } else {
+        html += buildGarageInfoRow({
+            hasData: false,
+            icon: 'fas fa-globe',
+            label: 'Website',
+            value: ''
+        });
     }
 
-    // Keep the info block aligned between cards by reserving minimum rows
-    const minimumInfoRows = 4;
-    while (infoRowCount < minimumInfoRows) {
-        html += `<div class="garage-info-row placeholder" aria-hidden="true">
-            <div class="icon"></div>
-            <div class="content">
-                <span class="label">&nbsp;</span>
-                <span class="value">&nbsp;</span>
-            </div>
-        </div>`;
-        infoRowCount++;
-    }
+    const addressClickHandler = isFromGoogle && garage.location
+        ? `data-lat="${garage.location.lat}" data-lng="${garage.location.lng}"`
+        : '';
+    html += buildGarageInfoRow({
+        hasData: hasAddress,
+        icon: 'fas fa-map-marker-alt',
+        label: 'Address',
+        value: hasAddress ? `${escapeHtml(garage.address)} <i class="fas fa-external-link-alt" style="font-size: 0.75rem; margin-left: 4px; opacity: 0.7;"></i>` : '',
+        rowClass: hasAddress ? 'garage-address-link' : '',
+        clickable: hasAddress,
+        dataAddress: fullAddress || '',
+        extraAttrs: addressClickHandler,
+        title: hasAddress ? 'Click to open in Google Maps' : ''
+    });
     
     // Car brands specialization
     if (carBrands.length > 0) {

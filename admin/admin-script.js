@@ -367,13 +367,14 @@ class AdminDashboard {
                 document.getElementById('totalCars').textContent = stats.total_cars || 0;
                 document.getElementById('totalUsers').textContent = stats.total_users || 0;
                 document.getElementById('pendingItems').textContent = 
-                    (stats.pending_cars + stats.pending_users + stats.pending_garages + stats.pending_dealers) || 0;
+                    (stats.pending_cars + stats.pending_users + stats.pending_garages + stats.pending_dealers + (stats.pending_car_hire || 0)) || 0;
                 document.getElementById('todayRevenue').textContent = 
                     `MWK ${this.formatNumber(stats.today_revenue || 0)}`;
                 
                 document.getElementById('pendingCount').textContent = 
-                    (stats.pending_cars + stats.pending_users + stats.pending_garages) || 0;
+                    (stats.pending_cars + stats.pending_users + stats.pending_garages + stats.pending_dealers + (stats.pending_car_hire || 0)) || 0;
                 document.getElementById('paymentsCount').textContent = stats.pending_payments || 0;
+                this.updateServicesPendingBadges(stats);
                 
                 debugLog('Stats loaded successfully:', stats);
             } else {
@@ -384,7 +385,23 @@ class AdminDashboard {
             document.getElementById('totalUsers').textContent = '0';
             document.getElementById('pendingItems').textContent = '0';
             document.getElementById('todayRevenue').textContent = 'MWK 0';
+            this.updateServicesPendingBadges({ pending_garages: 0, pending_dealers: 0, pending_car_hire: 0 });
         }
+    }
+
+    updateServicesPendingBadges(stats = {}) {
+        const updateBadge = (id, value) => {
+            const badge = document.getElementById(id);
+            if (!badge) return;
+
+            const count = Number(value || 0);
+            badge.textContent = String(count);
+            badge.classList.toggle('is-empty', count <= 0);
+        };
+
+        updateBadge('garagePendingBadge', stats.pending_garages);
+        updateBadge('dealerPendingBadge', stats.pending_dealers);
+        updateBadge('carHirePendingBadge', stats.pending_car_hire);
     }
     
     async setPrimaryImage(imageId, carId) {
@@ -690,7 +707,7 @@ class AdminDashboard {
                 document.getElementById('kpiListingsChange').className = 'kpi-change positive';
 
                 // Pending items (as conversion rate placeholder)
-                const pendingTotal = (stats.pending_cars || 0) + (stats.pending_users || 0) + (stats.pending_garages || 0) + (stats.pending_dealers || 0);
+                const pendingTotal = (stats.pending_cars || 0) + (stats.pending_users || 0) + (stats.pending_garages || 0) + (stats.pending_dealers || 0) + (stats.pending_car_hire || 0);
                 document.getElementById('kpiConversion').textContent = this.formatNumber(pendingTotal);
                 document.getElementById('kpiConversionChange').textContent = 'Pending Approvals';
                 document.getElementById('kpiConversionChange').className = 'kpi-change';
@@ -855,7 +872,7 @@ class AdminDashboard {
                 document.getElementById('dbTotalCars').textContent = this.formatNumber(stats.total_cars || 0);
                 document.getElementById('dbTotalUsers').textContent = this.formatNumber(stats.total_users || 0);
 
-                const pendingTotal = (stats.pending_cars || 0) + (stats.pending_users || 0) + (stats.pending_garages || 0) + (stats.pending_dealers || 0);
+                const pendingTotal = (stats.pending_cars || 0) + (stats.pending_users || 0) + (stats.pending_garages || 0) + (stats.pending_dealers || 0) + (stats.pending_car_hire || 0);
                 document.getElementById('dbPendingItems').textContent = this.formatNumber(pendingTotal);
                 document.getElementById('dbPendingPayments').textContent = this.formatNumber(stats.pending_payments || 0);
             }
@@ -1783,7 +1800,15 @@ displayGaragesTable(garages) {
             </td>
             <td>${this.formatDateShort(garage.created_at)}</td>
             <td>
-                <div class="d-flex gap-5">
+                <div class="management-actions">
+                    ${garage.status === 'pending_approval' ? `
+                    <button class="btn btn-sm btn-success btn-action" onclick="admin.approveItem('garage', ${garage.id}, 'approve')" title="Approve Garage">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-action" onclick="admin.approveItem('garage', ${garage.id}, 'reject')" title="Deny Garage">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    ` : ''}
                     <button class="btn btn-sm ${garage.is_featured ? 'btn-warning' : 'btn-outline-warning'}" onclick="admin.toggleFeatureGarage(${garage.id}, ${garage.is_featured || 0})" title="${garage.is_featured ? 'Unfeature' : 'Feature'}">
                         <i class="fas fa-star"></i>
                     </button>
@@ -1841,7 +1866,15 @@ displayDealersTable(dealers) {
             </td>
             <td>${this.formatDateShort(dealer.created_at)}</td>
             <td>
-                <div class="d-flex gap-5">
+                <div class="management-actions">
+                    ${dealer.status === 'pending_approval' ? `
+                    <button class="btn btn-sm btn-success btn-action" onclick="admin.approveItem('dealer', ${dealer.id}, 'approve')" title="Approve Dealer">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-action" onclick="admin.approveItem('dealer', ${dealer.id}, 'reject')" title="Deny Dealer">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    ` : ''}
                     <button class="btn btn-sm ${dealer.is_featured ? 'btn-warning' : 'btn-outline-warning'}" onclick="admin.toggleFeatureDealer(${dealer.id}, ${dealer.is_featured || 0})" title="${dealer.is_featured ? 'Unfeature' : 'Feature'}">
                         <i class="fas fa-star"></i>
                     </button>
@@ -1905,7 +1938,15 @@ displayCarHireTable(carHire) {
             </td>
             <td>${this.formatDateShort(company.created_at)}</td>
             <td>
-                <div class="d-flex gap-5">
+                <div class="management-actions">
+                    ${company.status === 'pending_approval' ? `
+                    <button class="btn btn-sm btn-success btn-action" onclick="admin.approveItem('car_hire', ${company.id}, 'approve')" title="Approve Car Hire">
+                        <i class="fas fa-check"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-action" onclick="admin.approveItem('car_hire', ${company.id}, 'reject')" title="Deny Car Hire">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    ` : ''}
                     <button class="btn btn-sm ${company.is_featured ? 'btn-warning' : 'btn-outline-warning'}" onclick="admin.toggleFeatureCarHire(${company.id}, ${company.is_featured || 0})" title="${company.is_featured ? 'Unfeature' : 'Feature'}">
                         <i class="fas fa-star"></i>
                     </button>
@@ -3662,7 +3703,7 @@ async filterMakesModels() {
                     <div>
                         <div class="pending-title">${item.name}</div>
                         <div class="pending-meta text-muted">
-                            <span class="pending-type">${item.type}</span> • 
+                            <span class="pending-type">${String(item.type || '').replace('_', ' ')}</span> • 
                             ${this.formatDate(item.created_at)} • 
                             <span class="text-primary">${item.owner_name}</span>
                         </div>
@@ -3984,6 +4025,9 @@ async filterMakesModels() {
                     break;
                 case 'dealer':
                     endpoint = 'approve_dealer';
+                    break;
+                case 'car_hire':
+                    endpoint = 'approve_car_hire';
                     break;
                 default:
                     throw new Error('Invalid item type');

@@ -47,15 +47,13 @@ class MyListingsManager {
                 const userNameEl = document.getElementById('userName');
                 if (userNameEl) userNameEl.textContent = displayName;
             } else {
-                // Try localStorage fallback for network errors only
-                const storedAuth = localStorage.getItem('motorlink_authenticated');
-                const storedUser = localStorage.getItem('motorlink_user');
-                if (storedAuth === 'true' && storedUser) {
-                    this.currentUser = JSON.parse(storedUser);
-                }
+                // Server confirmed unauthenticated: clear stale client auth state.
+                localStorage.removeItem('motorlink_authenticated');
+                localStorage.removeItem('motorlink_user');
+                this.currentUser = null;
             }
         } catch (error) {
-            // Network error - use localStorage
+            // Network error only: allow local fallback so users can retry gracefully.
             const storedAuth = localStorage.getItem('motorlink_authenticated');
             const storedUser = localStorage.getItem('motorlink_user');
             if (storedAuth === 'true' && storedUser) {
@@ -726,7 +724,6 @@ class MyListingsManager {
 
         // Convert to JSON
         const data = {
-            action: 'update_listing',
             listing_id: listingId
         };
 
@@ -740,7 +737,7 @@ class MyListingsManager {
         data.negotiable = document.getElementById('editNegotiable').checked ? 1 : 0;
 
         try {
-            const response = await fetch(CONFIG.API_URL, {
+            const response = await fetch(`${CONFIG.API_URL}?action=update_listing`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

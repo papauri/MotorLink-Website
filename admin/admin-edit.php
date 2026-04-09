@@ -659,18 +659,23 @@ function updateCarHire($pdo) {
     $carHireId = $_POST['car_hire_id'] ?? 0;
     
     try {
+        $pdo->beginTransaction();
+
         $updateData = [
             'business_name' => $_POST['business_name'] ?? '',
             'owner_name' => $_POST['owner_name'] ?: null,
             'email' => $_POST['email'] ?: null,
             'phone' => $_POST['phone'] ?? '',
-            'location' => $_POST['location'] ?? '',
+            'whatsapp' => $_POST['whatsapp'] ?: null,
+            'address' => $_POST['address'] ?: null,
+            'location_id' => !empty($_POST['location_id']) ? (int)$_POST['location_id'] : null,
+            'website' => $_POST['website'] ?: null,
+            'years_established' => !empty($_POST['years_established']) ? (int)$_POST['years_established'] : null,
+            'business_hours' => $_POST['business_hours'] ?: null,
             'daily_rate_from' => isset($_POST['daily_rate_from']) ? floatval($_POST['daily_rate_from']) : null,
-            'daily_rate_to' => isset($_POST['daily_rate_to']) ? floatval($_POST['daily_rate_to']) : null,
-            'car_types' => $_POST['car_types'] ?: null,
+            'weekly_rate_from' => isset($_POST['weekly_rate_from']) ? floatval($_POST['weekly_rate_from']) : null,
+            'monthly_rate_from' => isset($_POST['monthly_rate_from']) ? floatval($_POST['monthly_rate_from']) : null,
             'description' => $_POST['description'] ?: null,
-            'rental_terms' => $_POST['rental_terms'] ?: null,
-            'rating' => isset($_POST['rating']) ? floatval($_POST['rating']) : null,
             'status' => $_POST['status'] ?? 'active',
             'updated_at' => date('Y-m-d H:i:s')
         ];
@@ -688,8 +693,34 @@ function updateCarHire($pdo) {
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
+        // Keep linked user account status aligned with business status changes.
+        $stmt = $pdo->prepare("SELECT user_id FROM car_hire_companies WHERE id = ?");
+        $stmt->execute([$carHireId]);
+        $carHire = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($carHire && !empty($carHire['user_id'])) {
+            $userStatus = null;
+            if ($updateData['status'] === 'active') {
+                $userStatus = 'active';
+            } elseif ($updateData['status'] === 'pending_approval') {
+                $userStatus = 'pending';
+            } elseif ($updateData['status'] === 'suspended') {
+                $userStatus = 'suspended';
+            }
+
+            if ($userStatus !== null) {
+                $userStmt = $pdo->prepare("UPDATE users SET status = ?, updated_at = NOW() WHERE id = ?");
+                $userStmt->execute([$userStatus, $carHire['user_id']]);
+            }
+        }
+
+        $pdo->commit();
+
         echo json_encode(['success' => true, 'message' => 'Car hire updated successfully']);
     } catch (PDOException $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         echo json_encode(['success' => false, 'message' => 'Update failed: ' . $e->getMessage()]);
     }
 }

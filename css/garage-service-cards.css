@@ -192,6 +192,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
+  min-height: 34px;
   background: #fafafa;
   border-radius: 6px;
   border-left: 2px solid #e0e0e0;
@@ -253,7 +254,7 @@
   min-width: 0;
   display: flex;
   gap: 6px;
-  align-items: baseline;
+  align-items: center;
 }
 
 .garage-info-row .label {
@@ -269,7 +270,9 @@
   font-size: 0.75rem;
   color: #333;
   font-weight: 500;
-  word-break: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   line-height: 1.2;
 }
 
@@ -278,6 +281,11 @@
   text-decoration: none;
   transition: color 0.2s;
   font-weight: 500;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .garage-info-row .value a:hover {
@@ -660,6 +668,7 @@
   /* Compact info rows */
   .garage-info-row {
     padding: 5px 7px;
+    min-height: 31px;
     background: #fafafa;
     border: 1px solid #f0f0f0;
     border-radius: 4px;

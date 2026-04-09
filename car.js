@@ -82,6 +82,7 @@ class CarDetailManager {
         
         // Check if current user owns this listing
         const currentUser = this.getCurrentUser();
+        const isLoggedIn = !!currentUser;
         const isOwnListing = currentUser && listing.user_id && parseInt(currentUser.id) === parseInt(listing.user_id);
         
         // Format price with commas
@@ -350,10 +351,14 @@ class CarDetailManager {
                                     <i class="fab fa-whatsapp"></i> WhatsApp
                                 </a>
                             ` : ''}
-                            ${!isOwnListing && Number(listing.user_id) > 0 ? `
+                            ${!isOwnListing && Number(listing.user_id) > 0 && isLoggedIn ? `
                             <a href="chat_system.html?listing=${listing.id}&seller=${listing.user_id}" class="contact-btn outline">
                                 <i class="fas fa-comments"></i> Send Message
                             </a>
+                            ` : !isOwnListing && Number(listing.user_id) > 0 ? `
+                            <button class="contact-btn outline" onclick="carDetailManager.requestLoginForAction('send messages')">
+                                <i class="fas fa-comments"></i> Send Message
+                            </button>
                             ` : ''}
                             ${!isOwnListing ? `
                             <button class="contact-btn save-btn" id="saveListingBtn" data-listing-id="${listing.id}" onclick="carDetailManager.toggleSave()">
@@ -713,6 +718,12 @@ class CarDetailManager {
         const btn = document.getElementById('saveListingBtn');
         if (!btn) return;
 
+        const currentUser = this.getCurrentUser();
+        if (!currentUser) {
+            this.requestLoginForAction('save listings');
+            return;
+        }
+
         const listingId = parseInt(this.listingId);
         let savedListings = JSON.parse(localStorage.getItem('motorlink_favorites') || '[]');
         const isSaved = savedListings.includes(listingId);
@@ -730,18 +741,21 @@ class CarDetailManager {
         localStorage.setItem('motorlink_favorites', JSON.stringify(savedListings));
         this.updateSaveButton(!isSaved);
 
-        // Try to sync with server if logged in
+        // Sync with server for authenticated users only
         try {
-            const storedAuth = localStorage.getItem('motorlink_authenticated');
-            if (storedAuth === 'true') {
-                await fetch(`${CONFIG.API_URL}?action=${isSaved ? 'unsave_listing' : 'save_listing'}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ listing_id: listingId })
-                });
-            }
+            await fetch(`${CONFIG.API_URL}?action=${isSaved ? 'unsave_listing' : 'save_listing'}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ listing_id: listingId })
+            });
         } catch (error) {
+        }
+    }
+
+    requestLoginForAction(actionLabel = 'perform this action') {
+        if (confirm(`You must be logged in to ${actionLabel}. Would you like to go to the login page?`)) {
+            window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
         }
     }
 
@@ -777,10 +791,7 @@ class CarDetailManager {
         // Check if user is logged in
         const currentUser = this.getCurrentUser();
         if (!currentUser) {
-            // User is not logged in, redirect to login
-            if (confirm('You must be logged in to report a listing. Would you like to go to the login page?')) {
-                window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
-            }
+            this.requestLoginForAction('report a listing');
             return;
         }
         
@@ -834,6 +845,13 @@ class CarDetailManager {
 
     async handleReportSubmit(e) {
         e.preventDefault();
+
+        const currentUser = this.getCurrentUser();
+        if (!currentUser) {
+            this.closeReportModal();
+            this.requestLoginForAction('report a listing');
+            return;
+        }
         
         const formData = new FormData(e.target);
         const reportData = {

@@ -620,6 +620,7 @@ try {
         case 'delete_listing_image': deleteListingImage($db); break;
         case 'site_settings': 
         case 'get_site_settings': getSiteSettings($db); break;
+        case 'listing_restrictions': getListingRestrictions($db); break;
         case 'get_public_client_config': getPublicClientConfig($db); break;
         case 'get_ai_chat_status': getAIChatStatus($db); break;
         case 'verify_listing_email': verifyListingEmail($db); break;
@@ -639,7 +640,7 @@ try {
         // ====================================================================
         // USER ENDPOINTS (Authentication required except guest listing)
         // ====================================================================
-        case 'submit_listing': submitListing($db); break;
+        case 'submit_listing': requireAuth(); submitListing($db); break;
         case 'get_profile': requireAuth(); getProfile($db); break;
         case 'update_profile': requireAuth(); updateProfile($db); break;
         case 'user_stats': 
@@ -2524,6 +2525,9 @@ function submitListing($db) {
     }
     
     try {
+        // Ensure schema columns outside transaction because ALTER TABLE causes implicit commits.
+        ensureListingEmailVerificationColumns($db);
+
         $db->beginTransaction();
         
         $user = $isGuest ? null : getCurrentUser();
@@ -2555,8 +2559,6 @@ function submitListing($db) {
                 }
             }
         }
-
-        ensureListingEmailVerificationColumns($db);
 
         $listingEmailToken = null;
         $listingEmailExpiry = null;
@@ -2676,7 +2678,9 @@ function submitListing($db) {
             'verification_link' => $listingEmailSent ? null : $listingVerificationLink
         ]);
     } catch (Exception $e) {
-        $db->rollBack();
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         error_log("Submit listing error: " . $e->getMessage());
         sendError('Failed to submit listing: ' . $e->getMessage(), 500);
     }
@@ -6912,6 +6916,66 @@ function getSiteSettings($db) {
     } catch (Exception $e) {
         error_log("getSiteSettings error: " . $e->getMessage());
         sendSuccess(['settings' => [], 'flat' => []]);
+    }
+}
+
+/**
+ * Get effective listing restriction settings and current usage.
+ * Used by sell flow to align client-side UX with backend-enforced limits.
+ */
+function getListingRestrictions($db) {
+    try {
+        $allowGuestListings = (bool)getPlatformSetting($db, 'user_allowGuestListings', true);
+        $maxGuestListings = (int)getPlatformSetting($db, 'listing_maxGuestListings', 2);
+        $maxRegisteredListings = (int)getPlatformSetting($db, 'listing_maxRegisteredListings', 10);
+        $requireListingEmailValidation = (bool)getPlatformSetting($db, 'listing_requireEmailValidation', true);
+
+        $isAuthenticated = isLoggedIn();
+        $currentUser = getCurrentUser(false);
+
+        $currentRegisteredCount = null;
+        $remainingRegisteredListings = null;
+
+        if ($isAuthenticated && !empty($currentUser['id'])) {
+            $stmt = $db->prepare("SELECT COUNT(*) FROM car_listings WHERE user_id = ? AND status != 'deleted'");
+            $stmt->execute([(int)$currentUser['id']]);
+            $currentRegisteredCount = (int)$stmt->fetchColumn();
+
+            if ($maxRegisteredListings > 0) {
+                $remainingRegisteredListings = max(0, $maxRegisteredListings - $currentRegisteredCount);
+            }
+        }
+
+        $guestEmail = strtolower(trim($_GET['guest_email'] ?? ''));
+        $currentGuestCount = null;
+        $remainingGuestListings = null;
+
+        if (!empty($guestEmail) && filter_var($guestEmail, FILTER_VALIDATE_EMAIL)) {
+            $stmt = $db->prepare("SELECT COUNT(*) FROM car_listings WHERE is_guest = 1 AND LOWER(guest_seller_email) = LOWER(?) AND status != 'deleted'");
+            $stmt->execute([$guestEmail]);
+            $currentGuestCount = (int)$stmt->fetchColumn();
+
+            if ($maxGuestListings > 0) {
+                $remainingGuestListings = max(0, $maxGuestListings - $currentGuestCount);
+            }
+        }
+
+        sendSuccess([
+            'restrictions' => [
+                'allow_guest_listings' => $allowGuestListings,
+                'max_guest_listings' => $maxGuestListings,
+                'max_registered_listings' => $maxRegisteredListings,
+                'require_listing_email_validation' => $requireListingEmailValidation,
+                'is_authenticated' => $isAuthenticated,
+                'current_registered_count' => $currentRegisteredCount,
+                'remaining_registered_listings' => $remainingRegisteredListings,
+                'current_guest_count' => $currentGuestCount,
+                'remaining_guest_listings' => $remainingGuestListings
+            ]
+        ]);
+    } catch (Exception $e) {
+        error_log('getListingRestrictions error: ' . $e->getMessage());
+        sendError('Failed to load listing restrictions', 500);
     }
 }
 

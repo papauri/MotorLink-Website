@@ -65,10 +65,24 @@ class OnboardingForm {
         this.formData = {};
         this.duplicateChecked = false;
         this.duplicateExists = false;
+        this.duplicateApproved = false;
         this.API_BASE_URL = getOnboardingAPIUrl();
         this.STORAGE_KEY = 'motorlink_onboarding_progress';
         this.STORAGE_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
         this.init();
+    }
+
+    getFirstExistingField(idCandidates = [], nameCandidate = '') {
+        for (const id of idCandidates) {
+            const el = document.getElementById(id);
+            if (el) return el;
+        }
+
+        if (nameCandidate) {
+            return document.querySelector(`[name="${nameCandidate}"]`);
+        }
+
+        return null;
     }
 
     init() {
@@ -77,6 +91,7 @@ class OnboardingForm {
             if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) console.log('API URL:', this.API_BASE_URL);
         }
         this.setupEventListeners();
+        this.setupQuickActions();
         this.loadInitialData();
         this.restoreProgress(); // Try to restore saved progress
         this.showStep(this.currentStep);
@@ -251,11 +266,13 @@ class OnboardingForm {
 
         document.getElementById('cancelSubmitBtn')?.addEventListener('click', () => {
             document.getElementById('duplicateModal').style.display = 'none';
+            this.duplicateApproved = false;
         });
 
         document.getElementById('continueSubmitBtn')?.addEventListener('click', () => {
             document.getElementById('duplicateModal').style.display = 'none';
             this.duplicateChecked = true;
+            this.duplicateApproved = true;
             this.submitForm();
         });
 
@@ -338,17 +355,17 @@ class OnboardingForm {
 
         // Validate optional fields on blur
         const optionalFields = [
-            { id: 'website', type: 'url', name: 'Website' },
-            { id: 'facebook_url', type: 'url', name: 'Facebook URL' },
-            { id: 'instagram_url', type: 'url', name: 'Instagram URL' },
-            { id: 'twitter_url', type: 'url', name: 'Twitter URL' },
-            { id: 'linkedin_url', type: 'url', name: 'LinkedIn URL' },
-            { id: 'whatsapp', type: 'phone', name: 'WhatsApp' },
-            { id: 'recovery_number', type: 'phone', name: 'Recovery Number' }
+            { ids: ['website'], nameAttr: 'website', type: 'url', name: 'Website' },
+            { ids: ['facebook_url', 'facebookUrl'], nameAttr: 'facebook_url', type: 'url', name: 'Facebook URL' },
+            { ids: ['instagram_url', 'instagramUrl'], nameAttr: 'instagram_url', type: 'url', name: 'Instagram URL' },
+            { ids: ['twitter_url', 'twitterUrl'], nameAttr: 'twitter_url', type: 'url', name: 'Twitter URL' },
+            { ids: ['linkedin_url', 'linkedinUrl'], nameAttr: 'linkedin_url', type: 'url', name: 'LinkedIn URL' },
+            { ids: ['whatsapp'], nameAttr: 'whatsapp', type: 'phone', name: 'WhatsApp' },
+            { ids: ['recovery_number', 'recoveryNumber'], nameAttr: 'recovery_number', type: 'phone', name: 'Recovery Number' }
         ];
 
         optionalFields.forEach(field => {
-            const fieldEl = document.getElementById(field.id);
+            const fieldEl = this.getFirstExistingField(field.ids, field.nameAttr);
             if (fieldEl) {
                 fieldEl.addEventListener('blur', () => {
                     if (fieldEl.value) {
@@ -361,6 +378,170 @@ class OnboardingForm {
                 });
             }
         });
+    }
+
+    setupQuickActions() {
+        const phoneField = document.getElementById('phone');
+        const whatsappField = document.getElementById('whatsapp');
+        const recoveryField = document.getElementById('recoveryNumber') || document.querySelector('[name="recovery_number"]');
+        const businessNameField = document.getElementById('businessName');
+        const ownerNameField = document.getElementById('ownerName');
+        const usernameField = document.getElementById('username');
+        const passwordField = document.getElementById('password');
+
+        document.getElementById('copyPhoneToWhatsappBtn')?.addEventListener('click', () => {
+            if (phoneField && whatsappField) {
+                whatsappField.value = phoneField.value.trim();
+                whatsappField.dispatchEvent(new Event('input', { bubbles: true }));
+                this.showInfoToast('WhatsApp number copied from phone.');
+            }
+        });
+
+        document.getElementById('copyPhoneToRecoveryBtn')?.addEventListener('click', () => {
+            if (phoneField && recoveryField) {
+                recoveryField.value = phoneField.value.trim();
+                recoveryField.dispatchEvent(new Event('input', { bubbles: true }));
+                this.showInfoToast('Recovery number copied from phone.');
+            }
+        });
+
+        phoneField?.addEventListener('blur', () => {
+            const phone = phoneField.value.trim();
+            if (!phone) return;
+
+            if (whatsappField && !whatsappField.value.trim()) {
+                whatsappField.value = phone;
+                whatsappField.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (this.businessType === 'garage' && recoveryField && !recoveryField.value.trim()) {
+                recoveryField.value = phone;
+                recoveryField.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+
+        document.getElementById('suggestUsernameBtn')?.addEventListener('click', () => {
+            if (!usernameField) return;
+
+            const businessName = businessNameField?.value?.trim() || '';
+            const ownerName = ownerNameField?.value?.trim() || '';
+            const source = businessName || ownerName || 'motorlink';
+            const suggested = this.generateUsernameSuggestion(source);
+            usernameField.value = suggested;
+            usernameField.dispatchEvent(new Event('input', { bubbles: true }));
+            this.showInfoToast(`Username suggested: ${suggested}`);
+        });
+
+        document.getElementById('generatePasswordBtn')?.addEventListener('click', () => {
+            if (!passwordField) return;
+
+            const generated = this.generateStrongPassword();
+            passwordField.value = generated;
+            passwordField.dispatchEvent(new Event('input', { bubbles: true }));
+            this.showInfoToast('Strong password generated. Use Copy Password to share it securely.');
+        });
+
+        document.getElementById('copyPasswordBtn')?.addEventListener('click', async () => {
+            if (!passwordField || !passwordField.value.trim()) {
+                this.showError('Generate or enter a password before copying.');
+                return;
+            }
+
+            const copied = await this.copyToClipboard(passwordField.value.trim());
+            if (copied) {
+                this.showInfoToast('Password copied to clipboard.');
+            } else {
+                this.showError('Could not copy password automatically. Please copy it manually.');
+            }
+        });
+    }
+
+    sanitizeUsernameBase(value) {
+        return (value || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9_\s-]/g, '')
+            .replace(/[\s-]+/g, '_')
+            .replace(/^_+|_+$/g, '');
+    }
+
+    generateUsernameSuggestion(source) {
+        const cleanBase = this.sanitizeUsernameBase(source) || 'motorlink';
+        const timePart = Date.now().toString().slice(-4);
+        const maxBaseLength = 20 - timePart.length - 1;
+        const truncatedBase = cleanBase.slice(0, Math.max(4, maxBaseLength));
+        return `${truncatedBase}_${timePart}`.slice(0, 20);
+    }
+
+    generateStrongPassword(length = 12) {
+        const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        const lower = 'abcdefghijkmnopqrstuvwxyz';
+        const digits = '23456789';
+        const symbols = '!@#$%*?';
+        const all = upper + lower + digits + symbols;
+
+        const pick = (chars) => chars[Math.floor(Math.random() * chars.length)];
+
+        let result = [pick(upper), pick(lower), pick(digits), pick(symbols)];
+        for (let i = result.length; i < length; i++) {
+            result.push(pick(all));
+        }
+
+        // Shuffle
+        for (let i = result.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [result[i], result[j]] = [result[j], result[i]];
+        }
+
+        return result.join('');
+    }
+
+    async copyToClipboard(text) {
+        try {
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(text);
+                return true;
+            }
+        } catch (error) {
+        }
+
+        try {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            const copied = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            return copied;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    showInfoToast(message) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--primary-orange);
+            color: white;
+            padding: 12px 16px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 1001;
+            max-width: 360px;
+            animation: slideInRight 0.3s ease;
+        `;
+        toast.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <i class="fas fa-bolt"></i>
+                <div>${message}</div>
+            </div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
     }
 
     selectBusinessType(option) {
@@ -683,15 +864,15 @@ class OnboardingForm {
             
             // Validate optional URLs
             const urlFields = [
-                { id: 'website', name: 'Website' },
-                { id: 'facebook_url', name: 'Facebook URL' },
-                { id: 'instagram_url', name: 'Instagram URL' },
-                { id: 'twitter_url', name: 'Twitter URL' },
-                { id: 'linkedin_url', name: 'LinkedIn URL' }
+                { ids: ['website'], nameAttr: 'website', name: 'Website' },
+                { ids: ['facebook_url', 'facebookUrl'], nameAttr: 'facebook_url', name: 'Facebook URL' },
+                { ids: ['instagram_url', 'instagramUrl'], nameAttr: 'instagram_url', name: 'Instagram URL' },
+                { ids: ['twitter_url', 'twitterUrl'], nameAttr: 'twitter_url', name: 'Twitter URL' },
+                { ids: ['linkedin_url', 'linkedinUrl'], nameAttr: 'linkedin_url', name: 'LinkedIn URL' }
             ];
             
             urlFields.forEach(field => {
-                const fieldEl = document.getElementById(field.id);
+                const fieldEl = this.getFirstExistingField(field.ids, field.nameAttr);
                 if (fieldEl && fieldEl.value) {
                     if (!this.validateURLField(fieldEl, field.name)) {
                         isValid = false;
@@ -701,12 +882,12 @@ class OnboardingForm {
             
             // Validate optional phone numbers
             const optionalPhoneFields = [
-                { id: 'whatsapp', name: 'WhatsApp' },
-                { id: 'recovery_number', name: 'Recovery Number' }
+                { ids: ['whatsapp'], nameAttr: 'whatsapp', name: 'WhatsApp' },
+                { ids: ['recovery_number', 'recoveryNumber'], nameAttr: 'recovery_number', name: 'Recovery Number' }
             ];
             
             optionalPhoneFields.forEach(field => {
-                const fieldEl = document.getElementById(field.id);
+                const fieldEl = this.getFirstExistingField(field.ids, field.nameAttr);
                 if (fieldEl && fieldEl.value) {
                     if (!this.validatePhoneField(fieldEl)) {
                         isValid = false;
@@ -1407,6 +1588,7 @@ class OnboardingForm {
         // Reset duplicate check
         this.duplicateChecked = false;
         this.duplicateExists = false;
+        this.duplicateApproved = false;
         const duplicateResult = document.getElementById('duplicateResult');
         if (duplicateResult) {
             duplicateResult.style.display = 'none';
@@ -1474,14 +1656,18 @@ class OnboardingForm {
         return types[type] || type;
     }
 
-    async checkForDuplicates() {
+    async checkForDuplicates(fromSubmit = false) {
         const businessName = document.getElementById('businessName');
         const email = document.getElementById('email');
         const phone = document.getElementById('phone');
         
         if (!businessName || !businessName.value || !email || !email.value || !phone || !phone.value) {
-            this.showError('Please complete business name, email, and phone before checking for duplicates.');
-            return;
+            if (fromSubmit) {
+                this.showError('Please complete business name, email, and phone before submitting.');
+            } else {
+                this.showError('Please complete business name, email, and phone before checking for duplicates.');
+            }
+            return false;
         }
         
         try {
@@ -1504,26 +1690,30 @@ class OnboardingForm {
                 })
             });
             
+            const result = await response.json().catch(() => null);
+
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(result?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
-            
-            const result = await response.json();
             
             if (result.success) {
                 this.duplicateChecked = true;
                 
                 if (result.exists) {
                     this.duplicateExists = true;
+                    this.duplicateApproved = false;
                     // Pass the is_second_business flag to the modal
                     const businessData = {
                         ...result.business,
                         is_second_business: result.is_second_business || false
                     };
-                    this.showDuplicateModal(businessData);
+                    await this.showDuplicateModal(businessData);
+                    return false;
                 } else {
                     this.duplicateExists = false;
+                    this.duplicateApproved = true;
                     this.showDuplicateResult('No similar businesses found. You can proceed with submission.', 'success');
+                    return true;
                 }
             } else {
                 throw new Error(result.message || 'Duplicate check failed');
@@ -1531,6 +1721,7 @@ class OnboardingForm {
             
         } catch (error) {
             this.showError('Failed to check for duplicates: ' + error.message);
+            return false;
         } finally {
             const checkBtn = document.getElementById('checkDuplicateBtn');
             if (checkBtn) {
@@ -1597,6 +1788,8 @@ class OnboardingForm {
                 continueBtn.style.display = 'none';
             }
         }
+
+        this.duplicateApproved = isSecondBusiness;
         
         document.getElementById('duplicateModal').style.display = 'flex';
     }
@@ -1620,17 +1813,17 @@ class OnboardingForm {
             return;
         }
 
-        // Check if duplicate check was performed
-        if (!this.duplicateChecked && !this.duplicateExists) {
-            const proceed = confirm('You haven\'t checked for duplicate businesses. Do you want to proceed without checking?');
-            if (!proceed) {
+        // Run duplicate check automatically before final submit to reduce manual steps.
+        if (!this.duplicateChecked) {
+            const canProceedAfterCheck = await this.checkForDuplicates(true);
+            if (!canProceedAfterCheck) {
                 return;
             }
         }
 
-        // If duplicates exist and user hasn't confirmed to continue
-        if (this.duplicateExists && !this.duplicateChecked) {
-            this.showError('Please resolve duplicate business issues before submitting.');
+        // If duplicate was found, only allow submission when explicitly approved.
+        if (this.duplicateExists && !this.duplicateApproved) {
+            this.showError('Duplicate business details detected. Resolve the conflict or use an approved second-business flow before submitting.');
             return;
         }
 
@@ -1679,12 +1872,12 @@ class OnboardingForm {
                 },
                 body: JSON.stringify(apiData)
             });
-            
+
+            const result = await response.json().catch(() => null);
+
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                throw new Error(result?.message || `HTTP ${response.status}: ${response.statusText}`);
             }
-            
-            const result = await response.json();
 
             if (result.success) {
                 // Clear saved progress after successful submission
@@ -1888,6 +2081,7 @@ class OnboardingForm {
         this.businessType = '';
         this.duplicateChecked = false;
         this.duplicateExists = false;
+        this.duplicateApproved = false;
 
         // Go back to step 1
         this.showStep(1);

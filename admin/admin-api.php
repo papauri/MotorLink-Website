@@ -779,8 +779,8 @@ function handleDashboardStats($db) {
         
         // Get dealer stats
         try {
-            $stats['total_dealers'] = (int)$db->query("SELECT COUNT(*) FROM dealers")->fetchColumn();
-            $stats['pending_dealers'] = (int)$db->query("SELECT COUNT(*) FROM dealers WHERE status = 'pending_approval'")->fetchColumn();
+            $stats['total_dealers'] = (int)$db->query("SELECT COUNT(*) FROM car_dealers")->fetchColumn();
+            $stats['pending_dealers'] = (int)$db->query("SELECT COUNT(*) FROM car_dealers WHERE status = 'pending_approval'")->fetchColumn();
         } catch (Exception $e) {
             $stats['total_dealers'] = 0;
             $stats['pending_dealers'] = 0;
@@ -1050,6 +1050,45 @@ function getPendingApprovals($db) {
         ");
         $pendingUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $pending = array_merge($pending, $pendingUsers);
+
+        // Pending garages
+        $stmt = $db->query(" 
+            SELECT 'garage' as type, g.id, g.name as name, g.created_at,
+                   COALESCE(g.owner_name, u.full_name, 'N/A') as owner_name
+            FROM garages g
+            LEFT JOIN users u ON g.user_id = u.id
+            WHERE g.status = 'pending_approval'
+            ORDER BY g.created_at DESC
+            LIMIT 10
+        ");
+        $pendingGarages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $pending = array_merge($pending, $pendingGarages);
+
+        // Pending dealers
+        $stmt = $db->query(" 
+            SELECT 'dealer' as type, d.id, d.business_name as name, d.created_at,
+                   COALESCE(d.owner_name, u.full_name, 'N/A') as owner_name
+            FROM car_dealers d
+            LEFT JOIN users u ON d.user_id = u.id
+            WHERE d.status = 'pending_approval'
+            ORDER BY d.created_at DESC
+            LIMIT 10
+        ");
+        $pendingDealers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $pending = array_merge($pending, $pendingDealers);
+
+        // Pending car hire companies
+        $stmt = $db->query(" 
+            SELECT 'car_hire' as type, c.id, c.business_name as name, c.created_at,
+                   COALESCE(c.owner_name, u.full_name, 'N/A') as owner_name
+            FROM car_hire_companies c
+            LEFT JOIN users u ON c.user_id = u.id
+            WHERE c.status = 'pending_approval'
+            ORDER BY c.created_at DESC
+            LIMIT 10
+        ");
+        $pendingCarHire = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $pending = array_merge($pending, $pendingCarHire);
         
         // Sort by created_at desc
         usort($pending, function($a, $b) {

@@ -1238,6 +1238,12 @@ function addGarage($db) {
         $stmt = $db->prepare("UPDATE users SET business_id = ? WHERE id = ?");
         $stmt->execute([$garageId, $userId]);
 
+        // Commit transaction so user and garage records are persisted atomically
+        $db->commit();
+
+        // Log successful creation
+        logActivity("Garage created successfully: Garage ID=$garageId, User ID=$userId, Business={$input['name']}");
+
         sendSuccess([
             'api_version' => 'v2_with_user_creation',
             'message' => 'Garage successfully onboarded! Status: Pending Approval. Login account created.',
@@ -1411,6 +1417,9 @@ function addCarDealer($db) {
         if ($existingBusiness) {
             sendError('A car dealer with the name "' . $input['business_name'] . '" already exists. Please choose a different business name.', 409);
         }
+
+        // Start transaction to ensure atomicity and prevent partial writes
+        $db->beginTransaction();
 
         // Create user account first
         $passwordHash = password_hash($input['password'], PASSWORD_DEFAULT);

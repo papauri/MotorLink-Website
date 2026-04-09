@@ -581,6 +581,19 @@ body {
     border-radius: var(--border-radius);
 }
 
+.quick-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 8px 0 16px;
+}
+
+.quick-action-btn {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    border-radius: 8px;
+}
+
 .form-navigation {
     display: flex;
     justify-content: space-between;
@@ -1588,5 +1601,113 @@ body {
     .tip-content p,
     .tip-content li {
         font-size: 0.85rem;
+    }
+}
+
+/* ========================================
+   ONBOARDING UX/UI REFRESH OVERRIDES
+======================================== */
+
+body {
+    font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background:
+        radial-gradient(circle at 10% 10%, rgba(255, 168, 38, 0.22) 0, rgba(255, 168, 38, 0) 45%),
+        radial-gradient(circle at 85% 0, rgba(255, 193, 7, 0.18) 0, rgba(255, 193, 7, 0) 40%),
+        linear-gradient(180deg, #fffaf2 0%, #f6f9fc 100%);
+}
+
+.header,
+.form-container {
+    border: 1px solid rgba(255, 111, 0, 0.12);
+}
+
+.progress-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(6px);
+}
+
+.business-option {
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius-lg);
+    padding: 22px;
+    background: #ffffff;
+    box-shadow: 0 8px 20px rgba(33, 37, 41, 0.06);
+}
+
+.business-option:hover {
+    border-color: rgba(255, 111, 0, 0.55);
+}
+
+.business-option.selected {
+    border-color: var(--primary-orange);
+    background: linear-gradient(135deg, #fffaf3 0%, #ffe8cc 100%);
+}
+
+.review-section,
+.duplicate-check-section,
+.checkbox-group {
+    border: 1px solid var(--gray-300);
+}
+
+.review-item {
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.review-item span {
+    word-break: break-word;
+}
+
+.success-item {
+    justify-content: space-between;
+    gap: 14px;
+}
+
+.quick-action-btn {
+    background: #f7f8fb;
+    color: var(--gray-800);
+    border: 1px solid var(--gray-300);
+}
+
+.quick-action-btn:hover {
+    background: #fff3e0;
+    border-color: var(--primary-orange-light);
+    color: var(--primary-orange-dark);
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+.business-option:focus-visible,
+.checkbox-label:focus-within {
+    outline: 3px solid rgba(255, 111, 0, 0.25);
+    outline-offset: 1px;
+}
+
+.form-navigation {
+    position: sticky;
+    bottom: 0;
+    z-index: 15;
+    background: #ffffff;
+    padding: 18px 24px;
+    box-shadow: 0 -8px 24px rgba(33, 37, 41, 0.08);
+}
+
+@media (max-width: 768px) {
+    .form-navigation {
+        padding: 14px;
+    }
+
+    .quick-actions {
+        margin-top: 4px;
+    }
+
+    .quick-action-btn {
+        flex: 1 1 100%;
+        justify-content: center;
     }
 }

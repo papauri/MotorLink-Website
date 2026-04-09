@@ -19,6 +19,18 @@ class SellManager {
         this.reviewConfirmCheckbox = null;
         this.submitBtn = null;
         this.boundReviewConfirmHandler = null;
+        this.listingRestrictions = {
+            allow_guest_listings: true,
+            max_guest_listings: 2,
+            max_registered_listings: 10,
+            require_listing_email_validation: true,
+            is_authenticated: false,
+            current_registered_count: null,
+            remaining_registered_listings: null,
+            current_guest_count: null,
+            remaining_guest_listings: null
+        };
+        this.guestLimitCheckTimeout = null;
         this.init();
     }
 
@@ -27,7 +39,98 @@ class SellManager {
         // Mobile menu handled by mobile-menu.js
         // this.setupMobileMenu();
         this.setupEventListeners();
+        this.loadListingRestrictions();
         this.checkAuthentication();
+    }
+
+    async loadListingRestrictions(guestEmail = '') {
+        try {
+            const url = new URL(`${CONFIG.API_URL}?action=listing_restrictions`, window.location.origin);
+            if (guestEmail) {
+                url.searchParams.set('guest_email', guestEmail);
+            }
+
+            const response = await fetch(url.toString(), {
+                credentials: 'include'
+            });
+            const data = await response.json();
+
+            if (data.success && data.restrictions) {
+                this.listingRestrictions = { ...this.listingRestrictions, ...data.restrictions };
+                this.applyListingRestrictionsUI();
+            }
+        } catch (error) {
+            // Non-blocking: backend still enforces hard limits.
+        }
+    }
+
+    applyListingRestrictionsUI() {
+        const guestDescription = document.querySelector('.guest-option .guest-description');
+        const guestButton = document.querySelector('.guest-option .guest-button');
+        const guestNotice = document.querySelector('#guestNotice p');
+
+        const guestLimitText = this.listingRestrictions.max_guest_listings > 0
+            ? `Guests can post up to ${this.listingRestrictions.max_guest_listings} listing${this.listingRestrictions.max_guest_listings === 1 ? '' : 's'}.`
+            : 'Guest listing limit is currently unlimited.';
+
+        if (guestDescription) {
+            guestDescription.textContent = this.listingRestrictions.allow_guest_listings
+                ? `${guestLimitText} We will need your contact information and your listing will be reviewed before going live.`
+                : 'Guest listings are currently disabled. Please create an account to list your car.';
+        }
+
+        if (guestButton) {
+            guestButton.disabled = !this.listingRestrictions.allow_guest_listings;
+            if (!this.listingRestrictions.allow_guest_listings) {
+                guestButton.classList.add('disabled');
+                guestButton.title = 'Guest listings are currently disabled';
+            } else {
+                guestButton.classList.remove('disabled');
+                guestButton.removeAttribute('title');
+            }
+        }
+
+        if (guestNotice) {
+            const verificationText = this.listingRestrictions.require_listing_email_validation
+                ? ' You will need to verify your email before admin review starts.'
+                : '';
+            guestNotice.textContent = `Your listing will be reviewed within 2-4 hours before going live. ${guestLimitText}${verificationText}`;
+        }
+
+        this.renderListingLimitBanner();
+    }
+
+    renderListingLimitBanner() {
+        const container = document.querySelector('.form-container');
+        if (!container || this.guestMode || !this.currentUser) return;
+
+        let banner = document.getElementById('listingLimitBanner');
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'listingLimitBanner';
+            banner.className = 'guest-notice';
+            banner.style.marginBottom = '16px';
+            container.insertBefore(banner, container.firstChild);
+        }
+
+        const max = this.listingRestrictions.max_registered_listings;
+        const current = this.listingRestrictions.current_registered_count;
+        const remaining = this.listingRestrictions.remaining_registered_listings;
+
+        let message = 'Listing restrictions could not be loaded.';
+        if (typeof max === 'number' && max > 0 && typeof current === 'number' && typeof remaining === 'number') {
+            message = `Listing usage: ${current}/${max}. Remaining slots: ${remaining}.`;
+        } else if (typeof max === 'number' && max <= 0) {
+            message = 'Listing limit is currently unlimited for registered users.';
+        }
+
+        banner.innerHTML = `
+            <div class="guest-notice-header">
+                <i class="fas fa-tachometer-alt"></i>
+                <strong>Listing Limit</strong>
+            </div>
+            <p>${message}</p>
+        `;
     }
 
     // Check if we're in edit mode
@@ -53,6 +156,8 @@ class SellManager {
                 this.currentUser = data.user;
                 this.updateUserMenu();
                 this.showSellForm();
+                this.loadListingRestrictions();
+                this.applyListingRestrictionsUI();
                 
                 // Load listing data if in edit mode
                 if (this.editMode && this.editListingId) {
@@ -68,6 +173,7 @@ class SellManager {
                     window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
                 } else {
                     this.showGuestSellOption();
+                    this.applyListingRestrictionsUI();
                 }
             }
         } catch (error) {
@@ -79,6 +185,7 @@ class SellManager {
                 window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.href);
             } else {
                 this.showGuestSellOption();
+                this.applyListingRestrictionsUI();
             }
         }
     }
@@ -111,36 +218,36 @@ class SellManager {
     showGuestSellOption() {
         const authRequired = document.getElementById('authRequired');
         const sellForm = document.getElementById('sellForm');
+        const guestOption = document.querySelector('.guest-option');
+        const authDescription = document.querySelector('.auth-card > p');
         
         if (authRequired) authRequired.classList.remove('hidden');
         if (sellForm) sellForm.classList.add('hidden');
+        if (guestOption) guestOption.style.display = 'none';
+        if (authDescription) {
+            authDescription.textContent = 'You must be logged in to create and save listings. Please login or create an account to continue.';
+        }
     }
 
     enableGuestSelling() {
-        const authRequired = document.getElementById('authRequired');
-        const sellForm = document.getElementById('sellForm');
-        const guestNotice = document.getElementById('guestNotice');
-        const guestContactFields = document.getElementById('guestContactFields');
-
-        if (authRequired) authRequired.classList.add('hidden');
-        if (sellForm) sellForm.classList.remove('hidden');
-        if (guestNotice) guestNotice.classList.remove('hidden');
-        if (guestContactFields) guestContactFields.classList.remove('hidden');
-
-        this.guestMode = true;
-        this.initializeSellForm();
-
-        // Scroll to top for better UX
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        // Show guest limit reminder
-        this.showGuestLimitReminder();
+        this.showToast('Please login to save listings.', 'error');
+        setTimeout(() => {
+            window.location.href = 'login.html?redirect=sell.html';
+        }, 400);
     }
 
     /**
      * Show friendly reminder about guest posting limits
      */
     showGuestLimitReminder() {
+        const guestLimitText = this.listingRestrictions.max_guest_listings > 0
+            ? `Guests can post up to ${this.listingRestrictions.max_guest_listings} listing${this.listingRestrictions.max_guest_listings === 1 ? '' : 's'}.`
+            : 'Guests can post unlimited listings.';
+
+        const registeredLimitText = this.listingRestrictions.max_registered_listings > 0
+            ? `${this.listingRestrictions.max_registered_listings} listing slots`
+            : 'unlimited listing slots';
+
         const reminderHtml = `
             <div class="guest-limit-reminder">
                 <div class="guest-limit-icon">
@@ -148,8 +255,8 @@ class SellManager {
                 </div>
                 <div class="guest-limit-content">
                     <strong>Posting as Guest</strong>
-                    <p>Guests can post one car. Want to list more? 
-                    <a href="register.html">Create a free account</a> for unlimited listings, message tracking, and verified badges!</p>
+                    <p>${guestLimitText} Want to list more? 
+                    <a href="register.html">Create a free account</a> for ${registeredLimitText}, message tracking, and verified badges!</p>
                 </div>
                 <button class="reminder-dismiss" onclick="this.parentElement.remove()" aria-label="Dismiss">
                     <i class="fas fa-times"></i>
@@ -421,6 +528,14 @@ class SellManager {
                         this.showFieldError(emailInput, 'Please enter a valid email address');
                     } else {
                         this.clearFieldError(emailInput);
+                        clearTimeout(this.guestLimitCheckTimeout);
+                        this.guestLimitCheckTimeout = setTimeout(async () => {
+                            await this.loadListingRestrictions(value);
+                            const remaining = this.listingRestrictions.remaining_guest_listings;
+                            if (typeof remaining === 'number' && remaining <= 0) {
+                                this.showFieldError(emailInput, 'Guest listing limit reached for this email. Please register to continue.');
+                            }
+                        }, 350);
                     }
                 } else {
                     this.clearFieldError(emailInput);
@@ -1782,6 +1897,14 @@ removePhoto(index) {
         }
 
         // Validate ALL steps before submission
+        if (!this.currentUser) {
+            this.showToast('You must be logged in to save listings.', 'error');
+            setTimeout(() => {
+                window.location.href = 'login.html?redirect=sell.html';
+            }, 500);
+            return;
+        }
+
         if (!(await this.validateStep1())) {
             this.showToast('Please fix errors in Step 1: Car Information', 'error');
             this.currentStep = 1;
@@ -1804,6 +1927,28 @@ removePhoto(index) {
             this.updateStepDisplay();
             this.updateNavigationButtons();
             return;
+        }
+
+        // Enforce known limits client-side for better UX (backend still enforces hard limits).
+        if (!this.editMode) {
+            if (this.guestMode) {
+                if (!this.listingRestrictions.allow_guest_listings) {
+                    this.showToast('Guest listings are currently disabled. Please create an account to continue.', 'error');
+                    return;
+                }
+
+                const remainingGuest = this.listingRestrictions.remaining_guest_listings;
+                if (typeof remainingGuest === 'number' && remainingGuest <= 0) {
+                    this.showToast('Guest listing limit reached for this email. Please create an account to continue.', 'error');
+                    return;
+                }
+            } else if (this.currentUser) {
+                const remainingRegistered = this.listingRestrictions.remaining_registered_listings;
+                if (typeof remainingRegistered === 'number' && remainingRegistered <= 0) {
+                    this.showToast('You have reached your listing limit. Please remove an old listing before creating a new one.', 'error');
+                    return;
+                }
+            }
         }
 
         // Final validation check
@@ -1895,6 +2040,8 @@ removePhoto(index) {
 
             } else {
                 // CREATE MODE: Create new listing
+                await this.loadListingRestrictions(this.guestMode ? (formData.get('seller_email') || '') : '');
+
                 const tempReference = 'TEMP_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
                 listingData.reference_number = tempReference;
 
@@ -1945,7 +2092,7 @@ removePhoto(index) {
                 }
 
                 // Success
-                this.showSuccessMessage(listingId);
+                this.showSuccessMessage(listingId, data);
             }
 
         } catch (error) {
@@ -2006,9 +2153,35 @@ removePhoto(index) {
         }
     }
 
-    showSuccessMessage(listingId) {
+    showSuccessMessage(listingId, submitResponse = null) {
         const container = document.querySelector('.form-container');
         if (!container) return;
+
+        const emailVerificationRequired = !!submitResponse?.email_verification_required;
+        const verificationLink = submitResponse?.verification_link || '';
+        const nextStepHeader = emailVerificationRequired
+            ? 'Complete email verification to continue'
+            : 'What happens next?';
+        const nextStepList = emailVerificationRequired
+            ? `
+                <ol style="margin: 0; padding-left: 20px; line-height: 1.8;">
+                    <li>Verify your listing email using the link we sent</li>
+                    <li>After verification, our team reviews your listing within 2-4 hours</li>
+                    <li>You'll receive an email notification once approved</li>
+                    <li>Your listing then goes live and is visible to buyers</li>
+                </ol>
+            `
+            : `
+                <ol style="margin: 0; padding-left: 20px; line-height: 1.8;">
+                    <li>Our team will review your listing within 2-4 hours</li>
+                    <li>We'll check all details and photos for quality and accuracy</li>
+                    <li>You'll receive an email notification once approved</li>
+                    <li>Your listing will go live and be visible to thousands of buyers</li>
+                </ol>
+            `;
+        const fallbackVerificationBlock = emailVerificationRequired && verificationLink
+            ? `<div style="margin-top: 14px; padding: 12px; border-radius: 8px; background: #fff8e1; border: 1px solid #f2cc62;"><strong>Email test mode:</strong> <a href="${verificationLink}" target="_blank" rel="noopener">Verify listing email</a></div>`
+            : '';
 
         const successHTML = `
             <div style="text-align: center; padding: 60px 20px;">
@@ -2021,13 +2194,9 @@ removePhoto(index) {
                 </p>
 
                 <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 12px; padding: 24px; margin: 32px 0; text-align: left;">
-                    <h3 style="color: var(--success-green); margin-top: 0;">What happens next?</h3>
-                    <ol style="margin: 0; padding-left: 20px; line-height: 1.8;">
-                        <li>Our team will review your listing within 2-4 hours</li>
-                        <li>We'll check all details and photos for quality and accuracy</li>
-                        <li>You'll receive an email notification once approved</li>
-                        <li>Your listing will go live and be visible to thousands of buyers</li>
-                    </ol>
+                    <h3 style="color: var(--success-green); margin-top: 0;">${nextStepHeader}</h3>
+                    ${nextStepList}
+                    ${fallbackVerificationBlock}
                 </div>
 
                 <div style="background: #f8f9fa; border-radius: 8px; padding: 16px; margin-bottom: 32px;">
