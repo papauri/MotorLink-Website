@@ -1,6 +1,6 @@
 <?php
 /**
- * MotorLink VIN Decoder API
+ * MotorLink VIN Decoder API test
  * Separate API endpoint for VIN decoding functionality
  */
 
