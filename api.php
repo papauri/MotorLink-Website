@@ -268,37 +268,63 @@ function getClientIpAddress() {
 }
 
 /**
- * Ensure API rate-limit storage exists.
+ * Check if migrated DB table for API rate limits is available.
  */
-function ensureApiRateLimitTable($db) {
-    static $ready = false;
+function isApiRateLimitTableAvailable($db) {
+    static $checked = false;
+    static $available = false;
 
-    if ($ready) {
-        return;
+    if ($checked) {
+        return $available;
     }
 
-    $db->exec("CREATE TABLE IF NOT EXISTS api_rate_limits (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        action_key VARCHAR(64) NOT NULL,
-        identifier_hash VARCHAR(128) NOT NULL,
-        attempt_count INT NOT NULL DEFAULT 0,
-        window_started_at DATETIME NOT NULL,
-        blocked_until DATETIME DEFAULT NULL,
-        created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        UNIQUE KEY uniq_action_identifier (action_key, identifier_hash),
-        INDEX idx_action (action_key),
-        INDEX idx_blocked_until (blocked_until)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    try {
+        $stmt = $db->query("SELECT 1 FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 'api_rate_limits' LIMIT 1");
+        $available = (bool)$stmt->fetchColumn();
+    } catch (Exception $e) {
+        $available = false;
+    }
 
-    $ready = true;
+    if (!$available) {
+        error_log('api_rate_limits table missing. Using session fallback until DB migration is applied.');
+    }
+
+    $checked = true;
+    return $available;
+}
+
+/**
+ * Record security events to admin activity logs when available.
+ */
+function logSecurityRateLimitEvent($db, $actionType, $description, $details = []) {
+    try {
+        $stmt = $db->prepare("INSERT INTO activity_logs (admin_id, action_type, action_description, details, ip_address, user_agent, created_at) VALUES (NULL, ?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([
+            $actionType,
+            $description,
+            json_encode($details, JSON_UNESCAPED_UNICODE),
+            getClientIpAddress(),
+            (string)($_SERVER['HTTP_USER_AGENT'] ?? 'api-client')
+        ]);
+    } catch (Exception $e) {
+        error_log('Failed to write security activity log: ' . $e->getMessage());
+    }
 }
 
 /**
  * Check if a rate-limit key is currently blocked.
  */
 function isRateLimited($db, $actionKey, $identifierHash) {
-    ensureApiRateLimitTable($db);
+    if (!isApiRateLimitTableAvailable($db)) {
+        $sessionKey = 'rate_limit_' . $actionKey . '_' . $identifierHash;
+        $bucket = $_SESSION[$sessionKey] ?? null;
+        if (!is_array($bucket)) {
+            return false;
+        }
+
+        $blockedUntilTs = (int)($bucket['blocked_until_ts'] ?? 0);
+        return ($blockedUntilTs > time());
+    }
 
     $stmt = $db->prepare("SELECT blocked_until FROM api_rate_limits WHERE action_key = ? AND identifier_hash = ? LIMIT 1");
     $stmt->execute([$actionKey, $identifierHash]);
@@ -321,11 +347,42 @@ function isRateLimited($db, $actionKey, $identifierHash) {
  * Record failed attempt and block key when threshold is exceeded.
  */
 function recordRateLimitFailure($db, $actionKey, $identifierHash, $maxAttempts, $windowSeconds, $blockSeconds) {
-    ensureApiRateLimitTable($db);
-
     $maxAttempts = max(1, (int)$maxAttempts);
     $windowSeconds = max(60, (int)$windowSeconds);
     $blockSeconds = max(60, (int)$blockSeconds);
+
+    if (!isApiRateLimitTableAvailable($db)) {
+        $sessionKey = 'rate_limit_' . $actionKey . '_' . $identifierHash;
+        $bucket = $_SESSION[$sessionKey] ?? [
+            'attempt_count' => 0,
+            'window_started_ts' => time(),
+            'blocked_until_ts' => 0
+        ];
+
+        $nowTs = time();
+        $elapsed = $nowTs - (int)($bucket['window_started_ts'] ?? $nowTs);
+        if ($elapsed > $windowSeconds) {
+            $bucket['attempt_count'] = 0;
+            $bucket['window_started_ts'] = $nowTs;
+            $bucket['blocked_until_ts'] = 0;
+        }
+
+        $bucket['attempt_count'] = ((int)$bucket['attempt_count']) + 1;
+        $isBlocked = false;
+        if ((int)$bucket['attempt_count'] >= $maxAttempts) {
+            $bucket['blocked_until_ts'] = $nowTs + $blockSeconds;
+            $isBlocked = true;
+            logSecurityRateLimitEvent($db, 'security_rate_limit', 'Rate limit triggered (session fallback)', [
+                'action' => $actionKey,
+                'identifier_hash' => $identifierHash,
+                'attempt_count' => (int)$bucket['attempt_count'],
+                'fallback' => 'session'
+            ]);
+        }
+
+        $_SESSION[$sessionKey] = $bucket;
+        return $isBlocked;
+    }
 
     $stmt = $db->prepare("SELECT id, attempt_count, window_started_at FROM api_rate_limits WHERE action_key = ? AND identifier_hash = ? LIMIT 1");
     $stmt->execute([$actionKey, $identifierHash]);
@@ -353,6 +410,12 @@ function recordRateLimitFailure($db, $actionKey, $identifierHash, $maxAttempts, 
         $blockedAt = clone $now;
         $blockedAt->modify('+' . $blockSeconds . ' seconds');
         $blockedUntil = $blockedAt->format('Y-m-d H:i:s');
+        logSecurityRateLimitEvent($db, 'security_rate_limit', 'Rate limit triggered', [
+            'action' => $actionKey,
+            'identifier_hash' => $identifierHash,
+            'attempt_count' => $attemptCount,
+            'block_seconds' => $blockSeconds
+        ]);
     }
 
     if ($row) {
@@ -381,7 +444,11 @@ function recordRateLimitFailure($db, $actionKey, $identifierHash, $maxAttempts, 
  * Clear failed-attempt state after a successful flow.
  */
 function clearRateLimitState($db, $actionKey, $identifierHash) {
-    ensureApiRateLimitTable($db);
+    if (!isApiRateLimitTableAvailable($db)) {
+        $sessionKey = 'rate_limit_' . $actionKey . '_' . $identifierHash;
+        unset($_SESSION[$sessionKey]);
+        return;
+    }
 
     $stmt = $db->prepare("DELETE FROM api_rate_limits WHERE action_key = ? AND identifier_hash = ?");
     $stmt->execute([$actionKey, $identifierHash]);
