@@ -1,214 +1,106 @@
 <?php
 /**
- * MotorLink VIN Decoder API test
- * Separate API endpoint for VIN decoding functionality
+ * MotorLink VIN decoder middleware.
+ * Free source: NHTSA vPIC API.
+ * This file is included by proxy.php and api.php.
  */
 
-// This file is included by proxy.php after api-common.php
-// Function definitions only - routing is handled in proxy.php
+function vinField($row, $key, $fallback = 'N/A') {
+    $value = isset($row[$key]) ? trim((string)$row[$key]) : '';
+    if ($value === '' || $value === '0' || strcasecmp($value, 'Not Applicable') === 0) {
+        return $fallback;
+    }
+    return $value;
+}
 
-/**
- * Proxy for NHTSA Vehicle API - Completely free, government-run, no API key required
- * Documentation: https://vpic.nhtsa.dot.gov/api/
- * Base URL: https://vpic.nhtsa.dot.gov/api/vehicles
- * This API provides make/model/year data and can decode VINs
- */
+function fetchNhtsaVinValues($vin) {
+    $url = 'https://vpic.nhtsa.dot.gov/api/vehicles/decodevinvaluesextended/' . urlencode($vin) . '?format=json';
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'MotorLink-VIN/2.0');
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if (!empty($error)) {
+        throw new Exception('NHTSA request failed: ' . $error);
+    }
+
+    if ($httpCode !== 200 || empty($response)) {
+        throw new Exception('NHTSA returned HTTP ' . $httpCode);
+    }
+
+    $data = json_decode($response, true);
+    if (!is_array($data) || empty($data['Results']) || !is_array($data['Results'])) {
+        throw new Exception('NHTSA returned malformed data');
+    }
+
+    return $data['Results'][0] ?? [];
+}
+
+function normalizeVinDetails($vin, $raw) {
+    $vehicle = [
+        'vin' => $vin,
+        'make' => vinField($raw, 'Make'),
+        'model' => vinField($raw, 'Model'),
+        'year' => vinField($raw, 'ModelYear'),
+        'trim' => vinField($raw, 'Trim'),
+        'series' => vinField($raw, 'Series'),
+        'body_class' => vinField($raw, 'BodyClass'),
+        'vehicle_type' => vinField($raw, 'VehicleType'),
+        'manufacturer' => vinField($raw, 'Manufacturer'),
+        'plant_country' => vinField($raw, 'PlantCountry'),
+        'plant_city' => vinField($raw, 'PlantCity'),
+        'engine_cylinders' => vinField($raw, 'EngineCylinders'),
+        'engine_displacement_l' => vinField($raw, 'DisplacementL'),
+        'fuel_type' => vinField($raw, 'FuelTypePrimary'),
+        'drive_type' => vinField($raw, 'DriveType'),
+        'transmission_style' => vinField($raw, 'TransmissionStyle'),
+        'transmission_speeds' => vinField($raw, 'TransmissionSpeeds'),
+        'doors' => vinField($raw, 'Doors'),
+        'gvwr' => vinField($raw, 'GVWR')
+    ];
+
+    return [
+        'vehicle' => $vehicle,
+        'meta' => [
+            'provider' => 'NHTSA vPIC',
+            'provider_url' => 'https://vpic.nhtsa.dot.gov/api/',
+            'timestamp' => date('c')
+        ]
+    ];
+}
+
 function getNhtsaData($db) {
-    $endpoint = $_GET['endpoint'] ?? 'makes'; // makes, models, years, specs, decode
-    $vin = $_GET['vin'] ?? '';
-    $make = $_GET['make'] ?? '';
-    $model = $_GET['model'] ?? '';
-    $year = $_GET['year'] ?? '';
-    
-    // Handle VIN decoding endpoint
-    if ($endpoint === 'decode' || !empty($vin)) {
-        if (empty($vin) || strlen($vin) !== 17) {
-            sendError('Valid 17-character VIN required', 400);
-        }
-        
-        // NHTSA VIN Decode endpoint - returns comprehensive vehicle information
-        $url = 'https://vpic.nhtsa.dot.gov/api/vehicles/decodevin/' . urlencode($vin) . '?format=json';
-        
-        try {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'MotorLink/1.0');
-            
-            $response = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $error = curl_error($ch);
-            curl_close($ch);
-            
-            if ($error) {
-                error_log("NHTSA VIN decode error: " . $error);
-                sendError('VIN decode error: ' . $error, 500);
-            }
-            
-            if ($httpCode !== 200) {
-                error_log("NHTSA VIN decode returned HTTP " . $httpCode . " for VIN: " . $vin);
-                sendError('VIN decode failed. HTTP ' . $httpCode, $httpCode);
-            }
-            
-            $data = json_decode($response, true);
-            
-            if ($data === null || !isset($data['Results']) || !is_array($data['Results'])) {
-                error_log("NHTSA VIN decode returned invalid JSON");
-                sendError('Invalid response from NHTSA', 500);
-            }
-            
-            // Convert NHTSA Results array (Variable/Value pairs) to associative array
-            // NHTSA returns: {Results: [{Variable: "Make", Value: "TOYOTA"}, ...]}
-            $decodedData = [];
-            foreach ($data['Results'] as $result) {
-                if (isset($result['Variable']) && isset($result['Value'])) {
-                    $variable = $result['Variable'];
-                    $value = $result['Value'];
-                    // Only include fields with actual values (exclude empty, null, "Not Applicable")
-                    if ($value !== null && $value !== '' && $value !== 'Not Applicable' && $value !== 'Not Applicable.') {
-                        $decodedData[$variable] = $value;
-                    }
-                }
-            }
-            
-            // Add the raw results array as well for comprehensive access
-            $decodedData['_raw_results'] = $data['Results'];
-            $decodedData['vin'] = $vin;
-            
-            // Return ALL available data from NHTSA
-            echo json_encode($decodedData, JSON_PRETTY_PRINT);
-            exit();
-        } catch (Exception $e) {
-            error_log("NHTSA VIN decode exception: " . $e->getMessage());
-            sendError('VIN decode failed: ' . $e->getMessage(), 500);
-        }
+    $endpoint = $_GET['endpoint'] ?? 'decode';
+    $vin = strtoupper(trim((string)($_GET['vin'] ?? '')));
+
+    if ($endpoint !== 'decode') {
+        sendError('Only decode endpoint is supported for VIN middleware', 400);
     }
-    
-    // NHTSA base URL
-    $baseUrl = 'https://vpic.nhtsa.dot.gov/api/vehicles';
-    
-    // Build URL based on endpoint
-    $url = '';
-    
-    switch ($endpoint) {
-        case 'makes':
-            // Get all makes for a specific year (use current year)
-            $currentYear = date('Y');
-            $url = $baseUrl . '/GetMakesForVehicleType/car?format=json';
-            break;
-            
-        case 'models':
-            // Get models for a make and year
-            if (empty($make)) {
-                sendError('Make parameter required for models endpoint', 400);
-            }
-            $yearParam = $year ? $year : date('Y');
-            $url = $baseUrl . '/GetModelsForMake/' . urlencode($make) . '?format=json';
-            if ($year) {
-                $url .= '&year=' . urlencode($year);
-            }
-            break;
-            
-        case 'years':
-            // Get available years for a make/model
-            if (empty($make) || empty($model)) {
-                sendError('Make and model parameters required for years endpoint', 400);
-            }
-            // NHTSA doesn't have a direct years endpoint, return common years
-            $currentYear = (int)date('Y');
-            $years = [];
-            for ($y = $currentYear; $y >= 1990; $y--) {
-                $years[] = $y;
-            }
-            echo json_encode(['Years' => $years]);
-            exit();
-            
-        case 'specs':
-            // NHTSA doesn't provide detailed specs directly, but we can use VIN decoding
-            // For now, return empty and suggest using VIN decoder
-            echo json_encode(['Trims' => []]);
-            exit();
-            
-        default:
-            sendError('Invalid endpoint. Use: makes, models, years, specs, or decode (with vin parameter)', 400);
+
+    if (!preg_match('/^[A-HJ-NPR-Z0-9]{17}$/', $vin)) {
+        sendError('Valid 17-character VIN required', 400);
     }
-    
+
     try {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-        curl_setopt($ch, CURLOPT_USERAGENT, 'MotorLink/1.0');
-        
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
-        
-        if ($error) {
-            error_log("NHTSA error: " . $error . " for URL: " . $url);
-            sendError('NHTSA error: ' . $error, 500);
+        $raw = fetchNhtsaVinValues($vin);
+        $decoded = normalizeVinDetails($vin, $raw);
+
+        if (($decoded['vehicle']['make'] ?? 'N/A') === 'N/A' || ($decoded['vehicle']['model'] ?? 'N/A') === 'N/A') {
+            sendError('VIN could not be decoded. Please verify the VIN and try again.', 422);
         }
-        
-        if ($httpCode !== 200) {
-            error_log("NHTSA returned HTTP " . $httpCode . " for URL: " . $url);
-            echo json_encode([]);
-            exit();
-        }
-        
-        $data = json_decode($response, true);
-        
-        if ($data === null) {
-            error_log("NHTSA returned invalid JSON: " . substr($response, 0, 200));
-            echo json_encode([]);
-            exit();
-        }
-        
-        if ($endpoint === 'makes') {
-            // Format makes response - NHTSA returns {Results: [{Make_ID, Make_Name}, ...]}
-            $formatted = [];
-            $results = isset($data['Results']) ? $data['Results'] : [];
-            
-            if (is_array($results)) {
-                foreach ($results as $makeItem) {
-                    if (is_array($makeItem) && isset($makeItem['Make_Name'])) {
-                        $formatted[] = [
-                            'make' => $makeItem['Make_Name'],
-                            'make_display' => $makeItem['Make_Name'],
-                            'make_id' => isset($makeItem['Make_ID']) ? (string)$makeItem['Make_ID'] : strtolower(str_replace([' ', '-'], '_', $makeItem['Make_Name']))
-                        ];
-                    }
-                }
-            }
-            echo json_encode(['Makes' => $formatted]);
-        } else if ($endpoint === 'models') {
-            // Format models response - NHTSA returns {Results: [{Make_ID, Make_Name, Model_ID, Model_Name}, ...]}
-            $formatted = [];
-            $results = isset($data['Results']) ? $data['Results'] : [];
-            
-            if (is_array($results)) {
-                foreach ($results as $modelItem) {
-                    if (is_array($modelItem) && isset($modelItem['Model_Name'])) {
-                        $formatted[] = [
-                            'model_name' => $modelItem['Model_Name'],
-                            'model_id' => isset($modelItem['Model_ID']) ? (string)$modelItem['Model_ID'] : strtolower(str_replace([' ', '-'], '_', $modelItem['Model_Name'])),
-                            'model_year' => $year ? (string)$year : '',
-                            'make' => $make
-                        ];
-                    }
-                }
-            }
-            echo json_encode(['Models' => $formatted]);
-        }
-        
-        exit();
+
+        sendSuccess($decoded);
     } catch (Exception $e) {
-        error_log("NHTSA proxy error: " . $e->getMessage());
-        sendError('Failed to fetch from NHTSA', 500);
+        error_log('VIN middleware decode error: ' . $e->getMessage());
+        sendError('VIN decode temporarily unavailable. Please try again.', 503);
     }
 }

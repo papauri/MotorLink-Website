@@ -916,6 +916,7 @@ try {
         case 'get_public_client_config': getPublicClientConfig($db); break;
         case 'get_ai_chat_status': getAIChatStatus($db); break;
         case 'verify_listing_email': verifyListingEmail($db); break;
+        case 'nhtsa': require_once __DIR__ . '/vin-decoder-api.php'; getNhtsaData($db); break;
 
         // ====================================================================
         // AUTHENTICATION ENDPOINTS

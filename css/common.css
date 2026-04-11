@@ -1,6 +1,8 @@
 /* MotorLink Malawi - Common Foundation Styles */
 /* This file contains ONLY the essential shared styles needed by all pages */
 
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap');
+
 * {
     margin: 0;
     padding: 0;
@@ -18,6 +20,8 @@ html, body {
 }
 
 :root {
+    --font-primary: 'Manrope', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+
     /* Professional Color System */
     --primary-color: #00c853;  /* Main primary color - used throughout site */
     --primary-green: #00c853;
@@ -104,18 +108,35 @@ html {
 }
 
 body {
-    font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, sans-serif;
+    font-family: var(--font-primary);
     line-height: 1.6;
     color: var(--text-primary);
     background: var(--bg-light);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-kerning: normal;
     padding-top: 70px; /* Add space for fixed header */
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     margin: 0;
     padding-bottom: 0;
+}
+
+button,
+input,
+select,
+textarea {
+    font-family: var(--font-primary);
+}
+
+/* Global anti-blur safety: prevent accidental frosted overlays/site fogging. */
+*,
+*::before,
+*::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
 }
 
 /* Ensure main content area can grow to fill space */

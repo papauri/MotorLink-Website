@@ -42,6 +42,18 @@ function initMobileMenu() {
     const nav = document.getElementById('mainNav');
     const userMenu = document.getElementById('userMenu');
 
+    const cleanupTransientOverlayState = () => {
+        const staleBackdrop = document.getElementById('menu-backdrop');
+        if (staleBackdrop) {
+            staleBackdrop.remove();
+        }
+        document.body.style.overflow = '';
+    };
+
+    // Defensive cleanup for navigation restores/login redirects.
+    cleanupTransientOverlayState();
+    window.addEventListener('pageshow', cleanupTransientOverlayState);
+
     if (!toggle || !nav) {
         return;
     }
