@@ -20,14 +20,46 @@ if (!is_dir(__DIR__ . '/logs')) {
 
 // Headers for CORS and JSON responses
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
+
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$allowedOrigins = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://promanaged-it.com',
+    'https://www.promanaged-it.com'
+];
+
+if ($origin && in_array($origin, $allowedOrigins, true)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+    header('Access-Control-Allow-Credentials: true');
+    header('Vary: Origin');
+}
+
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 // Handle preflight OPTIONS request
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
+}
+
+// Start session early with cookie params matching admin-api.php so the
+// shared PHP session created at login is readable here.
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    $isHTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? null) == 443)
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path'     => '/',
+        'domain'   => '',
+        'secure'   => $isHTTPS,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
 }
 
 // Database Configuration
@@ -125,11 +157,6 @@ define('DB_NAME', $runtimeDb['name']);
 define('SITE_NAME', 'MotorLink Malawi');
 define('SITE_URL', 'https://promanaged-it.com/motorlink');
 
-// Start session if not already started
-if (session_status() == PHP_SESSION_NONE) {
-    session_start();
-}
-
 /**
  * Database Connection
  */
@@ -211,6 +238,59 @@ function getDB() {
     }
 }
 
+function getCurrentOnboardingAdmin($db) {
+    $adminId = (int)($_SESSION['admin_id'] ?? 0);
+    $loggedIn = !empty($_SESSION['admin_logged_in']);
+
+    if (!$loggedIn || $adminId <= 0) {
+        return null;
+    }
+
+    $stmt = $db->prepare("SELECT id, full_name, email, role, status FROM admin_users WHERE id = ? LIMIT 1");
+    $stmt->execute([$adminId]);
+    $admin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$admin || ($admin['status'] ?? '') !== 'active') {
+        return null;
+    }
+
+    $_SESSION['admin_role'] = $admin['role'] ?? 'admin';
+    $_SESSION['admin_name'] = $admin['full_name'] ?? ($_SESSION['admin_name'] ?? '');
+    $_SESSION['admin_email'] = $admin['email'] ?? ($_SESSION['admin_email'] ?? '');
+
+    return $admin;
+}
+
+function requireOnboardingManagerAccess($db) {
+    $admin = getCurrentOnboardingAdmin($db);
+    $allowedRoles = ['super_admin', 'admin', 'onboarding_manager'];
+
+    if (!$admin || !in_array($admin['role'] ?? '', $allowedRoles, true)) {
+        sendError('Onboarding manager access required', 403);
+    }
+
+    return $admin;
+}
+
+function handleCheckOnboardingAuth($db) {
+    $admin = getCurrentOnboardingAdmin($db);
+    $allowedRoles = ['super_admin', 'admin', 'onboarding_manager'];
+
+    if (!$admin || !in_array($admin['role'] ?? '', $allowedRoles, true)) {
+        sendSuccess(['authenticated' => false]);
+    }
+
+    sendSuccess([
+        'authenticated' => true,
+        'admin' => [
+            'id' => (int)$admin['id'],
+            'name' => $admin['full_name'],
+            'email' => $admin['email'],
+            'role' => $admin['role']
+        ]
+    ]);
+}
+
 /**
  * Validation helper functions
  */
@@ -244,11 +324,20 @@ function validatePassword($password) {
     if (empty($password)) {
         return ['valid' => false, 'message' => 'Password is required'];
     }
-    if (strlen($password) < 6) {
-        return ['valid' => false, 'message' => 'Password must be at least 6 characters long'];
+    if (strlen($password) < 8) {
+        return ['valid' => false, 'message' => 'Password must be at least 8 characters long'];
     }
     if (strlen($password) > 128) {
         return ['valid' => false, 'message' => 'Password is too long (max 128 characters)'];
+    }
+    if (!preg_match('/[A-Z]/', $password)) {
+        return ['valid' => false, 'message' => 'Password must include at least one uppercase letter'];
+    }
+    if (!preg_match('/[0-9]/', $password)) {
+        return ['valid' => false, 'message' => 'Password must include at least one number'];
+    }
+    if (!preg_match('/[^A-Za-z0-9]/', $password)) {
+        return ['valid' => false, 'message' => 'Password must include at least one special character'];
     }
     return ['valid' => true];
 }
@@ -359,13 +448,39 @@ function businessExists($db, $type, $businessName, $email, $phone) {
 }
 
 /**
- * Log API activity
+ * Log API activity to file
  */
 function logActivity($message) {
     $logFile = __DIR__ . '/logs/onboarding_activity.log';
     $timestamp = date('Y-m-d H:i:s');
     $logMessage = "[$timestamp] $message\n";
     file_put_contents($logFile, $logMessage, FILE_APPEND | LOCK_EX);
+}
+
+/**
+ * Write a structured entry to the shared admin activity_logs table.
+ * Uses the admin_id stored in the session by admin-api.php on login.
+ */
+function logAdminActivityLog($db, $actionType, $description, $details = null) {
+    $adminId = isset($_SESSION['admin_id']) ? (int)$_SESSION['admin_id'] : null;
+    if (!$adminId) return; // no-op when no session (shouldn't happen after auth gate)
+    try {
+        $stmt = $db->prepare(
+            "INSERT INTO activity_logs
+                (admin_id, action_type, action_description, details, ip_address, user_agent, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, NOW())"
+        );
+        $stmt->execute([
+            $adminId,
+            $actionType,
+            $description,
+            $details,
+            $_SERVER['REMOTE_ADDR'] ?? null,
+            $_SERVER['HTTP_USER_AGENT'] ?? null,
+        ]);
+    } catch (Exception $e) {
+        error_log("logAdminActivityLog error: " . $e->getMessage());
+    }
 }
 
 /**
@@ -714,9 +829,16 @@ try {
     if (empty($action)) {
         sendError('No action specified', 400);
     }
+
+    if ($action !== 'check_auth') {
+        requireOnboardingManagerAccess($db);
+    }
     
     // Route to appropriate handler
     switch ($action) {
+        case 'check_auth':
+            handleCheckOnboardingAuth($db);
+            break;
         case 'locations': 
             getLocations($db); 
             break;
@@ -1367,6 +1489,10 @@ function addCarHireCompany($db) {
         
         // Log successful creation
         logActivity("Car hire company created successfully: Company ID=$companyId, User ID=$userId, Business={$input['business_name']}");
+        logAdminActivityLog($db, 'onboarding_car_hire',
+            "Onboarded car hire company: {$input['business_name']}",
+            "Company ID: $companyId | User ID: $userId | Ref: CH" . str_pad($companyId, 5, '0', STR_PAD_LEFT)
+        );
 
         $notifications = sendOnboardingWelcomeNotifications($db, [
             'email' => $input['email'],
@@ -1678,6 +1804,10 @@ function addGarage($db) {
 
         // Log successful creation
         logActivity("Garage created successfully: Garage ID=$garageId, User ID=$userId, Business={$input['name']}");
+        logAdminActivityLog($db, 'onboarding_garage',
+            "Onboarded garage: {$input['name']}",
+            "Garage ID: $garageId | User ID: $userId | Ref: GR" . str_pad($garageId, 5, '0', STR_PAD_LEFT)
+        );
 
         $notifications = sendOnboardingWelcomeNotifications($db, [
             'email' => $input['email'],
@@ -1966,6 +2096,10 @@ function addCarDealer($db) {
         
         // Log successful creation
         logActivity("Car dealer created successfully: Dealer ID=$dealerId, User ID=$userId, Business={$input['business_name']}");
+        logAdminActivityLog($db, 'onboarding_dealer',
+            "Onboarded car dealer: {$input['business_name']}",
+            "Dealer ID: $dealerId | User ID: $userId | Ref: DL" . str_pad($dealerId, 5, '0', STR_PAD_LEFT)
+        );
 
         $notifications = sendOnboardingWelcomeNotifications($db, [
             'email' => $input['email'],

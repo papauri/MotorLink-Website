@@ -13,12 +13,22 @@ document.addEventListener('DOMContentLoaded', function() {
     const nextBtnIcon = document.getElementById('nextBtnIcon');
     const successMessage = document.getElementById('successMessage');
     const authLinks = document.getElementById('authLinks');
+    const businessOnboardingBox = document.getElementById('businessOnboardingBox');
+    const businessOnboardingPhone = document.getElementById('businessOnboardingPhone');
+    const businessOnboardingWhatsapp = document.getElementById('businessOnboardingWhatsapp');
+    const businessOnboardingEmail = document.getElementById('businessOnboardingEmail');
+    const businessOnboardingNote = document.getElementById('businessOnboardingNote');
     
     let currentStep = 1;
     const totalSteps = 3;
     
     // Get API URL from config
     const apiUrl = window.CONFIG?.API_URL || 'http://127.0.0.1:8000/proxy.php';
+    const businessContactDefaults = {
+        phone: '+265 991 234 567',
+        email: 'support@motorlink.mw',
+        whatsapp: '+265 991 234 567'
+    };
     
     // Validation state
     const validationState = {
@@ -35,15 +45,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // User type selection
     const userTypeCards = document.querySelectorAll('.user-type-card');
     const userTypeInput = document.getElementById('userType');
+
+    loadBusinessOnboardingContact();
     
     userTypeCards.forEach(card => {
         card.addEventListener('click', function() {
             const type = this.dataset.type;
             
             if (this.classList.contains('disabled')) {
-                if (confirm('Business accounts require our specialized onboarding process.\n\nWould you like to go to the Business Onboarding Portal now?')) {
-                    window.location.href = 'onboarding/onboarding.html';
-                }
+                showBusinessOnboardingContact(type);
                 return;
             }
             
@@ -248,6 +258,79 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         updateSubmitButton();
+    }
+
+    async function loadBusinessOnboardingContact() {
+        try {
+            const response = await fetch(`${apiUrl}?action=site_settings&group=contact`, {
+                ...(window.CONFIG?.USE_CREDENTIALS && { credentials: 'include' })
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to load onboarding contact settings (HTTP ${response.status})`);
+            }
+
+            const data = await response.json();
+            const contact = data?.settings?.contact || {};
+
+            applyBusinessOnboardingContact({
+                phone: contact.contact_phone || businessContactDefaults.phone,
+                email: contact.contact_support_email || contact.contact_email || businessContactDefaults.email,
+                whatsapp: contact.contact_whatsapp || contact.contact_phone || businessContactDefaults.whatsapp
+            });
+        } catch (error) {
+            applyBusinessOnboardingContact(businessContactDefaults);
+        }
+    }
+
+    function applyBusinessOnboardingContact(contact) {
+        const phone = (contact.phone || businessContactDefaults.phone).trim();
+        const email = (contact.email || businessContactDefaults.email).trim();
+        const whatsapp = (contact.whatsapp || phone || businessContactDefaults.whatsapp).trim();
+
+        if (businessOnboardingPhone) {
+            businessOnboardingPhone.href = `tel:${toTelephoneHref(phone)}`;
+            businessOnboardingPhone.querySelector('span').textContent = `Call ${phone}`;
+        }
+
+        if (businessOnboardingWhatsapp) {
+            businessOnboardingWhatsapp.href = `https://wa.me/${toWhatsappHref(whatsapp)}`;
+            businessOnboardingWhatsapp.querySelector('span').textContent = `WhatsApp ${whatsapp}`;
+        }
+
+        if (businessOnboardingEmail) {
+            businessOnboardingEmail.href = `mailto:${email}`;
+            businessOnboardingEmail.querySelector('span').textContent = `Email ${email}`;
+        }
+    }
+
+    function showBusinessOnboardingContact(type) {
+        const labels = {
+            dealer: 'Dealer',
+            garage: 'Garage',
+            car_hire: 'Car hire'
+        };
+
+        if (businessOnboardingNote) {
+            businessOnboardingNote.textContent = `${labels[type] || 'Business'} onboarding is handled by the MotorLink team. Use the contact options above and we will take care of approval and setup.`;
+        }
+
+        if (businessOnboardingBox) {
+            businessOnboardingBox.classList.add('is-highlighted');
+            businessOnboardingBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            window.setTimeout(() => {
+                businessOnboardingBox.classList.remove('is-highlighted');
+            }, 2200);
+        }
+    }
+
+    function toTelephoneHref(value) {
+        return value.replace(/[^\d+]/g, '');
+    }
+
+    function toWhatsappHref(value) {
+        return value.replace(/\D/g, '');
     }
     
     // Setup real-time validation

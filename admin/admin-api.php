@@ -477,6 +477,7 @@ function syncAdminSession() {
         $_SESSION['admin_name'] = $_SESSION['full_name'] ?? 'Admin';
         $_SESSION['admin_email'] = $_SESSION['email'] ?? '';
         $_SESSION['admin_id'] = $_SESSION['user_id'];
+        $_SESSION['admin_role'] = $_SESSION['admin_role'] ?? 'admin';
     }
 }
 
@@ -573,7 +574,8 @@ function handleCheckAdminAuth($db) {
             'authenticated' => true,
             'admin' => [
                 'name' => $_SESSION['admin_name'] ?? 'Admin',
-                'email' => $_SESSION['admin_email'] ?? ''
+                'email' => $_SESSION['admin_email'] ?? '',
+                'role' => $_SESSION['admin_role'] ?? 'admin'
             ]
         ]);
         exit();
@@ -661,6 +663,7 @@ function handleAdminLogin($db) {
                 $_SESSION['admin_name'] = $admin['full_name'];
                 $_SESSION['admin_email'] = $admin['email'];
                 $_SESSION['admin_logged_in'] = true;
+                $_SESSION['admin_role'] = $admin['role'] ?? 'admin';
                 $_SESSION['last_activity'] = time();
                 
                 // Verify session was set
@@ -670,7 +673,8 @@ function handleAdminLogin($db) {
                         'message' => 'Login successful',
                         'admin' => [
                             'name' => $admin['full_name'],
-                            'email' => $admin['email']
+                            'email' => $admin['email'],
+                            'role' => $admin['role'] ?? 'admin'
                         ]
                     ]);
                     exit();
@@ -3581,9 +3585,16 @@ function handleAddUser($db) {
 }
 
 function handleAddAdmin($db) {
-    requireAdmin();
+    requireSuperAdmin($db);
 
     $input = json_decode(file_get_contents('php://input'), true);
+    $allowedRoles = ['moderator', 'onboarding_manager', 'admin', 'super_admin'];
+    $requestedRole = trim((string)($input['role'] ?? 'moderator'));
+
+    if (!in_array($requestedRole, $allowedRoles, true)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid admin role']);
+        return;
+    }
 
     try {
         // Check if email already exists
@@ -3607,7 +3618,7 @@ function handleAddAdmin($db) {
             $input['email'],
             $passwordHash,
             $input['full_name'],
-            $input['role'] ?? 'moderator',
+            $requestedRole,
             $input['status'] ?? 'active'
         ]);
 

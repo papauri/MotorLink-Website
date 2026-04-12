@@ -1,5 +1,30 @@
 // MotorLink Malawi Business Onboarding
 
+// Derives the admin API URL from the same environment logic used by admin-script.js
+const getAdminAPIUrl = () => {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    const checkIsLocal = hostname === 'localhost' ||
+                         hostname === '127.0.0.1' ||
+                         protocol === 'file:' ||
+                         hostname.startsWith('192.168.') ||
+                         hostname.startsWith('10.') ||
+                         /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname);
+    const checkIsProduction = !checkIsLocal && hostname !== '' &&
+                               !hostname.includes('localhost') &&
+                               !hostname.includes('127.0.0.1');
+    if (checkIsProduction) {
+        return '/motorlink/admin/admin-api.php';
+    }
+    if (typeof CONFIG !== 'undefined' && CONFIG.MODE === 'UAT') {
+        if (checkIsLocal) {
+            return `${window.location.origin}/proxy.php?endpoint=admin-api`;
+        }
+        return '/motorlink/admin/admin-api.php';
+    }
+    return 'admin-api.php';
+};
+
 // API URL configuration - same pattern as admin and main website
 const getOnboardingAPIUrl = () => {
     // Check if running on localhost
@@ -31,9 +56,9 @@ const getOnboardingAPIUrl = () => {
     if (typeof CONFIG !== 'undefined') {
         if (CONFIG.MODE === 'UAT') {
             if (checkIsLocal) {
-                // Local development: use local onboarding API (connects to remote DB)
-                // Use 127.0.0.1 instead of localhost for VPN compatibility
-                const localHost = hostname === 'localhost' ? '127.0.0.1' : hostname;
+                // Local development: keep the same host as the page origin to avoid CORS
+                // issues when credentials are included (localhost vs 127.0.0.1 mismatch).
+                const localHost = hostname;
                 const currentPort = port || '8000';
                 return `${protocol}//${localHost}:${currentPort}/onboarding/api-onboarding.php`;
             } else {
@@ -48,7 +73,7 @@ const getOnboardingAPIUrl = () => {
     
     // Fallback: auto-detect based on hostname
     if (checkIsLocal) {
-        const localHost = hostname === 'localhost' ? '127.0.0.1' : hostname;
+        const localHost = hostname;
         const currentPort = port || '8000';
         return `${protocol}//${localHost}:${currentPort}/onboarding/api-onboarding.php`;
     }
@@ -63,6 +88,7 @@ class OnboardingForm {
         this.totalSteps = 5;
         this.businessType = '';
         this.formData = {};
+        this.currentAdmin = null;
         this.duplicateChecked = false;
         this.duplicateExists = false;
         this.duplicateApproved = false;
@@ -85,16 +111,132 @@ class OnboardingForm {
         return null;
     }
 
-    init() {
+    async init() {
         if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) {
             if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) console.log('Initializing onboarding form...');
             if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) console.log('API URL:', this.API_BASE_URL);
         }
+
+        const hasAccess = await this.verifyPortalAccess();
+        if (!hasAccess) {
+            return;
+        }
+
         this.setupEventListeners();
         this.setupQuickActions();
         this.loadInitialData();
         this.restoreProgress(); // Try to restore saved progress
         this.showStep(this.currentStep);
+    }
+
+    async verifyPortalAccess() {
+        const allowedRoles = ['super_admin', 'admin', 'onboarding_manager'];
+        const adminApiUrl = getAdminAPIUrl();
+        const sep = adminApiUrl.includes('?') ? '&' : '?';
+
+        try {
+            const response = await fetch(`${adminApiUrl}${sep}action=check_admin_auth`, {
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Auth check failed with HTTP ${response.status}`);
+            }
+
+            const data = await response.json();
+            if (data.success && data.authenticated && allowedRoles.includes(data.admin?.role)) {
+                this.currentAdmin = data.admin || null;
+                // Show admin badge in header
+                const badge = document.getElementById('onboardingAdminBadge');
+                const nameEl = document.getElementById('onboardingAdminName');
+                const logoutBtn = document.getElementById('onboardingLogoutBtn');
+                if (badge && nameEl && data.admin?.name) {
+                    nameEl.textContent = data.admin.name;
+                    badge.style.display = '';
+                }
+                if (logoutBtn) {
+                    logoutBtn.style.display = 'inline-flex';
+                }
+                return true;
+            }
+
+            this.renderAccessDenied();
+            return false;
+        } catch (error) {
+            this.renderAccessDenied('We could not verify onboarding access right now. Please sign in with an internal onboarding or admin account.');
+            return false;
+        }
+    }
+
+    validatePasswordStrength(password) {
+        if (!password || password.length < 8) {
+            return 'Password must be at least 8 characters long.';
+        }
+        if (!/[A-Z]/.test(password)) {
+            return 'Password must include at least one uppercase letter.';
+        }
+        if (!/[0-9]/.test(password)) {
+            return 'Password must include at least one number.';
+        }
+        if (!/[^A-Za-z0-9]/.test(password)) {
+            return 'Password must include at least one special character (e.g. !@#$%).';
+        }
+        return null; // valid
+    }
+
+    renderAccessDenied(message = 'This portal is restricted to internal onboarding managers and administrators.') {
+        const container = document.querySelector('.form-container');
+        if (!container) {
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="form-step active" style="display:block; text-align:center; padding:48px 24px;">
+                <div style="width:72px; height:72px; border-radius:50%; background:#ecfdf5; color:#0f6d37; display:flex; align-items:center; justify-content:center; margin:0 auto 20px auto; font-size:30px;">
+                    <i class="fas fa-user-lock"></i>
+                </div>
+                <h2 style="margin-bottom:12px;">Restricted Portal</h2>
+                <p style="max-width:560px; margin:0 auto 24px auto; color:#5f6b66; line-height:1.6;">${message}</p>
+                <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                    <a class="btn btn-primary" href="../admin/admin.html">
+                        <i class="fas fa-sign-in-alt"></i> Go to Admin Login
+                    </a>
+                    <a class="btn btn-secondary" href="../register.html">
+                        <i class="fas fa-arrow-left"></i> Back to Register
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+
+    async logoutAndKillSession() {
+        const adminApiUrl = getAdminAPIUrl();
+        const sep = adminApiUrl.includes('?') ? '&' : '?';
+        const logoutBtn = document.getElementById('onboardingLogoutBtn');
+        const originalHtml = logoutBtn ? logoutBtn.innerHTML : '';
+
+        if (logoutBtn) {
+            logoutBtn.disabled = true;
+            logoutBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing out...';
+        }
+
+        try {
+            await fetch(`${adminApiUrl}${sep}action=admin_logout`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+        } catch (error) {
+            // Even if request fails, continue redirect to avoid a stuck UI.
+        }
+
+        this.currentAdmin = null;
+        this.clearProgress();
+        window.location.href = '../admin/admin.html';
+
+        if (logoutBtn) {
+            logoutBtn.disabled = false;
+            logoutBtn.innerHTML = originalHtml;
+        }
     }
     
     // Save form progress to localStorage
@@ -237,6 +379,15 @@ class OnboardingForm {
             submitBtn.addEventListener('click', (e) => {
                 e.preventDefault();
                 this.submitForm();
+            });
+        }
+
+        const logoutBtn = document.getElementById('onboardingLogoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                const confirmed = confirm('Sign out and end this onboarding session?');
+                if (!confirmed) return;
+                await this.logoutAndKillSession();
             });
         }
 
@@ -950,10 +1101,10 @@ class OnboardingForm {
             if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) console.log('Step 5 validation - Confirmation valid:', isValid);
         }
         
-        // Update next button state
+        // Keep navigation flexible after step 1.
         const nextBtn = document.getElementById('nextBtn');
         if (nextBtn) {
-            nextBtn.disabled = !isValid;
+            nextBtn.disabled = this.currentStep === 1 ? !isValid : false;
             if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) console.log('Next button disabled:', nextBtn.disabled);
         }
         
@@ -1144,6 +1295,7 @@ class OnboardingForm {
 
             const response = await fetch(`${this.API_BASE_URL}?action=check_email_phone`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -1213,6 +1365,7 @@ class OnboardingForm {
         try {
             const response = await fetch(`${this.API_BASE_URL}?action=check_business_name`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -1268,7 +1421,9 @@ class OnboardingForm {
     async loadLocations() {
         try {
             if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) console.log('Loading locations from:', `${this.API_BASE_URL}?action=locations`);
-            const response = await fetch(`${this.API_BASE_URL}?action=locations`);
+            const response = await fetch(`${this.API_BASE_URL}?action=locations`, {
+                credentials: 'include'
+            });
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1279,6 +1434,7 @@ class OnboardingForm {
             if (data.success && data.locations) {
                 const locationSelect = document.getElementById('location');
                 if (locationSelect) {
+                    const previousValue = locationSelect.value;
                     locationSelect.innerHTML = '<option value="">Select City/Town</option>';
                     
                     data.locations.forEach(location => {
@@ -1287,6 +1443,10 @@ class OnboardingForm {
                         option.textContent = `${location.name}, ${location.region}`;
                         locationSelect.appendChild(option);
                     });
+
+                    if (previousValue) {
+                        locationSelect.value = String(previousValue);
+                    }
                 }
             } else {
                 throw new Error(data.message || 'Failed to load locations');
@@ -1299,7 +1459,9 @@ class OnboardingForm {
     async loadMakes() {
         try {
             if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) console.log('Loading makes from:', `${this.API_BASE_URL}?action=get_makes`);
-            const response = await fetch(`${this.API_BASE_URL}?action=get_makes`);
+            const response = await fetch(`${this.API_BASE_URL}?action=get_makes`, {
+                credentials: 'include'
+            });
             
             if (!response.ok) {
                 throw new Error('Endpoint not available');
@@ -1346,7 +1508,9 @@ class OnboardingForm {
     async loadServices() {
         try {
             if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) console.log('Loading services from:', `${this.API_BASE_URL}?action=get_services`);
-            const response = await fetch(`${this.API_BASE_URL}?action=get_services`);
+            const response = await fetch(`${this.API_BASE_URL}?action=get_services`, {
+                credentials: 'include'
+            });
             
             if (!response.ok) {
                 throw new Error('Endpoint not available');
@@ -1378,7 +1542,9 @@ class OnboardingForm {
     async loadVehicleTypes() {
         try {
             if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) console.log('Loading vehicle types from:', `${this.API_BASE_URL}?action=get_vehicle_types`);
-            const response = await fetch(`${this.API_BASE_URL}?action=get_vehicle_types`);
+            const response = await fetch(`${this.API_BASE_URL}?action=get_vehicle_types`, {
+                credentials: 'include'
+            });
             
             if (!response.ok) {
                 throw new Error('Endpoint not available');
@@ -1418,6 +1584,7 @@ class OnboardingForm {
         
         const locationSelect = document.getElementById('location');
         if (locationSelect) {
+            const previousValue = locationSelect.value;
             locationSelect.innerHTML = '<option value="">Select City/Town</option>';
             
             fallbackLocations.forEach(location => {
@@ -1426,6 +1593,10 @@ class OnboardingForm {
                 option.textContent = `${location.name}, ${location.region}`;
                 locationSelect.appendChild(option);
             });
+
+            if (previousValue) {
+                locationSelect.value = String(previousValue);
+            }
         }
     }
 
@@ -1530,7 +1701,7 @@ class OnboardingForm {
         const locationSelect = document.getElementById('location');
         if (locationSelect) {
             const selectedOption = locationSelect.options[locationSelect.selectedIndex];
-            document.getElementById('reviewLocation').textContent = selectedOption.text || 'Not selected';
+            document.getElementById('reviewLocation').textContent = selectedOption?.text || 'Not selected';
         }
 
         // Social Media Links
@@ -1680,6 +1851,7 @@ class OnboardingForm {
             
             const response = await fetch(`${this.API_BASE_URL}?action=check_business`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },
@@ -1749,6 +1921,7 @@ class OnboardingForm {
             try {
                 const response = await fetch(`${this.API_BASE_URL}?action=check_email_phone`, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: {
                         'Content-Type': 'application/json',
                     },
@@ -1852,6 +2025,11 @@ class OnboardingForm {
                 throw new Error('Password is required. Please fill in the login credentials.');
             }
 
+            const pwError = this.validatePasswordStrength(data.password.trim());
+            if (pwError) {
+                throw new Error(pwError);
+            }
+
             // Prepare data based on business type
             const apiData = this.prepareSubmissionData(data);
 
@@ -1868,6 +2046,7 @@ class OnboardingForm {
             
             const response = await fetch(`${this.API_BASE_URL}?action=${endpoint}`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                 },

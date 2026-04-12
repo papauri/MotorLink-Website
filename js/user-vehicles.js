@@ -68,6 +68,7 @@ async function checkAuthForMyVehicles() {
     
     try {
         const response = await fetch(`${CONFIG.API_URL}?action=check_auth`, {
+            headers: { 'X-Skip-Global-Loader': '1' },
             ...(CONFIG.USE_CREDENTIALS && {credentials: 'include'})
         });
         const data = await response.json();
@@ -92,7 +93,8 @@ async function checkAuthForMyVehicles() {
 async function loadUserVehiclesForDisplay() {
     try {
         const response = await fetch(`${CONFIG.API_URL}?action=get_user_vehicles`, {
-            credentials: 'include'
+            credentials: 'include',
+            headers: { 'X-Skip-Global-Loader': '1' }
         });
         const data = await response.json();
         
@@ -226,7 +228,9 @@ async function loadVehicleDetailsForModel(modelId) {
     
     // Check for engine variations
     try {
-        const response = await fetch(`${CONFIG.API_URL}?action=get_model_engine_variations&model_id=${modelId}`);
+        const response = await fetch(`${CONFIG.API_URL}?action=get_model_engine_variations&model_id=${modelId}`, {
+            headers: { 'X-Skip-Global-Loader': '1' }
+        });
         const data = await response.json();
         
         const engineCapacityContainer = document.getElementById('vehicleEngineCapacity').parentElement;
@@ -470,7 +474,9 @@ function loadYearsForModel(modelId) {
 
 async function loadMakes() {
     try {
-        const response = await fetch(`${CONFIG.API_URL}?action=get_makes`);
+        const response = await fetch(`${CONFIG.API_URL}?action=get_makes`, {
+            headers: { 'X-Skip-Global-Loader': '1' }
+        });
         const data = await response.json();
         
         if (data.success && data.makes) {
@@ -507,7 +513,9 @@ async function loadModels(makeId) {
     }
     
     try {
-        const response = await fetch(`${CONFIG.API_URL}?action=get_models&make_id=${makeId}`);
+        const response = await fetch(`${CONFIG.API_URL}?action=get_models&make_id=${makeId}`, {
+            headers: { 'X-Skip-Global-Loader': '1' }
+        });
         const data = await response.json();
         
         if (data.success && data.models) {
@@ -552,6 +560,7 @@ async function loadModels(makeId) {
 async function loadUserVehicles() {
     try {
         const response = await fetch(`${CONFIG.API_URL}?action=get_user_vehicles`, {
+            headers: { 'X-Skip-Global-Loader': '1' },
             ...(CONFIG.USE_CREDENTIALS && {credentials: 'include'})
         });
         

@@ -557,6 +557,7 @@ function showAddAdminModal() {
                             <label for="add-admin-role">Role *</label>
                             <select id="add-admin-role" name="role" required class="form-control">
                                 <option value="moderator">Moderator</option>
+                                <option value="onboarding_manager">Onboarding Manager</option>
                                 <option value="admin">Admin</option>
                                 <option value="super_admin">Super Admin</option>
                             </select>
@@ -575,6 +576,7 @@ function showAddAdminModal() {
                         <i class="fas fa-info-circle"></i>
                         <strong>Roles:</strong><br>
                         <strong>Moderator:</strong> Can review and approve listings<br>
+                        <strong>Onboarding Manager:</strong> Can access the business onboarding portal without full admin rights<br>
                         <strong>Admin:</strong> Full access to manage content<br>
                         <strong>Super Admin:</strong> All permissions including settings
                     </div>

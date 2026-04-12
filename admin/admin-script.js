@@ -128,6 +128,21 @@ class AdminDashboard {
         document.body.style.overflow = '';
     }
 
+    clearBlockingOverlays() {
+        // Clear mobile overlay/scrim state.
+        const overlay = document.getElementById('mobileOverlay');
+        if (overlay) {
+            overlay.classList.remove('active');
+        }
+
+        // Clear any modal that may have remained active due to navigation/session flow.
+        document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+            modal.classList.remove('active');
+        });
+
+        document.body.style.overflow = '';
+    }
+
     async checkLoginStatus() {
         // Always check server-side session first and ONLY trust server
         try {
@@ -159,6 +174,11 @@ class AdminDashboard {
                 localStorage.setItem('admin_email', data.admin.email);
 
                 debugLog('Valid server-side admin session found');
+                // Onboarding managers have no access to the admin dashboard
+                if (data.admin.role === 'onboarding_manager') {
+                    window.location.href = '../onboarding/onboarding.html';
+                    return;
+                }
                 this.showDashboard();
                 return;
             } else {
@@ -188,6 +208,8 @@ class AdminDashboard {
         const loginSection = document.getElementById('loginSection');
         const adminDashboard = document.getElementById('adminDashboard');
 
+        this.clearBlockingOverlays();
+
         if (loginSection) {
             loginSection.style.display = 'flex';
             loginSection.style.visibility = 'visible';
@@ -205,6 +227,8 @@ class AdminDashboard {
 
         const loginSection = document.getElementById('loginSection');
         const adminDashboard = document.getElementById('adminDashboard');
+
+        this.clearBlockingOverlays();
 
         // Completely hide login section
         if (loginSection) {
@@ -1561,7 +1585,7 @@ async loadAdmins() {
         }
     } catch (error) {
         document.getElementById('adminsTableBody').innerHTML =
-            '<tr><td colspan="8" class="text-center text-muted">Error loading administrators</td></tr>';
+            '<tr><td colspan="9" class="text-center text-muted">Error loading administrators</td></tr>';
     }
 }
 
@@ -3972,8 +3996,19 @@ async filterMakesModels() {
     displayAdminsTable(admins) {
         const tbody = document.getElementById('adminsTableBody');
 
+        const formatAdminRole = (role) => {
+            const labels = {
+                super_admin: 'Super Admin',
+                admin: 'Admin',
+                moderator: 'Moderator',
+                onboarding_manager: 'Onboarding Manager'
+            };
+
+            return labels[role] || role || 'Unknown';
+        };
+
         if (!admins || admins.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No administrators found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No administrators found</td></tr>';
             return;
         }
 
@@ -3982,6 +4017,7 @@ async filterMakesModels() {
                 <td>${admin.id}</td>
                 <td>${this.escapeHtml(admin.full_name)}</td>
                 <td>${this.escapeHtml(admin.email)}</td>
+                <td><span class="user-type-badge">${this.escapeHtml(formatAdminRole(admin.role))}</span></td>
                 <td>${admin.phone || '-'}</td>
                 <td><span class="status-badge status-${admin.status}">${admin.status}</span></td>
                 <td>${this.formatDateShort(admin.created_at)}</td>
@@ -4816,7 +4852,13 @@ async function adminLogin(event) {
             localStorage.setItem('admin_email', data.admin.email);
             
             admin.adminData = data.admin;
-            
+
+            // Onboarding managers have no access to the admin dashboard
+            if (data.admin.role === 'onboarding_manager') {
+                window.location.href = '../onboarding/onboarding.html';
+                return;
+            }
+
             // Use the existing showDashboard method for consistency
             admin.showDashboard();
             

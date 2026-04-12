@@ -27,6 +27,13 @@
                     <i class="fas fa-users"></i>
                     <span>Customer Service Portal</span>
                 </div>
+                <div class="info-item" id="onboardingAdminBadge" style="display:none; border-left:1px solid rgba(255,255,255,0.35); padding-left:12px; margin-left:8px;">
+                    <i class="fas fa-user-shield"></i>
+                    <span id="onboardingAdminName"></span>
+                </div>
+                <button type="button" id="onboardingLogoutBtn" class="btn btn-secondary" style="display:none; margin-left:10px; padding:8px 12px; font-size:0.875rem;">
+                    <i class="fas fa-sign-out-alt"></i> Sign Out
+                </button>
             </div>
         </div>
 
@@ -384,9 +391,9 @@
                                 Password *
                             </label>
                             <input type="password" id="password" name="password" required
-                                   autocomplete="new-password"
-                                   placeholder="Create a strong password" minlength="6">
-                            <div class="field-info">Minimum 6 characters</div>
+                                autocomplete="new-password"
+                                placeholder="Create a strong password" minlength="8">
+                            <div class="field-info">Min 8 chars — must include uppercase, number &amp; special character</div>
                         </div>
                     </div>
 

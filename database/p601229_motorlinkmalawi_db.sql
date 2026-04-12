@@ -154,7 +154,7 @@ CREATE TABLE `admin_users` (
   `email` varchar(100) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `full_name` varchar(100) NOT NULL,
-  `role` enum('super_admin','admin','moderator') DEFAULT 'moderator',
+  `role` enum('super_admin','admin','moderator','onboarding_manager') DEFAULT 'moderator',
   `status` enum('active','inactive','suspended') DEFAULT 'active',
   `last_login` datetime DEFAULT NULL,
   `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
