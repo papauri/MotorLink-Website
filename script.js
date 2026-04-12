@@ -523,7 +523,7 @@ class MotorLink {
             prevBtn.addEventListener('click', () => {
                 if (this.currentPage > 1) {
                     this.currentPage--;
-                    this.loadListings(true);
+                    this.loadListings(false);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             });
@@ -533,7 +533,7 @@ class MotorLink {
             nextBtn.addEventListener('click', () => {
                 if (this.hasMorePages) {
                     this.currentPage++;
-                    this.loadListings(true);
+                    this.loadListings(false);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             });
