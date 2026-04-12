@@ -42,6 +42,13 @@ class PageTransitionManager {
         window.addEventListener('load', () => {
             setTimeout(() => this.hidePageLoader(), 100);
         });
+
+        // BFCache/back-forward restores may not fire full load again.
+        window.addEventListener('pageshow', () => {
+            this.isTransitioning = false;
+            this.activeAsyncRequests = 0;
+            this.hidePageLoader();
+        });
         
         // Hide loader if page is already loaded
         if (document.readyState === 'complete') {

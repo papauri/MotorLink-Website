@@ -928,6 +928,20 @@ body {
     font-weight: 500;
 }
 
+.mobile-top-page-indicator {
+    display: none;
+    margin-top: 6px;
+    color: var(--primary-green-dark);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+@media (max-width: 767px) {
+    .mobile-top-page-indicator {
+        display: block;
+    }
+}
+
 .sort-controls {
     display: flex;
     align-items: center;

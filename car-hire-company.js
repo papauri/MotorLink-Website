@@ -10,6 +10,39 @@ let companyData = null;
 let fleet = [];
 let mapInitialized = false;
 
+async function fetchJsonWithRetry(url, options = {}, attempts = 2, timeoutMs = 10000) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            clearTimeout(timeoutId);
+            lastError = error;
+
+            if (attempt < attempts) {
+                await new Promise(resolve => setTimeout(resolve, 250 * attempt));
+            }
+        }
+    }
+
+    throw lastError || new Error('Request failed');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const urlParams = new URLSearchParams(window.location.search);
     const companyId = urlParams.get('id');
@@ -23,22 +56,45 @@ document.addEventListener('DOMContentLoaded', function() {
     loadFleet(companyId);
 });
 
+function showCompanyLoadError(message) {
+    const container = document.getElementById('companyHeader');
+    const safeMessage = escapeHtml(message || 'Failed to load company information.');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="container">
+            <div class="loading" style="padding: 30px 0; text-align: center;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>${safeMessage}</p>
+                <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:12px;">
+                    <button onclick="retryCompanyLoad()" class="btn btn-primary">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                    <a href="car-hire.html" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Listings
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function retryCompanyLoad() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const companyId = urlParams.get('id');
+    if (!companyId) {
+        window.location.href = 'car-hire.html';
+        return;
+    }
+
+    loadCompanyData(companyId);
+    loadFleet(companyId);
+}
+
 async function loadCompanyData(id) {
     try {
         const apiUrl = `${CONFIG.API_URL}?action=car_hire_company&id=${id}`;
-        console.log('Fetching company data from:', apiUrl);
-        console.log('Company ID:', id);
-        
-        const response = await fetch(apiUrl);
-        console.log('Response status:', response.status);
-        console.log('Response OK:', response.ok);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        console.log('API Response:', data);
+        const data = await fetchJsonWithRetry(apiUrl);
 
         if (data.success) {
             companyData = data.company;
@@ -46,33 +102,17 @@ async function loadCompanyData(id) {
             renderContactCard(companyData);
             document.title = `${companyData.business_name} - Car Hire - MotorLink Malawi`;
         } else {
-            console.error('API returned error:', data.message || 'Unknown error');
-            alert(`Company not found: ${data.message || 'Unknown error'}\n\nRedirecting to car hire listings...`);
-            setTimeout(() => {
-                window.location.href = 'car-hire.html';
-            }, 2000);
+            showCompanyLoadError(data.message || 'Company not found.');
         }
     } catch (error) {
-        console.error('Fetch error details:', {
-            message: error.message,
-            stack: error.stack,
-            name: error.name
-        });
-        alert(`Error loading company information:\n${error.message}\n\nRedirecting to car hire listings...`);
-        setTimeout(() => {
-            window.location.href = 'car-hire.html';
-        }, 2000);
+        showCompanyLoadError(error.message || 'Error loading company information.');
     }
 }
 
 async function loadFleet(companyId) {
     try {
         const apiUrl = `${CONFIG.API_URL}?action=car_hire_fleet&company_id=${companyId}`;
-        console.log('Fetching fleet data from:', apiUrl);
-        console.log('Company ID:', companyId);
-        
-        const response = await fetch(apiUrl);
-        const data = await response.json();
+        const data = await fetchJsonWithRetry(apiUrl);
         
         if (data.success) {
             fleet = data.fleet;
@@ -85,7 +125,18 @@ async function loadFleet(companyId) {
             `;
         }
     } catch (error) {
-        console.error('Error loading fleet:', error);
+        const grid = document.getElementById('fleetGrid');
+        if (grid) {
+            grid.innerHTML = `
+                <div class="loading" style="text-align:center;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Failed to load fleet. Please try again.</p>
+                    <button onclick="retryCompanyLoad()" class="btn btn-primary" style="margin-top:12px;">
+                        <i class="fas fa-redo"></i> Retry Fleet
+                    </button>
+                </div>
+            `;
+        }
     }
 }
 

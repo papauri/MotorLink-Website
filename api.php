@@ -1438,13 +1438,33 @@ function getListings($db) {
         }
         
         // Sorting
-        $sort = $_GET['sort'] ?? 'newest';
+        $rawSort = strtolower(trim((string)($_GET['sort'] ?? 'newest')));
+        $sortAliases = [
+            'latest' => 'newest',
+            'new' => 'newest',
+            'newest' => 'newest',
+            'old' => 'oldest',
+            'oldest' => 'oldest',
+            'price_low' => 'price_low',
+            'price_high' => 'price_high',
+            'year' => 'year_new',
+            'year_desc' => 'year_new',
+            'year_new' => 'year_new',
+            'year_asc' => 'year_old',
+            'year_old' => 'year_old',
+            'views' => 'most_viewed',
+            'most_views' => 'most_viewed',
+            'most_viewed' => 'most_viewed'
+        ];
+        $sort = $sortAliases[$rawSort] ?? 'newest';
+
         $orderBy = match($sort) {
             'price_low' => 'l.price ASC',
             'price_high' => 'l.price DESC',
             'year_new' => 'l.year DESC',
             'year_old' => 'l.year ASC',
             'most_viewed' => 'l.views_count DESC',
+            'oldest' => 'l.listing_type DESC, l.created_at ASC',
             default => 'l.listing_type DESC, l.created_at DESC'
         };
         

@@ -546,6 +546,7 @@ class MotorLink {
         const nextBtn = document.getElementById('nextPage');
         const currentPageNum = document.getElementById('currentPageNum');
         const totalPages = document.getElementById('totalPages');
+        const mobileTopPageIndicator = document.getElementById('mobileTopPageIndicator');
         
         if (!paginationControls) return;
         
@@ -557,12 +558,18 @@ class MotorLink {
             currentPageNum.textContent = this.currentPage;
         }
         
-        if (totalPages && pagination && pagination.total_pages) {
-            totalPages.textContent = pagination.total_pages;
-        } else if (totalPages) {
+        let resolvedTotalPages = 1;
+        if (pagination && pagination.total_pages) {
+            resolvedTotalPages = Math.max(1, parseInt(pagination.total_pages, 10) || 1);
+        } else {
             // Estimate total pages if not provided
-            const estimatedPages = Math.ceil((pagination?.total || 10) / 10);
-            totalPages.textContent = estimatedPages;
+            resolvedTotalPages = Math.max(1, Math.ceil((pagination?.total || 10) / 10));
+        }
+        if (totalPages) {
+            totalPages.textContent = resolvedTotalPages;
+        }
+        if (mobileTopPageIndicator) {
+            mobileTopPageIndicator.textContent = `Page ${this.currentPage} of ${resolvedTotalPages}`;
         }
         
         // Update button states
@@ -627,6 +634,29 @@ class MotorLink {
         } catch (error) {
             throw error;
         }
+    }
+
+    normalizeSortValue(value) {
+        const normalized = String(value || '').trim().toLowerCase();
+        const sortAliases = {
+            latest: 'newest',
+            newest: 'newest',
+            oldest: 'oldest',
+            old: 'oldest',
+            views: 'most_viewed',
+            most_views: 'most_viewed',
+            most_viewed: 'most_viewed',
+            year: 'year_new',
+            year_new: 'year_new',
+            year_old: 'year_old',
+            year_desc: 'year_new',
+            year_asc: 'year_old',
+            price_low: 'price_low',
+            price_high: 'price_high',
+            nearest: 'nearest'
+        };
+
+        return sortAliases[normalized] || 'newest';
     }
 
     // ============================================================================
@@ -1087,14 +1117,17 @@ class MotorLink {
                 const filters = this.getCurrentFilters();
                 filters.page = this.currentPage;
                 filters.limit = 10;
+                const activeSort = this.normalizeSortValue(filters.sort || 'newest');
                 
                 const response = await this.makeAPICall('listings', filters);
                 
                 if (response.success) {
                     let listings = response.listings || [];
                     
-                    // Apply recommendation boosting based on user viewing history
-                    listings = this.applyRecommendationBoosting(listings);
+                    // Only boost relevance on "newest" default browsing so explicit sorts remain exact.
+                    if (activeSort === 'newest') {
+                        listings = this.applyRecommendationBoosting(listings);
+                    }
                     
                     // Always render (replace) listings for pagination
                     this.renderListings(listings);
@@ -1675,7 +1708,7 @@ class MotorLink {
             // Sort
             const sortSelect = document.querySelector('.sort-select');
             if (sortSelect && sortSelect.value) {
-                filters.sort = sortSelect.value;
+                filters.sort = this.normalizeSortValue(sortSelect.value);
             }
             
             return filters;
@@ -2970,6 +3003,44 @@ class ShowroomManager {
         }
     }
 
+    async fetchJsonWithRetry(url, options = {}, attempts = 2, timeoutMs = 10000) {
+        let lastError = null;
+
+        for (let attempt = 1; attempt <= attempts; attempt++) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const contentType = response.headers.get('content-type') || '';
+                if (!contentType.includes('application/json')) {
+                    throw new Error('API returned non-JSON response');
+                }
+
+                return await response.json();
+            } catch (error) {
+                clearTimeout(timeoutId);
+                lastError = error;
+
+                if (attempt < attempts) {
+                    await new Promise(resolve => setTimeout(resolve, 300 * attempt));
+                }
+            }
+        }
+
+        throw lastError || new Error('Request failed');
+    }
+
     // Load showroom data
     async loadShowroom() {
         const loadingContainer = document.getElementById('loadingContainer');
@@ -2983,10 +3054,9 @@ class ShowroomManager {
 
             
             // First, get dealer details
-            const dealerResponse = await fetch(`${CONFIG.API_URL}?action=dealers`, {
+            const dealerDataResult = await this.fetchJsonWithRetry(`${CONFIG.API_URL}?action=dealers`, {
                 ...(CONFIG.USE_CREDENTIALS && {credentials: 'include'})
             });
-            const dealerDataResult = await dealerResponse.json();
 
             if (!dealerDataResult.success) {
                 throw new Error('Failed to load dealer information');
@@ -2999,10 +3069,9 @@ class ShowroomManager {
             }
 
             // Now get cars for this specific dealer
-            const carsResponse = await fetch(`${CONFIG.API_URL}?action=listings&dealer_id=${this.dealerId}`, {
+            const carsData = await this.fetchJsonWithRetry(`${CONFIG.API_URL}?action=listings&dealer_id=${this.dealerId}`, {
                 ...(CONFIG.USE_CREDENTIALS && {credentials: 'include'})
             });
-            const carsData = await carsResponse.json();
 
             if (carsData.success) {
                 this.allCars = carsData.listings || [];

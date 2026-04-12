@@ -10,6 +10,40 @@ let stats = {};
 let userLocation = null;
 let geocodedCompanies = new Map(); // Cache geocoded addresses
 
+async function fetchJsonWithRetry(url, options = {}, attempts = 2, timeoutMs = 10000) {
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            return data;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            lastError = error;
+
+            if (attempt < attempts) {
+                await new Promise(resolve => setTimeout(resolve, 250 * attempt));
+            }
+        }
+    }
+
+    throw lastError || new Error('Request failed');
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadStats();
     loadLocations();
@@ -20,8 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Load overall car hire statistics
 async function loadStats() {
     try {
-        const response = await fetch(`${CONFIG.API_URL}?action=car_hire_stats`);
-        const data = await response.json();
+        const data = await fetchJsonWithRetry(`${CONFIG.API_URL}?action=car_hire_stats`);
 
         if (data.success) {
             stats = data.stats;
@@ -51,8 +84,7 @@ function updateStatsDisplay() {
 // Load locations that actually have car hire companies
 async function loadLocations() {
     try {
-        const response = await fetch(`${CONFIG.API_URL}?action=car_hire_locations`);
-        const data = await response.json();
+        const data = await fetchJsonWithRetry(`${CONFIG.API_URL}?action=car_hire_locations`);
 
         if (data.success) {
             const select = document.getElementById('locationFilter');
@@ -84,8 +116,7 @@ async function loadLocations() {
 // Load companies with additional filtering options
 async function loadCompanies() {
     try {
-        const response = await fetch(`${CONFIG.API_URL}?action=car_hire_companies_with_fleet`);
-        const data = await response.json();
+        const data = await fetchJsonWithRetry(`${CONFIG.API_URL}?action=car_hire_companies_with_fleet`);
         
         if (data.success) {
             companies = data.companies;
@@ -398,8 +429,27 @@ function showErrorMessage() {
         <div class="loading">
             <i class="fas fa-exclamation-circle"></i>
             <p>Failed to load car hire companies. Please try again later.</p>
+            <button onclick="retryCarHireLoad()" class="btn btn-primary" style="margin-top: 14px;">
+                <i class="fas fa-redo"></i> Try Again
+            </button>
         </div>
     `;
+}
+
+function retryCarHireLoad() {
+    const grid = document.getElementById('companiesGrid');
+    if (grid) {
+        grid.innerHTML = `
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Retrying...</p>
+            </div>
+        `;
+    }
+
+    loadStats();
+    loadLocations();
+    loadCompanies();
 }
 
 function clearFilters() {
