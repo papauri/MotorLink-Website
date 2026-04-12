@@ -73,22 +73,135 @@
   margin-right: auto;
 }
 
-/* Mobile - Fix sidebar overlapping cars-grid */
-@media (max-width: 768px) {
+/* ================================================
+   SHOWROOM TWO-COLUMN LAYOUT
+   Sidebar (left) + car grid (right)
+================================================ */
+
+/* Two-column wrapper */
+.showroom-layout {
+  display: block;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  .showroom-layout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+}
+
+/* Main content (right column) */
+.showroom-main-content {
+  min-width: 0; /* prevent grid blowout */
+}
+
+/* Sidebar filter panel */
+.showroom-page-wrapper .filters.sidebar {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  border: 1px solid #e5e7eb;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Sidebar header */
+.showroom-sidebar-header {
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 2px solid var(--primary-green, #00c853);
+}
+
+.showroom-sidebar-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #212121);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.showroom-sidebar-header h3 i {
+  color: var(--primary-green, #00c853);
+}
+
+/* Filter groups inside sidebar */
+.showroom-page-wrapper .filters.sidebar .filter-group {
+  margin-bottom: 16px;
+}
+
+.showroom-page-wrapper .filters.sidebar .filter-group:last-child {
+  margin-bottom: 0;
+}
+
+.showroom-page-wrapper .filters.sidebar .filter-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #757575;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.showroom-page-wrapper .filters.sidebar .filter-label i {
+  color: var(--primary-green, #00c853);
+  margin-right: 4px;
+}
+
+.showroom-page-wrapper .filters.sidebar .filter-select {
+  width: 100%;
+  max-width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.showroom-page-wrapper .filters.sidebar .filter-select:focus {
+  outline: none;
+  border-color: var(--primary-green, #00c853);
+  box-shadow: 0 0 0 3px rgba(0,200,83,0.1);
+  background: #fff;
+}
+
+/* Cars grid: inside sidebar layout only 2 columns max */
+@media (min-width: 1024px) {
+  .showroom-main-content .cars-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+@media (min-width: 1280px) {
+  .showroom-main-content .cars-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+}
+
+/* Mobile — filters hidden (mobile tray is used instead), main content full width */
+@media (max-width: 1023px) {
+  .showroom-page-wrapper .filters.sidebar {
+    display: none !important; /* mobile tray handles filtering */
+  }
+
+  .showroom-main-content {
+    width: 100%;
+  }
+
   .showroom-page-wrapper .main-content {
     padding: 12px 0;
   }
-  
-  .showroom-page-wrapper .filters.sidebar {
-    position: relative !important;
-    top: auto !important;
-    margin-bottom: 16px !important;
-    width: 100% !important;
-  }
-  
+
   .showroom-page-wrapper .cars-grid {
-    clear: both;
-    margin-top: 16px !important;
     gap: 12px;
   }
 }

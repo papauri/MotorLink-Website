@@ -16,7 +16,11 @@ input, select, textarea {
 }
 
 html, body {
-    overflow-x: hidden;
+    overflow-x: hidden; /* html scroll clip — does not break sticky */
+}
+
+body {
+    overflow-x: clip; /* clip prevents horizontal bleed without creating a BFC; preserves position:sticky */
 }
 
 :root {

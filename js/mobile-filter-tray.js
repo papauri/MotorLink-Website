@@ -355,12 +355,19 @@
         
         // Wait a brief moment for sync to complete
         setTimeout(() => {
-            // For index.html - use MotorLink instance (highest priority)
-            if (typeof motorLink !== 'undefined' && motorLink.applyFilters) {
-                motorLink.applyFilters();
-                showFilterFeedback('Filters applied');
-                return;
-            }
+                // For showroom.html - use ShowroomManager instance
+                if (window.showroomManager && typeof window.showroomManager.filterAndSortCars === 'function') {
+                    window.showroomManager.filterAndSortCars();
+                    showFilterFeedback('Filters applied');
+                    return;
+                }
+
+                // For index.html - use MotorLink instance (highest priority)
+                if (typeof motorLink !== 'undefined' && motorLink.applyFilters) {
+                    motorLink.applyFilters();
+                    showFilterFeedback('Filters applied');
+                    return;
+                }
             
             // For dealers.html - check for dealers page
             const dealerSearch = document.getElementById('dealerSearch');

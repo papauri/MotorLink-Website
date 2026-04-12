@@ -3741,6 +3741,26 @@ class ShowroomManager {
 
         if (sortFilter) sortFilter.addEventListener('change', () => this.filterAndSortCars());
         if (categoryFilter) categoryFilter.addEventListener('change', () => this.filterAndSortCars());
+
+        const transmissionFilter = document.getElementById('transmissionFilter');
+        const fuelTypeFilter = document.getElementById('fuelTypeFilter');
+        const conditionFilter = document.getElementById('conditionFilter');
+
+        if (transmissionFilter) transmissionFilter.addEventListener('change', () => this.filterAndSortCars());
+        if (fuelTypeFilter) fuelTypeFilter.addEventListener('change', () => this.filterAndSortCars());
+        if (conditionFilter) conditionFilter.addEventListener('change', () => this.filterAndSortCars());
+
+        // Clear filters button
+        const clearBtn = document.getElementById('clearShowroomFilters');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                ['sortFilter','categoryFilter','transmissionFilter','fuelTypeFilter','conditionFilter'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = id === 'sortFilter' ? 'newest' : '';
+                });
+                this.filterAndSortCars();
+            });
+        }
     }
 
     // Filter and sort cars
@@ -3753,7 +3773,20 @@ class ShowroomManager {
 
         let filteredCars = this.allCars.filter(car => {
             const matchesCategory = !categoryFilterValue || car.body_type === categoryFilterValue;
-            return matchesCategory;
+
+            const transmissionFilter = document.getElementById('transmissionFilter');
+            const fuelTypeFilter = document.getElementById('fuelTypeFilter');
+            const conditionFilter = document.getElementById('conditionFilter');
+
+            const transmissionVal = transmissionFilter ? transmissionFilter.value : '';
+            const fuelTypeVal = fuelTypeFilter ? fuelTypeFilter.value : '';
+            const conditionVal = conditionFilter ? conditionFilter.value : '';
+
+            const matchesTransmission = !transmissionVal || (car.transmission || '').toLowerCase() === transmissionVal.toLowerCase();
+            const matchesFuel = !fuelTypeVal || (car.fuel_type || '').toLowerCase() === fuelTypeVal.toLowerCase();
+            const matchesCondition = !conditionVal || (car.condition_type || '').toLowerCase() === conditionVal.toLowerCase();
+
+            return matchesCategory && matchesTransmission && matchesFuel && matchesCondition;
         });
 
         // Sort cars

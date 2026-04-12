@@ -186,10 +186,17 @@
             </div>
 
             <!-- Filters -->
-            <div class="filters sidebar">
-                <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
-                    <div>
-                        <label for="sortFilter" style="font-size: 14px; color: #6c757d;">Sort by:</label>
+            <!-- Two-column layout: sticky sidebar filters + car grid -->
+            <div class="showroom-layout">
+
+                <!-- LEFT: Sticky Filter Sidebar (desktop) -->
+                <aside class="filters sidebar" aria-label="Filter cars">
+                    <div class="showroom-sidebar-header">
+                        <h3><i class="fas fa-filter"></i> Filter Cars</h3>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label" for="sortFilter"><i class="fas fa-sort"></i> Sort By</label>
                         <select class="filter-select" id="sortFilter">
                             <option value="newest">Newest First</option>
                             <option value="price_low">Price: Low to High</option>
@@ -200,8 +207,8 @@
                         </select>
                     </div>
 
-                    <div>
-                        <label for="categoryFilter" style="font-size: 14px; color: #6c757d;">Body Type:</label>
+                    <div class="filter-group">
+                        <label class="filter-label" for="categoryFilter"><i class="fas fa-car"></i> Body Type</label>
                         <select class="filter-select" id="categoryFilter">
                             <option value="">All Body Types</option>
                             <option value="sedan">Sedan</option>
@@ -217,8 +224,8 @@
                         </select>
                     </div>
 
-                    <div>
-                        <label for="transmissionFilter" style="font-size: 14px; color: #6c757d;">Transmission:</label>
+                    <div class="filter-group">
+                        <label class="filter-label" for="transmissionFilter"><i class="fas fa-cogs"></i> Transmission</label>
                         <select class="filter-select" id="transmissionFilter">
                             <option value="">All Transmissions</option>
                             <option value="manual">Manual</option>
@@ -228,8 +235,8 @@
                         </select>
                     </div>
 
-                    <div>
-                        <label for="fuelTypeFilter" style="font-size: 14px; color: #6c757d;">Fuel Type:</label>
+                    <div class="filter-group">
+                        <label class="filter-label" for="fuelTypeFilter"><i class="fas fa-gas-pump"></i> Fuel Type</label>
                         <select class="filter-select" id="fuelTypeFilter">
                             <option value="">All Fuel Types</option>
                             <option value="petrol">Petrol</option>
@@ -240,8 +247,8 @@
                         </select>
                     </div>
 
-                    <div>
-                        <label for="conditionFilter" style="font-size: 14px; color: #6c757d;">Condition:</label>
+                    <div class="filter-group">
+                        <label class="filter-label" for="conditionFilter"><i class="fas fa-star"></i> Condition</label>
                         <select class="filter-select" id="conditionFilter">
                             <option value="">All Conditions</option>
                             <option value="excellent">Excellent</option>
@@ -251,28 +258,38 @@
                             <option value="poor">Poor</option>
                         </select>
                     </div>
-                </div>
-            </div>
 
-            <!-- Loading State -->
-            <div class="loading-container" id="loadingContainer">
-                <div class="loading-spinner">
-                    <i class="fas fa-spinner fa-spin"></i>
-                </div>
-                <p>Loading showroom...</p>
-            </div>
+                    <div class="filter-group">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="clearShowroomFilters" style="width:100%;">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
+                    </div>
+                </aside>
 
-            <!-- Cars Grid -->
-            <div class="cars-grid" id="carsGrid">
-                <!-- Cars will be loaded here -->
-            </div>
+                <!-- RIGHT: Car Grid -->
+                <div class="showroom-main-content">
+                    <!-- Loading State -->
+                    <div class="loading-container" id="loadingContainer">
+                        <div class="loading-spinner">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                        <p>Loading showroom...</p>
+                    </div>
 
-            <!-- Empty State -->
-            <div class="empty-state" id="emptyState" style="display: none;">
-                <i class="fas fa-car"></i>
-                <h3>No Cars Available</h3>
-                <p>This dealer doesn't have any cars in stock at the moment. Please check back later or contact them directly.</p>
-            </div>
+                    <!-- Cars Grid -->
+                    <div class="cars-grid" id="carsGrid">
+                        <!-- Cars will be loaded here -->
+                    </div>
+
+                    <!-- Empty State -->
+                    <div class="empty-state" id="emptyState" style="display: none;">
+                        <i class="fas fa-car"></i>
+                        <h3>No Cars Available</h3>
+                        <p>This dealer doesn't have any cars in stock at the moment. Please check back later or contact them directly.</p>
+                    </div>
+                </div><!-- End showroom-main-content -->
+
+            </div><!-- End showroom-layout -->
 
         </div>
     </section>
@@ -616,7 +633,6 @@
         justify-content: center;
         z-index: 9999;
         padding: 20px;
-        backdrop-filter: blur(4px);
         animation: fadeIn 0.2s ease;
     }
 
