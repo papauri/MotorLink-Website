@@ -1497,7 +1497,7 @@
 
 @media (max-width: 768px) {
     .showroom-header-minimal {
-        padding: 100px 16px 24px !important;
+        padding: 25px 0 20px !important;
     }
 
     .showroom-hero-content {
@@ -1567,6 +1567,12 @@
     .showroom-grid {
         grid-template-columns: 1fr !important;
         gap: 16px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .showroom-header-minimal {
+        padding: 25px 0 20px !important;
     }
 }
 
@@ -2500,12 +2506,31 @@
     .card,
     .dealer-card,
     .garage-card,
+    .dealer-business-card,
+    .car-card,
     .company-card,
     .vehicle-card,
     .listing-card {
         margin: 0 0 16px 0 !important;
         width: 100% !important;
         max-width: 100% !important;
+    }
+
+    /* Stronger card boundaries for mobile readability */
+    .company-card,
+    .dealer-business-card,
+    .car-card {
+        background: #ffffff !important;
+        border: 1.5px solid #d1d5db !important;
+        border-radius: 14px !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+        overflow: hidden !important;
+    }
+
+    .company-card.featured-company,
+    .dealer-business-card.featured-dealer {
+        border-color: #f59e0b !important;
+        box-shadow: 0 8px 20px rgba(245, 158, 11, 0.22) !important;
     }
 
     /* Card images should have consistent height */

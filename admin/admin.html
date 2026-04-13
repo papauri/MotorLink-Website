@@ -140,9 +140,11 @@
                     </a>
                     <a href="#" class="nav-item" data-section="pending-cars">
                         <i class="fas fa-clock"></i> Pending Cars
+                        <span class="nav-badge" id="pendingCarsBadge">0</span>
                     </a>
                     <a href="#" class="nav-item" data-section="guest-listings">
                         <i class="fas fa-user-clock"></i> Guest Listings
+                        <span class="nav-badge" id="guestListingsBadge">0</span>
                     </a>
                     <a href="#" class="nav-item" data-section="rejected-cars">
                         <i class="fas fa-times-circle"></i> Rejected Cars
@@ -359,7 +361,7 @@
                             <option value="verified">Verified</option>
                             <option value="rejected">Rejected</option>
                         </select>
-                        <input type="text" id="carSearchFilter" class="form-control" placeholder="Search cars..." onkeyup="admin.loadCars()">
+                        <input type="text" id="carSearchFilter" class="form-control" placeholder="Search cars or ref (e.g. ML20260010)..." onkeyup="admin.loadCars()">
                         <button class="btn btn-outline" onclick="admin.loadCars()">
                             <i class="fas fa-sync"></i> Refresh
                         </button>
@@ -490,6 +492,7 @@
                             <thead>
                                 <tr>
                                     <th>ID</th>
+                                    <th>Image</th>
                                     <th>Title</th>
                                     <th>Guest Seller</th>
                                     <th>Email Verified</th>
@@ -500,7 +503,7 @@
                                 </tr>
                             </thead>
                             <tbody id="guestListingsTableBody">
-                                <tr><td colspan="8" class="text-center">Loading guest listings...</td></tr>
+                                <tr><td colspan="9" class="text-center">Loading guest listings...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -636,6 +639,7 @@
                             <option value="pending">Pending</option>
                             <option value="verified">Verified</option>
                             <option value="rejected">Rejected</option>
+                            <option value="free">Free Listings</option>
                         </select>
                         <select id="paymentServiceFilter" class="form-control" onchange="admin.loadPayments()">
                             <option value="">All Services</option>
@@ -643,7 +647,12 @@
                             <option value="listing_premium">Premium Listing</option>
                             <option value="garage_listing">Garage Listing</option>
                             <option value="dealer_listing">Dealer Listing</option>
+                            <option value="free_listing">Free Listing</option>
                         </select>
+                        <label class="form-control" style="display:flex;align-items:center;gap:8px;max-width:220px;">
+                            <input type="checkbox" id="includeFreeListingsFilter" onchange="admin.loadPayments()">
+                            <span>Include Free Listings</span>
+                        </label>
                         <input type="date" id="paymentDateFrom" class="form-control" onchange="admin.loadPayments()">
                         <input type="date" id="paymentDateTo" class="form-control" onchange="admin.loadPayments()">
                         <button class="btn btn-outline" onclick="admin.loadPayments()">
@@ -668,6 +677,34 @@
                             </thead>
                             <tbody id="paymentsTableBody">
                                 <tr><td colspan="9" class="text-center">Loading payments...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="section-header" style="margin-top: 18px;">
+                        <h3><i class="fas fa-gift"></i> Free Listings (No Payment Required)</h3>
+                        <div class="section-actions">
+                            <button class="btn btn-outline" onclick="admin.loadFreeListingsPayments()">
+                                <i class="fas fa-sync"></i> Refresh Free Listings
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="freeListingsPaymentsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Listing ID</th>
+                                    <th>Title</th>
+                                    <th>Seller</th>
+                                    <th>Reference</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="freeListingsPaymentsTableBody">
+                                <tr><td colspan="7" class="text-center">Loading free listings...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -1443,6 +1480,9 @@
                         <!-- Admin DB Credentials -->
                         <div class="settings-card">
                             <h3><i class="fas fa-database"></i> Admin DB Credentials</h3>
+                            <form id="adminDbCredentialsForm" onsubmit="return false;" autocomplete="off">
+                                <input type="text" name="admin-db-username-shadow" autocomplete="username" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;height:0;width:0;pointer-events:none;" value="">
+                            </form>
                             <p class="form-text" style="margin-bottom: 12px;">
                                 Super admin only. These credentials are stored in <strong>site_settings</strong> and used by admin bootstrap.
                             </p>
@@ -1464,7 +1504,7 @@
 
                             <div class="form-group">
                                 <label for="admin-db-pass">DB Password</label>
-                                <input type="password" id="admin-db-pass" class="form-control" autocomplete="new-password" placeholder="Leave blank to keep existing password">
+                                <input type="password" id="admin-db-pass" class="form-control" autocomplete="new-password" placeholder="Leave blank to keep existing password" form="adminDbCredentialsForm">
                             </div>
 
                             <div class="form-group">
@@ -2024,96 +2064,11 @@
 
         <!-- Mobile Overlay -->
         <div class="mobile-overlay" id="mobileOverlay"></div>
+          <!-- Dashboard Alerts (fixed toast notifications while logged in) -->
+          <div id="dashboardAlerts"></div>
+     </div><!-- /adminDashboard -->
 
-        <!-- Modal Structure -->
-        <div class="modal-overlay" id="editCarModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Edit Car Listing</h3>
-                    <button class="modal-close" id="modalClose">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <form class="modal-form" id="editCarForm">
-                        <!-- Form content will be loaded here by JavaScript -->
-                    </form>
-                </div>
-
-                <!-- Database Management Section -->
-                <div class="content-section" id="database-section">
-                    <div class="section-header">
-                        <h2><i class="fas fa-database"></i> Database Management</h2>
-                        <div>
-                            <button class="btn btn-primary" onclick="loadDatabaseTables()">
-                                <i class="fas fa-sync"></i> Refresh
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="database-container">
-                        <!-- Tables List -->
-                        <div class="database-sidebar">
-                            <h3><i class="fas fa-list"></i> Tables</h3>
-                            <div id="databaseTablesList" class="tables-list">
-                                <div class="loading">Loading tables...</div>
-                            </div>
-                        </div>
-
-                        <!-- Table Content -->
-                        <div class="database-content">
-                            <div id="databaseTableInfo" class="table-info" style="display: none;">
-                                <div class="table-header">
-                                    <h3 id="currentTableName"></h3>
-                                    <div class="table-actions">
-                                        <button class="btn btn-success btn-sm" onclick="showInsertRecordForm()">
-                                            <i class="fas fa-plus"></i> Insert Record
-                                        </button>
-                                        <button class="btn btn-info btn-sm" onclick="refreshTableData()">
-                                            <i class="fas fa-sync"></i> Refresh
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Table Structure -->
-                                <div class="table-structure">
-                                    <h4><i class="fas fa-table"></i> Structure</h4>
-                                    <div id="tableStructure" class="structure-table"></div>
-                                </div>
-
-                                <!-- Table Data -->
-                                <div class="table-data">
-                                    <h4><i class="fas fa-database"></i> Data</h4>
-                                    <div class="data-controls">
-                                        <div class="pagination-info">
-                                            <span id="paginationInfo">Showing 0-0 of 0</span>
-                                        </div>
-                                        <div class="pagination-controls">
-                                            <button class="btn btn-sm" onclick="changePage(-1)" id="prevPageBtn" disabled>
-                                                <i class="fas fa-chevron-left"></i> Previous
-                                            </button>
-                                            <span id="currentPageInfo">Page 1</span>
-                                            <button class="btn btn-sm" onclick="changePage(1)" id="nextPageBtn" disabled>
-                                                Next <i class="fas fa-chevron-right"></i>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div id="tableDataContainer" class="data-table-container">
-                                        <div class="loading">Loading data...</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="databaseWelcome" class="welcome-message">
-                                <i class="fas fa-database fa-3x"></i>
-                                <h3>Database Management</h3>
-                                <p>Select a table from the left to view and manage its data.</p>
-                                <p class="warning"><i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Only super admins can access this section. Be careful when modifying database records.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Modal placeholder — editCarModal is created dynamically by admin-script.js -->
 
     <!-- Modals Container -->
     <div id="modalContainer"></div>

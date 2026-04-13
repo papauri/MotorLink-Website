@@ -42,6 +42,31 @@ function getAdminBootstrapDbConfig($defaultHost) {
         'name' => getenv('MOTORLINK_DB_NAME') ?: ($local['MOTORLINK_DB_NAME'] ?? '')
     ];
 
+    // Fallback: load shared DB constants from api.php when neither env vars nor
+    // admin-secrets.local.php are present (e.g. on the live production server).
+    if ($config['user'] === '' || $config['pass'] === '' || $config['name'] === '') {
+        if (!defined('DB_USER')) {
+            if (!defined('MOTORLINK_CONSTANTS_ONLY')) {
+                define('MOTORLINK_CONSTANTS_ONLY', true);
+            }
+            ob_start();
+            @require_once __DIR__ . '/../api.php';
+            ob_end_clean();
+        }
+        if (defined('DB_USER') && $config['user'] === '') {
+            $config['user'] = DB_USER;
+        }
+        if (defined('DB_PASS') && $config['pass'] === '') {
+            $config['pass'] = DB_PASS;
+        }
+        if (defined('DB_NAME') && $config['name'] === '') {
+            $config['name'] = DB_NAME;
+        }
+        if (defined('DB_HOST') && $config['host'] === $defaultHost) {
+            $config['host'] = DB_HOST;
+        }
+    }
+
     if ($config['user'] === '' || $config['pass'] === '' || $config['name'] === '') {
         throw new Exception('Missing bootstrap DB credentials. Set MOTORLINK_DB_* env vars or provide admin/admin-secrets.local.php.');
     }

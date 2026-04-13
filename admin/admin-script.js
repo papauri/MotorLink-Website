@@ -409,6 +409,8 @@ class AdminDashboard {
         updateBadge('garagePendingBadge', stats.pending_garages);
         updateBadge('dealerPendingBadge', stats.pending_dealers);
         updateBadge('carHirePendingBadge', stats.pending_car_hire);
+        updateBadge('pendingCarsBadge', stats.pending_cars);
+        updateBadge('guestListingsBadge', stats.pending_guest_listings);
     }
     
     async setPrimaryImage(imageId, carId) {
@@ -420,45 +422,8 @@ class AdminDashboard {
 
             if (response.success) {
                 this.showAlert('success', 'Primary image updated successfully');
-
-                // Refresh the modal if it's open
-                const gallery = document.getElementById('carImagesGallery');
-                if (gallery) {
-                    gallery.innerHTML = '<div class="text-center">Reloading images...</div>';
-                    const imagesResponse = await this.apiCall('get_car_images', 'GET', { car_id: carId });
-
-                    if (imagesResponse.success && imagesResponse.images) {
-                        if (imagesResponse.images.length === 0) {
-                            gallery.innerHTML = '<div class="text-center text-muted">No images found for this listing</div>';
-                        } else {
-                            gallery.innerHTML = imagesResponse.images.map(img => {
-                                const imageUrl = this.getSafeUploadUrl(img.filename);
-                                return `
-                                <div class="car-image-card" style="position: relative; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    <img src="${imageUrl}" alt="${this.escapeHtml(img.original_filename)}"
-                                         style="width: 100%; height: 200px; object-fit: cover; cursor: pointer;"
-                                         onclick="window.open('${imageUrl}', '_blank')">
-                                    ${img.is_primary ? '<span style="position: absolute; top: 5px; left: 5px; background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">Primary</span>' : ''}
-                                    <div style="padding: 10px;">
-                                        <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
-                                            ${this.escapeHtml(img.original_filename)}
-                                        </div>
-                                        <div style="display: flex; gap: 5px; justify-content: space-between;">
-                                            ${!img.is_primary ? `<button class="btn btn-sm btn-success" onclick="admin.setPrimaryImage(${img.id}, ${carId})" title="Set as Primary">
-                                                <i class="fas fa-star"></i> Set Primary
-                                            </button>` : ''}
-                                            <button class="btn btn-sm btn-danger" onclick="admin.deleteCarImage(${img.id}, ${carId})" title="Delete Image">
-                                                <i class="fas fa-trash"></i> Delete
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                            }).join('');
-                        }
-                    }
-                } else {
-                    // Fallback to old refresh method if not in modal
+                const refreshed = await this.refreshCarImageManagers(carId);
+                if (!refreshed) {
                     await this.refreshCarImages(carId);
                 }
             } else {
@@ -466,6 +431,62 @@ class AdminDashboard {
             }
         } catch (error) {
             this.showAlert('error', error.message || 'Failed to set primary image');
+        }
+    }
+
+    renderCarImageManagerCards(images, carId) {
+        if (!images || images.length === 0) {
+            return '<div class="text-center text-muted" style="grid-column:1/-1; padding:24px;">No images found for this listing</div>';
+        }
+
+        return images.map((img, index) => {
+            const imageUrl = this.getSafeUploadUrl(img.filename || img.file_path || img.thumbnail_path || '');
+            const imageName = this.escapeHtml(img.original_filename || `Image ${index + 1}`);
+            return `
+                <div class="car-image-card" style="position: relative; border: 1px solid #e6eaf0; border-radius: 12px; overflow: hidden; background:#fff; box-shadow: 0 4px 12px rgba(0,0,0,0.06);">
+                    <img src="${imageUrl}" alt="${imageName}"
+                         style="width: 100%; height: 180px; object-fit: cover; cursor: zoom-in; display:block;"
+                         onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<div style=&quot;height:180px;display:flex;align-items:center;justify-content:center;color:#6b7280;background:#f8fafc;&quot;><i class=&quot;fas fa-image fa-2x&quot;></i></div>');"
+                         onclick="window.open('${imageUrl}', '_blank')">
+                    ${img.is_primary ? '<span style="position:absolute;top:10px;left:10px;background:#16a34a;color:#fff;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;">Primary</span>' : ''}
+                    <div style="padding: 12px;">
+                        <div style="font-size:12px;color:#6b7280;margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${imageName}</div>
+                        <div style="display:flex; gap:8px; justify-content:space-between;">
+                            ${!img.is_primary ? `<button class="btn btn-sm btn-success" onclick="admin.setPrimaryImage(${img.id}, ${carId})" title="Set as Primary"><i class="fas fa-star"></i> Primary</button>` : '<span class="text-success small" style="align-self:center;font-weight:600;">Current Primary</span>'}
+                            <button class="btn btn-sm btn-danger" onclick="admin.deleteCarImage(${img.id}, ${carId})" title="Delete Image"><i class="fas fa-trash"></i> Delete</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    async refreshCarImageManagers(carId) {
+        const galleries = Array.from(document.querySelectorAll(`[data-car-gallery-for="${carId}"]`));
+        if (galleries.length === 0) {
+            return false;
+        }
+
+        galleries.forEach(gallery => {
+            gallery.innerHTML = '<div class="text-center text-muted" style="grid-column:1/-1; padding:24px;">Reloading images...</div>';
+        });
+
+        try {
+            const response = await this.apiCall('get_car_images', 'GET', { car_id: carId });
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to load images');
+            }
+
+            const markup = this.renderCarImageManagerCards(response.images || [], carId);
+            galleries.forEach(gallery => {
+                gallery.innerHTML = markup;
+            });
+            return true;
+        } catch (error) {
+            galleries.forEach(gallery => {
+                gallery.innerHTML = '<div class="text-center text-danger" style="grid-column:1/-1; padding:24px;">Error loading images</div>';
+            });
+            return true;
         }
     }
 
@@ -529,7 +550,7 @@ class AdminDashboard {
             if (response.success) {
                 this.showAlert('success', 'Car listing suspended successfully');
                 document.getElementById('editCarModal').remove();
-                this.loadCars();
+                await this.loadCars();
             } else {
                 throw new Error(response.message);
             }
@@ -557,7 +578,7 @@ class AdminDashboard {
             if (response.success) {
                 this.showAlert('success', 'Car updated successfully');
                 document.getElementById('editCarModal').remove();
-                this.loadCars();
+                await this.loadCars();
             } else {
                 throw new Error(response.message);
             }
@@ -605,68 +626,57 @@ class AdminDashboard {
         
         switch (section) {
             case 'cars':
-                this.loadCars();
-                break;
+                return this.loadCars();
             case 'reports':
-                this.loadListingReports();
-                break;
+                return this.loadListingReports();
             case 'pending-cars':
-                this.loadPendingCars();
-                break;
+                return this.loadPendingCars();
             case 'guest-listings':
-                this.loadGuestListings();
-                break;
+                return this.loadGuestListings();
             case 'rejected-cars':
-                this.loadRejectedCars();
-                break;
+                return this.loadRejectedCars();
             case 'deleted-cars':
-                this.loadDeletedCars();
-                break;
+                return this.loadDeletedCars();
             case 'payments':
-                this.loadPayments();
-                this.loadPaymentStats();
-                break;
+                return Promise.all([
+                    this.loadPayments(),
+                    this.loadPaymentStats(),
+                    this.loadFreeListingsPayments()
+                ]);
             case 'users':
-                this.loadUsers();
-                break;
+                return this.loadUsers();
             case 'ai-chat-usage':
                 // Load AI chat usage logs
-                loadAIChatUsers().then(() => {
-                    loadAIChatUsage(1);
+                return loadAIChatUsers().then(() => {
+                    return loadAIChatUsage(1);
                 }).catch(err => {
                     console.error('Error loading AI chat users:', err);
-                    loadAIChatUsage(1); // Still try to load usage even if users fail
+                    return loadAIChatUsage(1); // Still try to load usage even if users fail
                 });
-                break;
             case 'admins':
-                this.loadAdmins();
-                break;
+                return this.loadAdmins();
             case 'garages':
-                this.loadGarages();
-                break;
+                return this.loadGarages();
             case 'dealers':
-                this.loadDealers();
-                break;
+                return this.loadDealers();
             case 'car-hire':
-                this.loadCarHire();
-                break;
+                return this.loadCarHire();
             case 'makes-models':
-                this.loadMakesModels();
-                break;
+                return this.loadMakesModels();
             case 'locations':
-                this.loadLocations();
-                break;
+                return this.loadLocations();
             case 'logs':
-                this.loadActivityLogs();
-                break;
+                return this.loadActivityLogs();
             case 'analytics':
-                this.loadAnalytics();
-                break;
+                return this.loadAnalytics();
             case 'settings':
-                loadSettings();
-                loadSystemInfo();
-                loadAIChatSettings(); // This will also load AI Learning settings
-                break;
+                return Promise.all([
+                    loadSettings(),
+                    loadSystemInfo(),
+                    loadAIChatSettings() // This will also load AI Learning settings
+                ]);
+            default:
+                return Promise.resolve();
         }
     }
 
@@ -1096,7 +1106,13 @@ async loadCars() {
             'delete': 'delete'
         };
         
-        if (!confirm(`Are you sure you want to ${actionTexts[action]} ${carIds.length} car(s)?`)) {
+        const confirmed = await this.showActionConfirmDialog(
+            'Confirm Bulk Action',
+            `Are you sure you want to ${actionTexts[action]} ${carIds.length} car(s)?`,
+            'Proceed',
+            action === 'delete' ? 'btn-danger' : 'btn-primary'
+        );
+        if (!confirmed) {
             return;
         }
         
@@ -1128,8 +1144,10 @@ async loadCars() {
             if (response.success) {
                 this.showAlert('success', response.message || `Successfully ${actionTexts[action]}ed ${carIds.length} car(s)`);
                 this.clearBulkSelection();
-                this.loadCars();
-                this.loadDashboardData();
+                await Promise.all([
+                    this.loadCars(),
+                    this.loadDashboardData()
+                ]);
             } else {
                 throw new Error(response.message);
             }
@@ -1193,23 +1211,130 @@ async loadGuestListings() {
     } catch (error) {
         const tbody = document.getElementById('guestListingsTableBody');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading guest listings</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">Error loading guest listings</td></tr>';
         }
     }
 }
+
+    async approveGuestListingWithOverride(listingId, listingEmailVerified) {
+        const isVerified = Number(listingEmailVerified || 0) === 1;
+
+        if (!isVerified) {
+            const overrideAndApprove = await this.showActionConfirmDialog(
+                'Guest Email Not Verified',
+                'This guest listing email is not verified yet. Do you want to override verification and approve now?',
+                'Override & Approve',
+                'btn-warning'
+            );
+
+            if (!overrideAndApprove) {
+                return;
+            }
+
+            try {
+                const response = await this.apiCall('manage_guest_listing_auth', 'POST', {
+                    id: listingId,
+                    operation: 'override_email_verification'
+                });
+
+                if (!response.success) {
+                    throw new Error(response.message || 'Failed to override email verification');
+                }
+            } catch (error) {
+                this.showAlert('error', error.message || 'Failed to override email verification');
+                return;
+            }
+        }
+
+        await this.approveCar(listingId, 'approve');
+    }
+
+    async overrideGuestListingEmailVerification(listingId) {
+        if (!confirm('Override email verification for this guest listing? This will mark the listing as verified by admin.')) {
+            return;
+        }
+
+        try {
+            const response = await this.apiCall('manage_guest_listing_auth', 'POST', {
+                id: listingId,
+                operation: 'override_email_verification'
+            });
+
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to override email verification');
+            }
+
+            this.showAlert('success', response.message || 'Listing email verification overridden');
+            await Promise.all([
+                this.loadGuestListings(),
+                this.loadPendingCars(),
+                this.loadDashboardData()
+            ]);
+        } catch (error) {
+            this.showAlert('error', error.message || 'Failed to override email verification');
+        }
+    }
+
+    async setGuestListingManageCode(listingId) {
+        const codeInput = prompt('Enter guest manage code (4-8 digits). Leave blank to auto-generate a 6-digit code:', '');
+        if (codeInput === null) {
+            return;
+        }
+
+        const trimmedCode = String(codeInput).trim();
+        if (trimmedCode !== '' && !/^\d{4,8}$/.test(trimmedCode)) {
+            this.showAlert('warning', 'Code must be 4 to 8 digits, or leave blank to auto-generate');
+            return;
+        }
+
+        const hoursInput = prompt('Code expiry in hours (1-168):', '24');
+        if (hoursInput === null) {
+            return;
+        }
+
+        const parsedHours = parseInt(String(hoursInput).trim(), 10);
+        if (Number.isNaN(parsedHours) || parsedHours < 1 || parsedHours > 168) {
+            this.showAlert('warning', 'Expiry must be between 1 and 168 hours');
+            return;
+        }
+
+        try {
+            const response = await this.apiCall('manage_guest_listing_auth', 'POST', {
+                id: listingId,
+                operation: 'set_guest_manage_code',
+                code: trimmedCode || null,
+                expires_hours: parsedHours
+            });
+
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to set guest manage code');
+            }
+
+            const plainCode = response.code ? ` Code: ${response.code}` : '';
+            const expiresText = response.expires_at ? ` Expires: ${response.expires_at}` : '';
+            this.showAlert('success', `${response.message || 'Guest manage code updated.'}${plainCode}${expiresText}`);
+            await this.loadGuestListings();
+        } catch (error) {
+            this.showAlert('error', error.message || 'Failed to set guest manage code');
+        }
+    }
 
 displayGuestListingsTable(cars) {
     const tbody = document.getElementById('guestListingsTableBody');
     if (!tbody) return;
 
     if (!cars || cars.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No guest listings found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No guest listings found</td></tr>';
         return;
     }
 
     const html = cars.map(car => {
         const sellerName = car.guest_seller_name || car.guest_seller_email || 'Guest Seller';
         const sellerEmail = car.guest_seller_email || 'N/A';
+        const listingImage = car.featured_image || car.primary_image || car.fallback_image || '';
+        const imageTypeBadge = car.featured_image
+            ? '<span class="badge badge-warning" style="position:absolute;top:4px;left:4px;font-size:10px;padding:2px 6px;">Featured</span>'
+            : (car.primary_image ? '<span class="badge badge-info" style="position:absolute;top:4px;left:4px;font-size:10px;padding:2px 6px;">Primary</span>' : '');
         const verifiedBadge = car.listing_email_verified
             ? '<span class="status-badge status-active">Verified</span>'
             : '<span class="status-badge status-pending">Not Verified</span>';
@@ -1220,6 +1345,15 @@ displayGuestListingsTable(cars) {
         return `
             <tr>
                 <td>${car.id}</td>
+                <td>
+                    <div class="car-image-thumb" style="position:relative;display:inline-block;">
+                        ${listingImage ?
+                            `<img src="${this.getSafeUploadUrl(listingImage)}" alt="${this.escapeHtml(car.title || 'Listing image')}"
+                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car text-muted\'></i>';" style="max-width:72px;max-height:54px;border-radius:6px;">${imageTypeBadge}` :
+                            `<i class="fas fa-car text-muted"></i>`
+                        }
+                    </div>
+                </td>
                 <td>${this.escapeHtml(car.title || 'Untitled')}</td>
                 <td>
                     <div>${this.escapeHtml(sellerName)}</div>
@@ -1231,14 +1365,22 @@ displayGuestListingsTable(cars) {
                 <td>${this.formatDateShort(car.created_at)}</td>
                 <td>
                     <div class="d-flex gap-5">
-                        <button class="btn btn-sm btn-info" onclick="admin.viewCarDetails(${car.id})" title="View Details">
+                        <button type="button" class="btn btn-sm btn-info" onclick="admin.viewCarDetails(${car.id})" title="View Details">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-success" onclick="admin.approveCar(${car.id}, 'approve')" title="Approve" ${car.listing_email_verified ? '' : 'disabled'}>
+                        <button type="button" class="btn btn-sm btn-success" onclick="admin.approveGuestListingWithOverride(${car.id}, ${Number(car.listing_email_verified || 0)})" title="Approve">
                             <i class="fas fa-check"></i>
                         </button>
-                        <button class="btn btn-sm btn-warning" onclick="admin.approveCar(${car.id}, 'reject')" title="Reject">
+                        <button type="button" class="btn btn-sm btn-warning" onclick="admin.approveCar(${car.id}, 'reject')" title="Reject">
                             <i class="fas fa-times"></i>
+                        </button>
+                        ${car.listing_email_verified ? '' : `
+                        <button type="button" class="btn btn-sm btn-primary" onclick="admin.overrideGuestListingEmailVerification(${car.id})" title="Override Email Verification">
+                            <i class="fas fa-user-check"></i>
+                        </button>
+                        `}
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="admin.setGuestListingManageCode(${car.id})" title="Set Guest Manage Code">
+                            <i class="fas fa-key"></i>
                         </button>
                     </div>
                 </td>
@@ -1247,6 +1389,7 @@ displayGuestListingsTable(cars) {
     }).join('');
 
     tbody.innerHTML = html;
+    this.enableTableSorting('guestListingsTable');
 }
 
 
@@ -1258,12 +1401,21 @@ displayGuestListingsTable(cars) {
             return;
         }
 
-        const html = cars.map(car => `
+        const html = cars.map(car => {
+            const listingImage = car.featured_image || car.primary_image || car.fallback_image || '';
+            return `
             <tr>
+                <td>
+                    <input type="checkbox" class="car-checkbox" value="${car.id}" onchange="admin.updateBulkSelection()">
+                </td>
                 <td>${car.id}</td>
                 <td>
                     <div class="car-image-thumb">
-                        <i class="fas fa-car text-warning"></i>
+                        ${listingImage ?
+                            `<img src="${this.getSafeUploadUrl(listingImage)}" alt="${this.escapeHtml(car.title)}"
+                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car text-warning\'></i>';" style="max-width:72px;max-height:54px;border-radius:6px;">` :
+                            `<i class="fas fa-car text-warning"></i>`
+                        }
                     </div>
                 </td>
                 <td>
@@ -1290,9 +1442,11 @@ displayGuestListingsTable(cars) {
                     </div>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
 
         tbody.innerHTML = html;
+        this.enableTableSorting('pendingCarsTable');
     }
 
     async loadRejectedCars() {
@@ -1350,9 +1504,9 @@ displayGuestListingsTable(cars) {
                 <td>${car.id}</td>
                 <td>
                     <div class="car-image-thumb">
-                        ${car.primary_image ? 
-                            `<img src="${this.getSafeUploadUrl(car.primary_image)}" alt="${this.escapeHtml(car.title)}" 
-                                  onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\"fas fa-car text-danger\"></i>';">
+                        ${(car.featured_image || car.primary_image || car.fallback_image) ? 
+                            `<img src="${this.getSafeUploadUrl(car.featured_image || car.primary_image || car.fallback_image)}" alt="${this.escapeHtml(car.title)}" 
+                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car text-danger\'></i>';" style="max-width:60px;max-height:45px;border-radius:4px;">
                             ` :
                             `<i class="fas fa-car text-danger"></i>`
                         }
@@ -1387,6 +1541,7 @@ displayGuestListingsTable(cars) {
         }).join('');
 
         tbody.innerHTML = html;
+        this.enableTableSorting('rejectedCarsTable');
     }
 
     filterRejectedCars() {
@@ -1398,7 +1553,7 @@ displayGuestListingsTable(cars) {
             const response = await this.apiCall('get_car', 'GET', { id: carId });
             
             if (response.success && response.car) {
-                this.showCarDetailsModal(response.car);
+                await this.showCarDetailsModal(response.car);
             } else {
                 throw new Error(response.message || 'Failed to load car details');
             }
@@ -1407,11 +1562,11 @@ displayGuestListingsTable(cars) {
         }
     }
 
-    showCarDetailsModal(car) {
+    async showCarDetailsModal(car) {
         this.prepareModal('carDetailsModal');
         const modalHtml = `
             <div class="modal-overlay active" id="carDetailsModal">
-                <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-content" style="max-width: 1000px;">
                     <div class="modal-header">
                         <h3>Car Listing Details</h3>
                         <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">
@@ -1491,6 +1646,18 @@ displayGuestListingsTable(cars) {
                                     <span class="detail-value">${car.owner_phone || 'N/A'}</span>
                                 </div>
                             </div>
+
+                            <div class="detail-section" style="grid-column:1/-1;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;">
+                                    <h4 style="margin:0;"><i class="fas fa-images"></i> Listing Images</h4>
+                                    <button class="btn btn-sm btn-outline" onclick="admin.refreshCarImageManagers(${car.id})">
+                                        <i class="fas fa-sync"></i> Refresh Images
+                                    </button>
+                                </div>
+                                <div id="carDetailsImagesGallery" data-car-gallery-for="${car.id}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+                                    <div class="text-center text-muted" style="grid-column:1/-1; padding:24px;">Loading images...</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -1508,6 +1675,7 @@ displayGuestListingsTable(cars) {
         `;
         
         document.body.insertAdjacentHTML('beforeend', modalHtml);
+        await this.refreshCarImageManagers(Number(car.id));
     }
 
     async bulkApproveCars() {
@@ -1517,7 +1685,13 @@ displayGuestListingsTable(cars) {
             return;
         }
         
-        if (!confirm(`Are you sure you want to approve ${checkboxes.length} car(s)?`)) {
+        const confirmed = await this.showActionConfirmDialog(
+            'Bulk Approve Listings',
+            `Are you sure you want to approve ${checkboxes.length} car(s)?`,
+            'Approve Selected',
+            'btn-success'
+        );
+        if (!confirmed) {
             return;
         }
         
@@ -1531,8 +1705,10 @@ displayGuestListingsTable(cars) {
             
             if (response.success) {
                 this.showAlert('success', `Successfully approved ${carIds.length} car(s)`);
-                this.loadPendingCars();
-                this.loadDashboardData();
+                await Promise.all([
+                    this.loadPendingCars(),
+                    this.loadDashboardData()
+                ]);
             } else {
                 throw new Error(response.message);
             }
@@ -1548,7 +1724,13 @@ displayGuestListingsTable(cars) {
             return;
         }
         
-        if (!confirm(`Are you sure you want to reject ${checkboxes.length} car(s)?`)) {
+        const confirmed = await this.showActionConfirmDialog(
+            'Bulk Reject Listings',
+            `Are you sure you want to reject ${checkboxes.length} car(s)?`,
+            'Reject Selected',
+            'btn-danger'
+        );
+        if (!confirmed) {
             return;
         }
         
@@ -1562,8 +1744,10 @@ displayGuestListingsTable(cars) {
             
             if (response.success) {
                 this.showAlert('success', `Successfully rejected ${carIds.length} car(s)`);
-                this.loadPendingCars();
-                this.loadDashboardData();
+                await Promise.all([
+                    this.loadPendingCars(),
+                    this.loadDashboardData()
+                ]);
             } else {
                 throw new Error(response.message);
             }
@@ -1580,16 +1764,19 @@ async loadPayments() {
         const serviceFilter = document.getElementById('paymentServiceFilter')?.value;
         const dateFrom = document.getElementById('paymentDateFrom')?.value;
         const dateTo = document.getElementById('paymentDateTo')?.value;
+        const includeFreeListings = document.getElementById('includeFreeListingsFilter')?.checked;
         
         if (statusFilter) filters.status = statusFilter;
         if (serviceFilter) filters.service_type = serviceFilter;
         if (dateFrom) filters.date_from = dateFrom;
         if (dateTo) filters.date_to = dateTo;
+        if (includeFreeListings) filters.include_free_listings = '1';
         
         const response = await this.apiCall('get_payments', 'GET', filters);
         
         if (response.success && response.payments) {
             this.displayPaymentsTable(response.payments);
+            this.loadFreeListingsPayments();
             debugLog(`Loaded ${response.payments.length} payments`);
         } else {
             throw new Error(response.message || 'Invalid payments response');
@@ -1597,8 +1784,143 @@ async loadPayments() {
     } catch (error) {
         document.getElementById('paymentsTableBody').innerHTML = 
             '<tr><td colspan="9" class="text-center text-muted">Error loading payments</td></tr>';
+
+        const freeTbody = document.getElementById('freeListingsPaymentsTableBody');
+        if (freeTbody) {
+            freeTbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Error loading free listings</td></tr>';
+        }
     }
 }
+
+    async loadFreeListingsPayments() {
+        try {
+            const filters = {
+                include_free_listings: '1',
+                status: 'free',
+                service_type: 'free_listing'
+            };
+
+            const dateFrom = document.getElementById('paymentDateFrom')?.value;
+            const dateTo = document.getElementById('paymentDateTo')?.value;
+            if (dateFrom) filters.date_from = dateFrom;
+            if (dateTo) filters.date_to = dateTo;
+
+            const response = await this.apiCall('get_payments', 'GET', filters);
+            if (response.success && response.payments) {
+                this.displayFreeListingsPaymentsTable(response.payments);
+            } else {
+                throw new Error(response.message || 'Invalid free listings response');
+            }
+        } catch (error) {
+            const tbody = document.getElementById('freeListingsPaymentsTableBody');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Error loading free listings</td></tr>';
+            }
+        }
+    }
+
+    displayFreeListingsPaymentsTable(rows) {
+        const tbody = document.getElementById('freeListingsPaymentsTableBody');
+        if (!tbody) return;
+
+        const freeRows = (rows || []).filter(row => Number(row.is_free_listing || 0) === 1 || row.service_type === 'free_listing' || row.status === 'free');
+
+        if (freeRows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No free listings found</td></tr>';
+            return;
+        }
+
+        const html = freeRows.map(row => {
+            const listingId = Number(row.listing_id || 0);
+            const listingTitle = this.escapeHtml(row.listing_title || 'Untitled listing');
+            const sellerName = this.escapeHtml(row.user_name || 'Guest Seller');
+            const sellerEmail = this.escapeHtml(row.user_email || '');
+            const listingStatus = this.escapeHtml((row.listing_status || 'free').replace('_', ' '));
+            const reference = this.escapeHtml(row.reference || '-');
+
+            return `
+                <tr>
+                    <td>${listingId > 0 ? listingId : '-'}</td>
+                    <td>${listingTitle}</td>
+                    <td>
+                        <div>${sellerName}</div>
+                        <div class="text-muted small">${sellerEmail}</div>
+                    </td>
+                    <td>${reference}</td>
+                    <td><span class="status-badge status-active">${listingStatus}</span></td>
+                    <td>${this.formatDateShort(row.created_at)}</td>
+                    <td>
+                        <div class="d-flex gap-5">
+                            ${listingId > 0 ? `<button class="btn btn-sm btn-success" onclick="admin.markFreeListingAsPaid(${listingId})" title="Mark as Paid (Verified)"><i class="fas fa-check-double"></i></button>` : ''}
+                            ${listingId > 0 ? `<button class="btn btn-sm btn-primary" onclick="showAddPaymentModal(${listingId})" title="Apply manual payment"><i class="fas fa-hand-holding-usd"></i></button>` : ''}
+                            ${listingId > 0 ? `<a class="btn btn-sm btn-secondary" href="../car.html?id=${listingId}" target="_blank" rel="noopener" title="View listing page"><i class="fas fa-external-link-alt"></i></a>` : ''}
+                            ${listingId > 0 ? `<button class="btn btn-sm btn-info" onclick="admin.viewCarDetails(${listingId})" title="View listing"><i class="fas fa-eye"></i></button>` : ''}
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        tbody.innerHTML = html;
+        this.enableTableSorting('freeListingsPaymentsTable');
+    }
+
+    async markFreeListingAsPaid(listingId) {
+        const amountInput = await this.showActionPromptDialog(
+            'Mark Listing as Paid',
+            'Enter amount to record for this listing (MWK).',
+            '0',
+            'Record Verified Payment'
+        );
+
+        if (amountInput === null) {
+            return;
+        }
+
+        const amount = Number(String(amountInput).trim());
+        if (Number.isNaN(amount) || amount < 0) {
+            this.showAlert('warning', 'Please enter a valid non-negative amount');
+            return;
+        }
+
+        const confirmed = await this.showActionConfirmDialog(
+            'Confirm Mark as Paid',
+            `Record a verified payment of MWK ${this.formatNumber(amount)} for listing #${listingId}?`,
+            'Record Payment',
+            'btn-success'
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            const response = await this.apiCall('record_manual_payment', 'POST', {
+                listing_id: Number(listingId),
+                amount,
+                payment_method: 'manual',
+                reference: `ADMIN-MARKPAID-${listingId}-${Date.now()}`,
+                status: 'verified',
+                service_type: 'listing_submission',
+                notes: 'Admin quick action: Marked free listing as paid and verified'
+            });
+
+            if (!response.success) {
+                throw new Error(response.message || 'Failed to record payment');
+            }
+
+            this.showAlert('success', response.message || 'Verified payment recorded');
+            await Promise.all([
+                this.loadPayments(),
+                this.loadPaymentStats(),
+                this.loadCars(),
+                this.loadPendingCars(),
+                this.loadFreeListingsPayments()
+            ]);
+        } catch (error) {
+            this.showAlert('error', error.message || 'Failed to mark listing as paid');
+        }
+    }
 
     async loadPaymentStats() {
         try {
@@ -2233,6 +2555,7 @@ displayLocationsTable(locations) {
     `).join('');
 
     tbody.innerHTML = html;
+    this.enableTableSorting('locationsTable');
 }
 
 // Add these functions to admin-script.js
@@ -2871,7 +3194,7 @@ async filterMakesModels() {
             if (response.success) {
                 this.showAlert('success', 'Car deleted successfully');
                 document.getElementById('editCarModal').remove();
-                this.loadCars();
+                await this.loadCars();
             } else {
                 throw new Error(response.message);
             }
@@ -2904,6 +3227,7 @@ async filterMakesModels() {
             if (result.success) {
                 this.showAlert('success', 'Images uploaded successfully');
                 await this.refreshCarImages(carId);
+                await this.refreshCarImageManagers(Number(carId));
                 input.value = '';
             } else {
                 throw new Error(result.message);
@@ -2926,42 +3250,9 @@ async filterMakesModels() {
 
                 // If carId is provided, refresh the modal
                 if (carId) {
-                    // Reload the images in the modal
-                    const gallery = document.getElementById('carImagesGallery');
-                    if (gallery) {
-                        gallery.innerHTML = '<div class="text-center">Reloading images...</div>';
-                        const imagesResponse = await this.apiCall('get_car_images', 'GET', { car_id: carId });
-
-                        if (imagesResponse.success && imagesResponse.images) {
-                            if (imagesResponse.images.length === 0) {
-                                gallery.innerHTML = '<div class="text-center text-muted">No images found for this listing</div>';
-                            } else {
-                                gallery.innerHTML = imagesResponse.images.map(img => {
-                                    const imageUrl = this.getSafeUploadUrl(img.filename);
-                                    return `
-                                    <div class="car-image-card" style="position: relative; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                        <img src="${imageUrl}" alt="${this.escapeHtml(img.original_filename)}"
-                                             style="width: 100%; height: 200px; object-fit: cover; cursor: pointer;"
-                                             onclick="window.open('${imageUrl}', '_blank')">
-                                        ${img.is_primary ? '<span style="position: absolute; top: 5px; left: 5px; background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">Primary</span>' : ''}
-                                        <div style="padding: 10px;">
-                                            <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
-                                                ${this.escapeHtml(img.original_filename)}
-                                            </div>
-                                            <div style="display: flex; gap: 5px; justify-content: space-between;">
-                                                ${!img.is_primary ? `<button class="btn btn-sm btn-success" onclick="admin.setPrimaryImage(${img.id}, ${carId})" title="Set as Primary">
-                                                    <i class="fas fa-star"></i> Set Primary
-                                                </button>` : ''}
-                                                <button class="btn btn-sm btn-danger" onclick="admin.deleteCarImage(${img.id}, ${carId})" title="Delete Image">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `;
-                                }).join('');
-                            }
-                        }
+                    const refreshed = await this.refreshCarImageManagers(Number(carId));
+                    if (!refreshed) {
+                        await this.refreshCarImages(Number(carId));
                     }
                 } else {
                     // Old behavior: remove element from DOM
@@ -2979,7 +3270,13 @@ async filterMakesModels() {
     }
 
     async deleteCarFromTable(carId) {
-        if (!confirm('Are you sure you want to delete this car? This action cannot be undone.')) {
+        const confirmed = await this.showActionConfirmDialog(
+            'Delete Listing',
+            'Are you sure you want to delete this car? This action cannot be undone.',
+            'Delete',
+            'btn-danger'
+        );
+        if (!confirmed) {
             return;
         }
         
@@ -2988,7 +3285,7 @@ async filterMakesModels() {
             
             if (response.success) {
                 this.showAlert('success', 'Car deleted successfully');
-                this.loadCars();
+                await this.loadCars();
             } else {
                 throw new Error(response.message);
             }
@@ -3192,7 +3489,7 @@ async filterMakesModels() {
             if (response.success) {
                 this.showAlert('success', 'User updated successfully');
                 this.closeModal('editUserModal');
-                this.loadUsers();
+                await this.loadUsers();
             } else {
                 throw new Error(response.message);
             }
@@ -3289,7 +3586,7 @@ async filterMakesModels() {
             if (response.success) {
                 this.showAlert('success', 'User and all related data permanently deleted');
                 document.getElementById('editUserModal')?.remove();
-                this.loadUsers();
+                await this.loadUsers();
             } else {
                 throw new Error(response.message);
             }
@@ -3305,7 +3602,7 @@ async filterMakesModels() {
 
                 if (response.success) {
                     this.showAlert('success', 'User suspended successfully');
-                    this.loadUsers();
+                    await this.loadUsers();
                 } else {
                     throw new Error(response.message);
                 }
@@ -3351,7 +3648,7 @@ async filterMakesModels() {
             
             if (data.success) {
                 this.showAlert('success', data.message);
-                this.loadUsers();
+                await this.loadUsers();
             } else {
                 throw new Error(data.message || 'Failed to update AI chat access');
             }
@@ -3362,12 +3659,23 @@ async filterMakesModels() {
 
     async toggleFeatureCar(id, isFeatured) {
         try {
-            const action = isFeatured ? 'feature' : 'unfeature';
+            const enablingFeatured = Number(isFeatured) === 1;
+            const confirmed = await this.showActionConfirmDialog(
+                enablingFeatured ? 'Set Featured Listing' : 'Remove Featured Listing',
+                enablingFeatured ? 'Mark this listing as featured?' : 'Remove featured status from this listing?',
+                enablingFeatured ? 'Set Featured' : 'Remove Featured',
+                enablingFeatured ? 'btn-warning' : 'btn-secondary'
+            );
+            if (!confirmed) {
+                return;
+            }
+
+            const action = enablingFeatured ? 'feature' : 'unfeature';
             const response = await this.apiCall('feature_car', 'POST', { id: id, is_featured: isFeatured });
 
             if (response.success) {
                 this.showAlert('success', `Car ${action}d successfully`);
-                this.loadCars();
+                await this.loadCars();
             } else {
                 throw new Error(response.message);
             }
@@ -3383,7 +3691,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Car ${action} successfully`);
-                this.loadCars();
+                await this.loadCars();
             } else {
                 throw new Error(response.message);
             }
@@ -3427,7 +3735,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', response.message || 'Garage deleted successfully');
-                this.loadGarages();
+                await this.loadGarages();
             } else {
                 throw new Error(response.message);
             }
@@ -3471,7 +3779,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', response.message || 'Dealer deleted successfully');
-                this.loadDealers();
+                await this.loadDealers();
             } else {
                 throw new Error(response.message);
             }
@@ -3520,7 +3828,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', response.message || 'Car hire company deleted successfully');
-                this.loadCarHire();
+                await this.loadCarHire();
             } else {
                 console.error('Deletion failed:', response.message);
                 throw new Error(response.message);
@@ -3539,7 +3847,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Garage ${action} successfully`);
-                this.loadGarages();
+                await this.loadGarages();
             } else {
                 throw new Error(response.message);
             }
@@ -3557,7 +3865,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Garage ${action} successfully`);
-                this.loadGarages();
+                await this.loadGarages();
             } else {
                 throw new Error(response.message);
             }
@@ -3575,7 +3883,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Garage ${action} successfully`);
-                this.loadGarages();
+                await this.loadGarages();
             } else {
                 throw new Error(response.message);
             }
@@ -3593,7 +3901,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Dealer ${action} successfully`);
-                this.loadDealers();
+                await this.loadDealers();
             } else {
                 throw new Error(response.message);
             }
@@ -3611,7 +3919,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Dealer ${action} successfully`);
-                this.loadDealers();
+                await this.loadDealers();
             } else {
                 throw new Error(response.message);
             }
@@ -3629,7 +3937,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Dealer ${action} successfully`);
-                this.loadDealers();
+                await this.loadDealers();
             } else {
                 throw new Error(response.message);
             }
@@ -3647,7 +3955,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Car hire company ${action} successfully`);
-                this.loadCarHire();
+                await this.loadCarHire();
             } else {
                 throw new Error(response.message);
             }
@@ -3665,7 +3973,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Car hire company ${action} successfully`);
-                this.loadCarHire();
+                await this.loadCarHire();
             } else {
                 throw new Error(response.message);
             }
@@ -3683,7 +3991,7 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', `Car hire company ${action} successfully`);
-                this.loadCarHire();
+                await this.loadCarHire();
             } else {
                 throw new Error(response.message);
             }
@@ -3710,7 +4018,7 @@ async filterMakesModels() {
                     <button class="close-btn" onclick="document.getElementById('viewCarImagesModal').remove()" style="position: absolute; right: 15px; top: 15px; background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div id="carImagesGallery" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; padding: 20px;">
+                    <div id="carImagesGallery" data-car-gallery-for="${carId}" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 20px;">
                         <div class="text-center">Loading images...</div>
                     </div>
                 </div>
@@ -3725,47 +4033,7 @@ async filterMakesModels() {
             }
         });
 
-        // Load images
-        try {
-            const response = await this.apiCall('get_car_images', 'GET', { car_id: carId });
-
-            if (response.success && response.images) {
-                const gallery = document.getElementById('carImagesGallery');
-
-                if (response.images.length === 0) {
-                    gallery.innerHTML = '<div class="text-center text-muted">No images found for this listing</div>';
-                } else {
-                    gallery.innerHTML = response.images.map(img => {
-                        const imageUrl = this.getSafeUploadUrl(img.filename);
-                        return `
-                        <div class="car-image-card" style="position: relative; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <img src="${imageUrl}" alt="${this.escapeHtml(img.original_filename)}"
-                                 style="width: 100%; height: 200px; object-fit: cover; cursor: pointer;"
-                                 onclick="window.open('${imageUrl}', '_blank')">
-                            ${img.is_primary ? '<span style="position: absolute; top: 5px; left: 5px; background: #28a745; color: white; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">Primary</span>' : ''}
-                            <div style="padding: 10px;">
-                                <div style="font-size: 12px; color: #666; margin-bottom: 8px;">
-                                    ${this.escapeHtml(img.original_filename)}
-                                </div>
-                                <div style="display: flex; gap: 5px; justify-content: space-between;">
-                                    ${!img.is_primary ? `<button class="btn btn-sm btn-success" onclick="admin.setPrimaryImage(${img.id}, ${carId})" title="Set as Primary">
-                                        <i class="fas fa-star"></i> Set Primary
-                                    </button>` : ''}
-                                    <button class="btn btn-sm btn-danger" onclick="admin.deleteCarImage(${img.id}, ${carId})" title="Delete Image">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    }).join('');
-                }
-            } else {
-                throw new Error(response.message || 'Failed to load images');
-            }
-        } catch (error) {
-            document.getElementById('carImagesGallery').innerHTML = '<div class="text-center text-danger">Error loading images</div>';
-        }
+        await this.refreshCarImageManagers(Number(carId));
     }
 
     async viewPayment(id) {
@@ -3854,7 +4122,9 @@ async filterMakesModels() {
             return;
         }
 
-        const html = cars.map(car => `
+        const html = cars.map(car => {
+            const listingImage = car.featured_image || car.primary_image || car.fallback_image || '';
+            return `
             <tr>
                 <td>
                     <input type="checkbox" class="car-checkbox" value="${car.id}" onchange="admin.updateBulkSelection()">
@@ -3862,9 +4132,9 @@ async filterMakesModels() {
                 <td>${car.id}</td>
                 <td class="car-image-cell">
                     <div class="car-image-thumb">
-                        ${car.primary_image ? 
-                            `<img src="${this.getSafeUploadUrl(car.primary_image)}" alt="${this.escapeHtml(car.title)}" 
-                                  onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\"fas fa-car car-image-placeholder\"></i>';">` :
+                        ${listingImage ? 
+                            `<img src="${this.getSafeUploadUrl(listingImage)}" alt="${this.escapeHtml(car.title)}" 
+                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car car-image-placeholder\'></i>';" style="max-width:84px;max-height:60px;border-radius:6px;">` :
                             `<i class="fas fa-car car-image-placeholder"></i>`
                         }
                     </div>
@@ -3890,44 +4160,50 @@ async filterMakesModels() {
                 <td>${car.views_count || 0}</td>
                 <td>${this.formatDateShort(car.created_at)}</td>
                 <td>
-                    <div class="d-flex gap-5" style="flex-wrap: wrap;">
-                        ${car.status === 'pending_approval' ? `
-                            <button class="btn btn-sm btn-success" onclick="admin.approveCar(${car.id}, 'approve')" title="${((Number(car.payment_required || 0) === 1 || Number(car.payment_amount || 0) > 0) && String(car.payment_status || '').toLowerCase() !== 'verified') ? 'Payment must be verified before approval' : 'Approve'}" ${((Number(car.payment_required || 0) === 1 || Number(car.payment_amount || 0) > 0) && String(car.payment_status || '').toLowerCase() !== 'verified') ? 'disabled' : ''}>
-                                <i class="fas fa-check"></i>
+                    <div class="car-actions d-flex gap-5" style="flex-wrap:wrap;align-items:center;">
+                        ${(() => {
+                            const canModerate = (
+                                car.status === 'pending_approval' ||
+                                car.approval_status === 'pending' ||
+                                car.approval_status === 'pending_email_verification'
+                            ) && !(car.status === 'active' && car.approval_status === 'approved');
+
+                            if (!canModerate) {
+                                return '';
+                            }
+
+                            return `
+                            <button class="btn btn-xs btn-success" onclick="admin.approveCar(${car.id}, 'approve')" title="Approve">
+                                <i class="fas fa-check"></i> Approve
                             </button>
-                            <button class="btn btn-sm btn-warning" onclick="admin.approveCar(${car.id}, 'reject')" title="Reject">
-                                <i class="fas fa-times"></i>
+                            <button class="btn btn-xs btn-danger" onclick="admin.approveCar(${car.id}, 'reject')" title="Reject">
+                                <i class="fas fa-times"></i> Reject
                             </button>
-                        ` : ''}
-                        <button class="btn btn-sm ${car.is_featured ? 'btn-warning' : 'btn-outline-warning'}"
-                                onclick="admin.toggleFeatureCar(${car.id}, ${car.is_featured ? 0 : 1})"
-                                title="${car.is_featured ? 'Unfeature' : 'Feature'} Car">
-                            <i class="fas fa-star"></i>
-                        </button>
-                        <button class="btn btn-sm ${car.is_premium ? 'btn-success' : 'btn-outline-success'}"
-                                onclick="admin.togglePremiumCar(${car.id}, ${car.is_premium ? 0 : 1})"
-                                title="${car.is_premium ? 'Remove Premium' : 'Make Premium'}">
-                            <i class="fas fa-crown"></i>
-                        </button>
-                        <button class="btn btn-sm btn-info" onclick="admin.viewCarDetails(${car.id})" title="View Details">
+                        `;
+                        })()}
+                        <button class="btn btn-xs btn-info" onclick="admin.viewCarDetails(${car.id})" title="View Details">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button class="btn btn-sm btn-success" onclick="admin.viewCarImages(${car.id}, '${this.escapeHtml(car.title).replace(/'/g, "\\'")}')" title="View Images">
-                            <i class="fas fa-images"></i>
-                        </button>
-                        <button class="btn btn-sm btn-primary" onclick="admin.editCar(${car.id})" title="Edit">
+                        <button class="btn btn-xs btn-primary" onclick="admin.editCar(${car.id})" title="Edit">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="admin.deleteCarFromTable(${car.id})" title="Delete">
+                        <button class="btn btn-xs ${car.is_featured ? 'btn-warning' : 'btn-outline-warning'}"
+                                onclick="admin.toggleFeatureCar(${car.id}, ${car.is_featured ? 0 : 1})"
+                                title="${car.is_featured ? 'Remove' : 'Set'} Featured">
+                            <i class="fas fa-star"></i>
+                        </button>
+                        <button class="btn btn-xs btn-danger" onclick="admin.deleteCarFromTable(${car.id})" title="Delete">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
 
         tbody.innerHTML = html;
         this.updateBulkSelection();
+        this.enableTableSorting('carsTable');
     }
 
     displayDeletedCarsTable(cars) {
@@ -3943,9 +4219,9 @@ async filterMakesModels() {
                 <td>${car.id}</td>
                 <td class="car-image-cell">
                     <div class="car-image-thumb">
-                        ${car.primary_image ?
-                            `<img src="${this.getSafeUploadUrl(car.primary_image)}" alt="${this.escapeHtml(car.title)}"
-                                  onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\"fas fa-car car-image-placeholder\"></i>';">` :
+                        ${(car.featured_image || car.primary_image || car.fallback_image) ?
+                            `<img src="${this.getSafeUploadUrl(car.featured_image || car.primary_image || car.fallback_image)}" alt="${this.escapeHtml(car.title)}"
+                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car car-image-placeholder\'></i>';" style="max-width:60px;max-height:45px;border-radius:4px;">` :
                             `<i class="fas fa-car car-image-placeholder"></i>`
                         }
                     </div>
@@ -3985,7 +4261,7 @@ async filterMakesModels() {
         `).join('');
 
         tbody.innerHTML = html;
-        this.enableTableSorting('carsTable');
+        this.enableTableSorting('deletedCarsTable');
     }
 
     displayPaymentsTable(payments) {
@@ -3996,9 +4272,14 @@ async filterMakesModels() {
             return;
         }
 
-        const html = payments.map(payment => `
+        const html = payments.map(payment => {
+            const paymentId = String(payment.id ?? '');
+            const isNumericPayment = /^\d+$/.test(paymentId);
+            const listingId = Number(payment.listing_id || 0);
+            const isFreeListing = Number(payment.is_free_listing || 0) === 1 || payment.service_type === 'free_listing' || payment.status === 'free';
+            return `
             <tr>
-                <td>#${payment.id}</td>
+                <td>#${this.escapeHtml(paymentId)}</td>
                 <td>
                     <div>${this.escapeHtml(payment.user_name)}</div>
                     <div class="text-muted small">${payment.user_email}</div>
@@ -4008,29 +4289,36 @@ async filterMakesModels() {
                 <td>${payment.payment_method ? this.capitalize(String(payment.payment_method).replace('_', ' ')) : '-'}</td>
                 <td>
                     <div>${payment.reference || '-'}</div>
+                    ${payment.listing_id ? `<div class="small text-muted">Listing #${payment.listing_id}</div>` : ''}
                     ${payment.proof_path ? `<div class="small"><a href="../${payment.proof_path}" target="_blank" rel="noopener">View POP</a></div>` : ''}
                 </td>
                 <td><span class="status-badge status-${payment.status}">${this.formatManualPaymentStatus(payment.status)}</span></td>
                 <td>${this.formatDateShort(payment.created_at)}</td>
                 <td>
                     <div class="d-flex gap-5">
-                        ${payment.status === 'pending' ? `
-                            <button class="btn btn-sm btn-success" onclick="admin.verifyPayment(${payment.id})" title="Verify Manually">
+                        ${payment.status === 'pending' && isNumericPayment ? `
+                            <button class="btn btn-sm btn-success" onclick="admin.verifyPayment(${paymentId})" title="Verify Manually">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger" onclick="admin.rejectPayment(${payment.id})" title="Reject POP">
+                            <button class="btn btn-sm btn-danger" onclick="admin.rejectPayment(${paymentId})" title="Reject POP">
                                 <i class="fas fa-times"></i>
                             </button>
                         ` : ''}
-                        <button class="btn btn-sm btn-info" onclick="admin.viewPayment(${payment.id})" title="View">
+                        ${listingId > 0 ? `<button class="btn btn-sm ${isFreeListing ? 'btn-primary' : 'btn-outline-primary'}" onclick="showAddPaymentModal(${listingId})" title="Apply Manual Payment to Listing">
+                            <i class="fas fa-hand-holding-usd"></i>
+                        </button>` : ''}
+                        ${listingId > 0 ? `<a class="btn btn-sm btn-secondary" href="../car.html?id=${listingId}" target="_blank" rel="noopener" title="View listing page"><i class="fas fa-external-link-alt"></i></a>` : ''}
+                        <button class="btn btn-sm btn-info" onclick="admin.viewPayment('${paymentId.replace(/'/g, "\\'")}')" title="View">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
 
         tbody.innerHTML = html;
+        this.enableTableSorting('paymentsTable');
     }
 
     displayUsersTable(users) {
@@ -4141,6 +4429,7 @@ async filterMakesModels() {
         `).join('');
 
         tbody.innerHTML = html;
+        this.enableTableSorting('adminsTable');
     }
 
     async approveItem(type, id, action) {
@@ -4177,8 +4466,10 @@ async filterMakesModels() {
             
             if (response.success) {
                 this.showAlert('success', response.message);
-                this.loadDashboardData();
-                this.loadSectionData(this.currentSection);
+                await Promise.all([
+                    this.loadDashboardData(),
+                    this.loadSectionData(this.currentSection)
+                ]);
             } else {
                 throw new Error(response.message);
             }
@@ -4187,12 +4478,124 @@ async filterMakesModels() {
         }
     }
 
+    showActionConfirmDialog(title, message, confirmText = 'Confirm', confirmClass = 'btn-primary') {
+        this.prepareModal('actionConfirmModal');
+
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.id = 'actionConfirmModal';
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 520px;">
+                    <div class="modal-header">
+                        <h3>${this.escapeHtml(title || 'Confirm Action')}</h3>
+                        <button type="button" class="modal-close" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin: 0; line-height: 1.5;">${this.escapeHtml(message || 'Are you sure?')}</p>
+                    </div>
+                    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;">
+                        <button type="button" class="btn btn-secondary" data-action="cancel">Cancel</button>
+                        <button type="button" class="btn ${confirmClass}" data-action="confirm">${this.escapeHtml(confirmText)}</button>
+                    </div>
+                </div>
+            `;
+
+            const closeAndResolve = (value) => {
+                if (modal && modal.parentElement) {
+                    modal.remove();
+                }
+                resolve(value);
+            };
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeAndResolve(false);
+                }
+            });
+
+            const closeBtn = modal.querySelector('.modal-close');
+            if (closeBtn) closeBtn.addEventListener('click', () => closeAndResolve(false));
+
+            const cancelBtn = modal.querySelector('[data-action="cancel"]');
+            if (cancelBtn) cancelBtn.addEventListener('click', () => closeAndResolve(false));
+
+            const confirmBtn = modal.querySelector('[data-action="confirm"]');
+            if (confirmBtn) confirmBtn.addEventListener('click', () => closeAndResolve(true));
+
+            document.body.appendChild(modal);
+            if (confirmBtn) confirmBtn.focus();
+        });
+    }
+
+    showActionPromptDialog(title, message, placeholder = '', confirmText = 'Submit') {
+        this.prepareModal('actionPromptModal');
+
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.id = 'actionPromptModal';
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 560px;">
+                    <div class="modal-header">
+                        <h3>${this.escapeHtml(title || 'Provide Details')}</h3>
+                        <button type="button" class="modal-close" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p style="margin: 0 0 10px; line-height: 1.5;">${this.escapeHtml(message || '')}</p>
+                        <textarea class="form-control" rows="4" data-input="prompt" placeholder="${this.escapeHtml(placeholder)}"></textarea>
+                    </div>
+                    <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:10px;">
+                        <button type="button" class="btn btn-secondary" data-action="cancel">Cancel</button>
+                        <button type="button" class="btn btn-primary" data-action="confirm">${this.escapeHtml(confirmText)}</button>
+                    </div>
+                </div>
+            `;
+
+            const closeAndResolve = (value) => {
+                if (modal && modal.parentElement) {
+                    modal.remove();
+                }
+                resolve(value);
+            };
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    closeAndResolve(null);
+                }
+            });
+
+            const closeBtn = modal.querySelector('.modal-close');
+            if (closeBtn) closeBtn.addEventListener('click', () => closeAndResolve(null));
+
+            const cancelBtn = modal.querySelector('[data-action="cancel"]');
+            if (cancelBtn) cancelBtn.addEventListener('click', () => closeAndResolve(null));
+
+            const confirmBtn = modal.querySelector('[data-action="confirm"]');
+            const input = modal.querySelector('[data-input="prompt"]');
+            if (confirmBtn) {
+                confirmBtn.addEventListener('click', () => {
+                    const value = input ? String(input.value || '').trim() : '';
+                    closeAndResolve(value);
+                });
+            }
+
+            document.body.appendChild(modal);
+            if (input) input.focus();
+        });
+    }
+
     async approveCar(id, action) {
         let rejectionReason = '';
         
         // If rejecting, prompt for rejection reason
         if (action === 'reject') {
-            rejectionReason = prompt('Please provide a reason for rejection (this will be visible to the user):');
+            rejectionReason = await this.showActionPromptDialog(
+                'Reject Listing',
+                'Please provide a reason for rejection (this will be visible to the user).',
+                'Enter rejection reason...',
+                'Reject Listing'
+            );
             if (rejectionReason === null) {
                 // User cancelled
                 return;
@@ -4203,7 +4606,13 @@ async filterMakesModels() {
             }
         }
         
-        if (!confirm(`Are you sure you want to ${action} this car?`)) {
+        const confirmed = await this.showActionConfirmDialog(
+            action === 'approve' ? 'Approve Listing' : 'Reject Listing',
+            `Are you sure you want to ${action} this car listing?`,
+            action === 'approve' ? 'Approve' : 'Reject',
+            action === 'approve' ? 'btn-success' : 'btn-danger'
+        );
+        if (!confirmed) {
             return;
         }
 
@@ -4218,16 +4627,22 @@ async filterMakesModels() {
             
             if (response.success) {
                 this.showAlert('success', response.message);
-                this.loadDashboardData();
-                // Reload the current section if it's pending or rejected cars
+                const refreshTasks = [this.loadDashboardData(), this.loadPendingCars()];
+
+                // Reload current data immediately after action completion.
                 if (this.currentSection === 'pending-cars') {
-                    this.loadPendingCars();
+                    refreshTasks.push(this.loadPendingCars());
                 } else if (this.currentSection === 'rejected-cars') {
-                    this.loadRejectedCars();
+                    refreshTasks.push(this.loadRejectedCars());
+                } else if (this.currentSection === 'guest-listings') {
+                    refreshTasks.push(this.loadGuestListings());
+                } else if (this.currentSection === 'cars') {
+                    refreshTasks.push(this.loadCars());
                 } else {
-                    // Also reload pending cars in case it was approved from another section
-                    this.loadPendingCars();
+                    refreshTasks.push(this.loadSectionData(this.currentSection));
                 }
+
+                await Promise.all(refreshTasks);
             } else {
                 throw new Error(response.message);
             }
@@ -4251,8 +4666,11 @@ async filterMakesModels() {
             
             if (response.success) {
                 this.showAlert('success', 'Payment marked as manually verified');
-                this.loadPayments();
-                this.loadPaymentStats();
+                await Promise.all([
+                    this.loadPayments(),
+                    this.loadPaymentStats(),
+                    this.loadFreeListingsPayments()
+                ]);
             } else {
                 throw new Error(response.message);
             }
@@ -4272,8 +4690,11 @@ async filterMakesModels() {
 
             if (response.success) {
                 this.showAlert('success', 'POP submission rejected');
-                this.loadPayments();
-                this.loadPaymentStats();
+                await Promise.all([
+                    this.loadPayments(),
+                    this.loadPaymentStats(),
+                    this.loadFreeListingsPayments()
+                ]);
             } else {
                 throw new Error(response.message);
             }
@@ -4392,7 +4813,7 @@ async filterMakesModels() {
             if (response.success) {
                 this.renderListingReportsIssues(response.warnings || []);
                 this.showAlert('success', response.message || 'Report updated');
-                this.loadListingReports();
+                await this.loadListingReports();
             } else {
                 const apiError = new Error(response.message || 'Failed to update report');
                 apiError.code = response.code || 'REPORT_STATUS_UPDATE_FAILED';
@@ -4496,6 +4917,7 @@ async filterMakesModels() {
         `).join('');
 
         tbody.innerHTML = html;
+        this.enableTableSorting('activityLogsTable');
     }
 
     exportActivityLogs() {
@@ -4811,17 +5233,55 @@ async filterMakesModels() {
         div.textContent = text;
         return div.innerHTML;
     }
+
     getSafeUploadUrl(filename) {
         if (!filename) return '';
-        const normalized = String(filename).split('/').pop().split('\\').pop();
-        return `../uploads/${encodeURIComponent(normalized)}`;
+
+        const rawValue = String(filename).trim();
+        if (!rawValue) return '';
+
+        // Respect absolute/data URLs already returned by API.
+        if (/^(https?:)?\/\//i.test(rawValue) || rawValue.startsWith('data:')) {
+            return rawValue;
+        }
+
+        // Normalize slashes and strip query/hash fragments.
+        let normalized = rawValue.replace(/\\/g, '/').split('?')[0].split('#')[0];
+        normalized = normalized.replace(/^\.\//, '').replace(/^\/+/, '');
+
+        // Keep nested upload paths instead of collapsing to basename.
+        if (normalized.startsWith('uploads/')) {
+            const relativePath = normalized.substring('uploads/'.length)
+                .split('/')
+                .map(part => encodeURIComponent(part))
+                .join('/');
+            return `../uploads/${relativePath}`;
+        }
+
+        if (normalized.includes('/uploads/')) {
+            const relativePath = normalized.split('/uploads/').pop()
+                .split('/')
+                .map(part => encodeURIComponent(part))
+                .join('/');
+            return `../uploads/${relativePath}`;
+        }
+
+        const relativePath = normalized
+            .split('/')
+            .map(part => encodeURIComponent(part))
+            .join('/');
+        return `../uploads/${relativePath}`;
     }
 
     showAlert(type, message) {
         debugLog(`Alert: ${type} - ${message}`);
         
-        const alertsContainer = document.getElementById('alerts');
-        const alert = document.createElement('div');
+            // Use the dashboard overlay container when logged in; fall back to the login #alerts div.
+            const alertsContainer = this.isLoggedIn
+                ? (document.getElementById('dashboardAlerts') || document.getElementById('alerts'))
+                : document.getElementById('alerts');
+            if (!alertsContainer) return;
+            const alert = document.createElement('div');
         alert.className = `alert alert-${type === 'error' ? 'error' : type}`;
         alert.innerHTML = `
             <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
@@ -4878,7 +5338,7 @@ class CarModal {
         }
         
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.modal.classList.contains('active')) {
+            if (e.key === 'Escape' && this.modal && this.modal.classList.contains('active')) {
                 this.close();
             }
         });
@@ -4981,6 +5441,9 @@ async function adminLogin(event) {
             localStorage.setItem('admin_email', data.admin.email);
             
             admin.adminData = data.admin;
+
+            // Notify other tabs that this tab is now the active admin session.
+            document.dispatchEvent(new CustomEvent('adminLoginSuccess'));
 
             // Onboarding managers have no access to the admin dashboard
             if (data.admin.role === 'onboarding_manager') {
@@ -5302,7 +5765,10 @@ async function submitAddCar() {
         if (response.success) {
             admin.showAlert('success', 'Car listing added successfully!');
             admin.closeModal('addCarModal');
-            admin.loadCars(); // Reload the cars list
+            await Promise.all([
+                admin.loadCars(),
+                admin.loadDashboardData()
+            ]);
         } else {
             admin.showAlert('error', response.message || 'Failed to add car');
         }
@@ -5311,8 +5777,116 @@ async function submitAddCar() {
     }
 }
 
-function showAddPaymentModal() {
-    admin.showAlert('info', 'Add payment modal coming soon');
+function showAddPaymentModal(prefillListingId = '') {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.id = 'manualPaymentModal';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 720px;">
+            <div class="modal-header">
+                <h3><i class="fas fa-hand-holding-usd"></i> Record Manual Listing Payment</h3>
+                <button class="modal-close" onclick="admin.closeModal('manualPaymentModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="manualPaymentForm" class="modal-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="manual-payment-listing-id">Listing ID *</label>
+                            <input type="number" id="manual-payment-listing-id" class="form-control" min="1" required value="${prefillListingId ? String(prefillListingId) : ''}">
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-payment-amount">Amount (MWK) *</label>
+                            <input type="number" id="manual-payment-amount" class="form-control" min="0" step="0.01" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="manual-payment-method">Payment Method *</label>
+                            <select id="manual-payment-method" class="form-control" required>
+                                <option value="manual">Manual</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="airtel_money">Airtel Money</option>
+                                <option value="tnm_mpamba">TNM Mpamba</option>
+                                <option value="cash">Cash</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-payment-reference">Reference</label>
+                            <input type="text" id="manual-payment-reference" class="form-control" placeholder="Optional reference number">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="manual-payment-status">Status *</label>
+                            <select id="manual-payment-status" class="form-control" required>
+                                <option value="verified">Verified</option>
+                                <option value="pending">Pending</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="manual-payment-service">Service Type *</label>
+                            <select id="manual-payment-service" class="form-control" required>
+                                <option value="listing_submission">Listing Submission</option>
+                                <option value="listing_featured">Featured Listing</option>
+                                <option value="listing_premium">Premium Listing</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="manual-payment-notes">Admin Notes</label>
+                        <textarea id="manual-payment-notes" class="form-control" rows="3" placeholder="Optional note about this manual payment"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="admin.closeModal('manualPaymentModal')">Cancel</button>
+                <button type="button" class="btn btn-success" onclick="submitManualPaymentRecord()"><i class="fas fa-save"></i> Save Payment</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+}
+
+async function submitManualPaymentRecord() {
+    const form = document.getElementById('manualPaymentForm');
+    if (!form || !form.checkValidity()) {
+        form?.reportValidity();
+        return;
+    }
+
+    const payload = {
+        listing_id: Number(document.getElementById('manual-payment-listing-id').value),
+        amount: Number(document.getElementById('manual-payment-amount').value),
+        payment_method: document.getElementById('manual-payment-method').value,
+        reference: (document.getElementById('manual-payment-reference').value || '').trim(),
+        status: document.getElementById('manual-payment-status').value,
+        service_type: document.getElementById('manual-payment-service').value,
+        notes: (document.getElementById('manual-payment-notes').value || '').trim()
+    };
+
+    try {
+        const response = await admin.apiCall('record_manual_payment', 'POST', payload);
+        if (!response.success) {
+            throw new Error(response.message || 'Failed to record manual payment');
+        }
+
+        admin.showAlert('success', response.message || 'Manual payment recorded successfully');
+        admin.closeModal('manualPaymentModal');
+        await Promise.all([
+            admin.loadPayments(),
+            admin.loadPaymentStats(),
+            admin.loadCars(),
+            admin.loadPendingCars(),
+            admin.loadFreeListingsPayments()
+        ]);
+    } catch (error) {
+        admin.showAlert('error', error.message || 'Failed to record manual payment');
+    }
 }
 
 function showAddAdminModal() {
@@ -5347,6 +5921,10 @@ async function saveGeneralSettings() {
         if (response.success) {
             admin.showAlert('success', response.message);
             debugLog('Saved general settings:', settings);
+            await Promise.all([
+                loadSettings(),
+                loadSystemInfo()
+            ]);
         } else {
             admin.showAlert('error', response.message || 'Failed to save settings');
         }
@@ -5383,6 +5961,11 @@ async function saveListingSettings() {
             admin.showAlert('success', response.message);
             updateFeaturedLaunchModeBadge();
             debugLog('Saved listing settings:', settings);
+            await Promise.all([
+                loadSettings(),
+                admin.loadCars(),
+                admin.loadPendingCars()
+            ]);
         } else {
             admin.showAlert('error', response.message || 'Failed to save settings');
         }
@@ -5408,6 +5991,11 @@ async function saveUserSettings() {
         if (response.success) {
             admin.showAlert('success', response.message);
             debugLog('Saved user settings:', settings);
+            await Promise.all([
+                loadSettings(),
+                admin.loadUsers(),
+                admin.loadGuestListings()
+            ]);
         } else {
             admin.showAlert('error', response.message || 'Failed to save settings');
         }
@@ -5436,6 +6024,7 @@ async function saveEmailSettings() {
         if (response.success) {
             admin.showAlert('success', response.message);
             debugLog('Saved email settings');
+            await loadSettings();
         } else {
             admin.showAlert('error', response.message || 'Failed to save settings');
         }
@@ -5468,6 +6057,10 @@ async function saveSecuritySettings() {
         if (response.success) {
             admin.showAlert('success', response.message);
             debugLog('Saved security settings:', settings);
+            await Promise.all([
+                loadSettings(),
+                loadSystemInfo()
+            ]);
         } else {
             admin.showAlert('error', response.message || 'Failed to save settings');
         }
@@ -5555,6 +6148,7 @@ async function saveAdminDbCredentials() {
         document.getElementById('admin-db-pass').value = '';
         setAdminDbStatus('Credentials saved successfully. New admin connections will use these settings.', false);
         admin.showAlert('success', response.message || 'Admin DB credentials saved');
+        await loadAdminDbCredentials();
     } catch (error) {
         setAdminDbStatus(error.message || 'Failed to save admin DB credentials', true);
         admin.showAlert('error', error.message || 'Failed to save admin DB credentials');
@@ -5585,6 +6179,7 @@ async function toggleMaintenanceMode() {
             admin.showAlert(isEnabled ? 'warning' : 'success',
                            isEnabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled');
             debugLog('Maintenance mode:', isEnabled ? 'enabled' : 'disabled', message);
+            await loadSettings();
         } else {
             admin.showAlert('error', response.message || 'Failed to update maintenance mode');
             document.getElementById('maintenance-mode').checked = !isEnabled;
@@ -6531,3 +7126,48 @@ if (featuredListingPriceInput && !featuredListingPriceInput.hasAttribute('data-l
     updateFeaturedLaunchModeBadge();
 }
 debugLog('Admin dashboard initialized');
+
+// ── Single active admin tab enforcement via BroadcastChannel ─────────────
+(function () {
+    if (typeof BroadcastChannel === 'undefined') return; // unsupported browser
+
+    const CH = new BroadcastChannel('motorlink_admin_session');
+    const TAB_ID = Date.now() + '_' + Math.random();
+
+    // Tell other tabs we are now the active admin tab.
+    function claimSession() {
+        CH.postMessage({ type: 'admin_claim', tabId: TAB_ID });
+    }
+
+    // Listen for a new tab claiming the session — if it isn't us, force logout.
+    CH.onmessage = (e) => {
+        if (e.data && e.data.type === 'admin_claim' && e.data.tabId !== TAB_ID) {
+            // Another tab has logged in.  Show warning then reload to login screen.
+            if (admin && admin.isLoggedIn) {
+                admin.showAlert('warning', 'Another admin session was started elsewhere. You have been logged out of this tab.');
+                setTimeout(() => {
+                    localStorage.removeItem('admin_token');
+                    localStorage.removeItem('admin_name');
+                    localStorage.removeItem('admin_email');
+                    window.location.reload();
+                }, 2500);
+            }
+        }
+    };
+
+    // Hook into login success.  adminLogin() is the global login function.
+    const _origAdminLogin = window.adminLogin || null;
+    // Patch login: claim session after successful login response.
+    // We can't override adminLogin directly because it's defined as a plain function.
+    // Instead, we intercept DOMContentLoaded-time login form submissions.
+    document.addEventListener('adminLoginSuccess', () => { claimSession(); }, { once: false });
+
+    // Also claim session if page loads while already authenticated (resuming dashboard).
+    const checkIfAlreadyLoggedIn = setInterval(() => {
+        if (admin && admin.isLoggedIn) {
+            claimSession();
+            clearInterval(checkIfAlreadyLoggedIn);
+        }
+    }, 500);
+    setTimeout(() => clearInterval(checkIfAlreadyLoggedIn), 10000);
+})();

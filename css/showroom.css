@@ -991,23 +991,92 @@
 .showroom-header-minimal {
     background: linear-gradient(135deg, #00c853 0%, #00a843 50%, #008c3a 100%);
     color: white;
-    padding: 30px 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 40px 0 35px;
+    margin-top: 0;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.showroom-header-minimal::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.12) 25%, transparent 25%),
+        linear-gradient(315deg, rgba(255,255,255,0.08) 25%, transparent 25%),
+        linear-gradient(45deg, rgba(255,255,255,0.06) 20%, transparent 20%),
+        linear-gradient(225deg, rgba(255,255,255,0.05) 20%, transparent 20%),
+        radial-gradient(ellipse at 20% 80%, rgba(255,255,255,0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+    pointer-events: none;
+    animation: showroomHeroGlow 10s ease-in-out infinite;
+}
+
+@keyframes showroomHeroGlow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+.showroom-header-minimal::after {
+    content: '';
+    position: absolute;
+    top: -20%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background:
+        linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%),
+        radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+    background-size: 100% 100%, 25px 25px;
+    border-radius: 50%;
+    transform: rotate(0deg);
+    pointer-events: none;
+    opacity: 0.5;
+    animation: showroomFloatRotate 20s ease-in-out infinite;
+}
+
+@keyframes showroomFloatRotate {
+    0%, 100% {
+        transform: rotate(0deg) translateY(0px);
+        opacity: 0.5;
+    }
+    50% {
+        transform: rotate(180deg) translateY(-30px);
+        opacity: 0.7;
+    }
+}
+
+.showroom-header-minimal > * {
+    position: relative;
+    z-index: 1;
 }
 
 /* Header layout to match company-header */
 .showroom-header-content {
+    max-width: 1200px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 18px;
+    position: relative;
+    z-index: 1;
+    padding: 0 var(--space-lg);
 }
 
 .showroom-header-content .header-top {
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr auto;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 24px;
-    flex-wrap: wrap;
+    gap: 25px;
+    margin-bottom: 20px;
 }
 
 .showroom-header-content .company-header-left {
@@ -1018,7 +1087,7 @@
 .showroom-header-content .company-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 18px;
     margin-top: 10px;
 }
 
@@ -1055,13 +1124,12 @@
 }
 
 .showroom-header-content .quick-contact-box {
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(14px);
-    border: 1px solid rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
     border-radius: 12px;
     padding: 16px;
-    min-width: 240px;
-    max-width: 320px;
+    min-width: 220px;
 }
 
 .showroom-header-content .quick-contact-box h4 {
@@ -1069,35 +1137,47 @@
     font-size: 0.95rem;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .showroom-header-content .quick-contact-buttons {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 8px;
 }
 
 .showroom-header-content .quick-contact-btn {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 10px 12px;
+    gap: 8px;
+    padding: 10px 16px;
     border-radius: 8px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
     text-decoration: none;
     transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.showroom-header-content .quick-contact-btn.whatsapp {
+    background: #25D366;
+    color: white;
+}
+
+.showroom-header-content .quick-contact-btn.whatsapp:hover {
+    background: #20BA5A;
+    transform: translateY(-2px);
 }
 
 .showroom-header-content .quick-contact-btn.phone {
-    background: rgba(255, 255, 255, 0.9);
+    background: white;
     color: #00a843;
 }
 
 .showroom-header-content .quick-contact-btn.phone:hover {
-    background: #ffffff;
+    background: #f5f5f5;
     transform: translateY(-2px);
 }
 
@@ -1131,15 +1211,21 @@
 }
 
 .dealer-name-minimal {
-    font-size: 28px;
+    font-size: 1.75rem;
     font-weight: 700;
-    margin: 0 0 8px 0;
+    margin: 0 0 12px 0;
     color: white;
     display: flex;
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
     justify-content: flex-start;
+}
+
+@media (min-width: 768px) {
+    .dealer-name-minimal {
+        font-size: 2rem;
+    }
 }
 
 /* Trust Badges in Header */
@@ -1220,47 +1306,50 @@
 /* Showroom Stats */
 .showroom-stats {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-    max-width: 600px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    max-width: none;
     margin: 16px auto 0;
-    padding: 0 16px;
+    padding: 0;
 }
 
 @media (min-width: 480px) {
     .showroom-stats {
-        grid-template-columns: repeat(4, 1fr);
-        max-width: 800px;
-        gap: 16px;
-        padding: 0;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
     }
 }
 
 .stat-item {
-    text-align: center;
-    padding: 20px 16px;
+    text-align: left;
+    padding: 14px;
     background: rgba(255, 255, 255, 0.15);
-    border-radius: 14px;
+    border-radius: 10px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.25);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    grid-template-areas:
+        "icon value"
+        "icon label";
+    column-gap: 12px;
+    row-gap: 2px;
+    align-items: center;
 }
 
 .stat-item:hover {
     background: rgba(255, 255, 255, 0.25);
-    transform: translateY(-6px) scale(1.03);
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
 
 .stat-item i {
+    grid-area: icon;
     font-size: 1.4rem;
-    margin-bottom: 4px;
+    margin-bottom: 0;
     opacity: 0.95;
-    display: block;
+    display: inline-flex;
+    align-self: center;
 }
 
 @media (min-width: 768px) {
@@ -1271,30 +1360,21 @@
 }
 
 .stat-value {
-    font-size: 1.4rem;
-    font-weight: 700;
-    margin-bottom: 4px;
+    grid-area: value;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 2px;
     display: block;
-    letter-spacing: -0.02em;
-    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     color: var(--text-white);
-    line-height: 1;
-}
-
-@media (min-width: 768px) {
-    .stat-value {
-        font-size: 1.6rem;
-        margin-bottom: 5px;
-    }
+    line-height: 1.2;
 }
 
 .stat-label {
-    font-size: 0.65rem;
-    opacity: 0.92;
+    grid-area: label;
+    font-size: 0.75rem;
+    opacity: 0.85;
     font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    line-height: 1.3;
+    line-height: 1.2;
     color: var(--text-white);
 }
 
@@ -1366,21 +1446,28 @@
 .dealer-info-grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 30px;
-}
-
-@media (min-width: 992px) {
-    .dealer-info-grid {
-        grid-template-columns: 1fr 1fr;
-    }
+    gap: 24px;
 }
 
 .dealer-map-card,
 .dealer-contact-card {
     background: white;
     border-radius: 12px;
-    padding: 30px;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e5e7eb;
+}
+
+.dealer-map-card {
+    grid-column: 1 / -1;
+}
+
+#map {
+    width: 100%;
+    height: 350px;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-top: 0;
 }
 
 .dealer-map-card h3,
@@ -2133,43 +2220,66 @@
 
 @media (max-width: 768px) {
     .showroom-header-minimal {
-        padding: 70px 12px 16px !important;
+        padding: 25px 0 20px !important;
+        min-height: auto !important;
     }
 
     .showroom-header-content .header-top {
-        flex-direction: column;
-        align-items: center;
+        grid-template-columns: 1fr;
+        justify-items: center;
         text-align: center;
-        gap: 12px;
+        gap: 14px;
+        width: 100%;
+        max-width: 100%;
     }
 
     .showroom-header-content .company-header-left {
         text-align: center;
         align-items: center;
+        width: 100%;
+        max-width: 100%;
     }
 
     .dealer-name-minimal {
         text-align: center;
-        display: flex;
-        flex-direction: column;
+        justify-content: center;
         align-items: center;
         gap: 6px;
         line-height: 1.3;
-        font-size: 1.3rem !important;
+        font-size: 1.4rem !important;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .dealer-name-minimal .verified-badge,
+    .dealer-name-minimal .featured-badge,
+    .dealer-name-minimal .certified-badge {
+        display: none !important;
     }
 
     .showroom-header-content .company-meta {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 8px !important;
+        font-size: 0.85rem;
         justify-content: center;
-        gap: 8px;
-        font-size: 12px;
+        text-align: center;
+        width: 100%;
+        max-width: 100%;
+        margin: 12px auto 16px;
     }
 
     .showroom-header-content .meta-item {
-        gap: 4px;
-        font-size: 0.75rem;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        max-width: 100%;
+        white-space: nowrap;
     }
 
-    .showroom-header-content .meta-item:nth-child(n+2) {
+    .showroom-header-content .meta-item:nth-child(n+3) {
         display: none !important;
     }
 
@@ -2178,11 +2288,21 @@
     }
 
     .showroom-header-content .quick-contact-box {
-        display: none !important;
+        width: 100%;
+        padding: 14px;
     }
 
-    .showroom-header-minimal .showroom-stats {
-        display: none !important;
+    .showroom-header-content .quick-contact-box h4 {
+        font-size: 0.9rem;
+    }
+
+    .showroom-header-content .quick-contact-buttons {
+        gap: 8px;
+    }
+
+    .showroom-header-content .quick-contact-btn {
+        font-size: 0.8rem;
+        padding: 8px 12px;
     }
 
     /* Stack badges vertically on mobile for better readability */
@@ -2222,27 +2342,36 @@
     /* Style showroom-stats to match key-features design */
     .showroom-stats {
         display: grid !important;
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)) !important;
+        grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
-        margin-top: 16px !important;
+        margin: 16px auto 0 !important;
         width: 100%;
-        max-width: 400px;
+        max-width: 100%;
         margin-left: auto;
         margin-right: auto;
+        padding: 0 !important;
+        box-sizing: border-box;
     }
 
     .showroom-stats .stat-item {
-        background: rgba(255, 255, 255, 0.18) !important;
-        border: 1.5px solid rgba(255, 255, 255, 0.28) !important;
+        background: rgba(255, 255, 255, 0.2) !important;
+        border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
         border-radius: 12px !important;
-        padding: 12px 10px !important;
-        display: flex !important;
-        flex-direction: column !important;
+        padding: 12px 8px !important;
+        display: grid !important;
+        grid-template-columns: 24px 1fr !important;
+        grid-template-areas:
+            "icon value"
+            "icon label" !important;
         align-items: center !important;
-        justify-content: center !important;
-        gap: 6px !important;
+        column-gap: 8px !important;
+        row-gap: 2px !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        min-width: 0 !important;
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow: hidden;
+        min-width: 0;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
     }
 
@@ -2253,22 +2382,26 @@
     }
 
     .showroom-stats .stat-item i {
+        grid-area: icon;
         font-size: 1.4rem !important;
-        opacity: 0.95 !important;
-        margin-bottom: 2px !important;
+        margin-bottom: 0 !important;
     }
 
     .showroom-stats .stat-value {
-        font-size: 1.1rem !important;
+        grid-area: value;
+        font-size: 0.8rem !important;
         font-weight: 700 !important;
         color: white !important;
-        line-height: 1 !important;
+        line-height: 1.2 !important;
+        margin: 0 !important;
+        text-align: left !important;
     }
 
     .showroom-stats .stat-label {
-        font-size: 0.7rem !important;
+        grid-area: label;
+        font-size: 0.68rem !important;
         opacity: 0.9 !important;
-        text-align: center !important;
+        text-align: left !important;
         color: white !important;
         font-weight: 500 !important;
         line-height: 1.2 !important;
@@ -2278,7 +2411,7 @@
 @media (max-width: 480px) {
     /* Extra compact on very small screens */
     .showroom-header-minimal {
-        padding: 60px 10px 12px !important;
+        padding: 25px 0 20px !important;
     }
 
     .dealer-name-minimal {
@@ -2305,7 +2438,9 @@
     }
 
     .showroom-stats {
-        display: none !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important;
     }
 }
 

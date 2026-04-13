@@ -612,6 +612,37 @@ body {
     margin-right: 0;
 }
 
+.btn-xs {
+    padding: 3px 8px !important;
+    font-size: 11px !important;
+    margin-right: 3px;
+    margin-bottom: 3px;
+    line-height: 1.4;
+    border-radius: 4px;
+}
+
+.btn-xs:last-child {
+    margin-right: 0;
+}
+
+    /* ===========================================================================
+       DASHBOARD TOAST ALERTS (visible while logged in)
+    =========================================================================== */
+    #dashboardAlerts {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 8500;
+        width: 340px;
+        pointer-events: none;
+    }
+    #dashboardAlerts .alert {
+        pointer-events: all;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+        margin-bottom: 10px;
+        animation: slideIn 0.25s ease;
+    }
+
 /* Ensure buttons in action groups have proper spacing */
 .btn-sm + .btn-sm {
     margin-left: 0;
@@ -1960,6 +1991,283 @@ body {
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 24px;
     margin-bottom: 30px;
+}
+
+/* ============================================================================
+   ACTION BUTTON DESIGN UPGRADE
+============================================================================ */
+
+.data-table td {
+    vertical-align: middle;
+}
+
+.management-actions,
+.car-actions,
+.data-table td .d-flex.gap-5 {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+    border: 1px solid #e6ebf2;
+    box-shadow: inset 0 1px 0 #ffffff;
+}
+
+.btn,
+.btn-sm,
+.btn-xs,
+.btn-action {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before,
+.btn-sm::before,
+.btn-xs::before,
+.btn-action::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -110%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(120deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.25) 50%, rgba(255,255,255,0) 100%);
+    transition: left 0.35s ease;
+    pointer-events: none;
+}
+
+.btn:hover::before,
+.btn-sm:hover::before,
+.btn-xs:hover::before,
+.btn-action:hover::before {
+    left: 110%;
+}
+
+.data-table td .btn-sm,
+.data-table td .btn-xs,
+.data-table td .btn-action {
+    margin: 0;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    min-height: 32px;
+    min-width: 32px;
+    justify-content: center;
+    transition: transform 0.16s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.data-table td .btn-sm i,
+.data-table td .btn-xs i,
+.data-table td .btn-action i {
+    transition: transform 0.16s ease;
+}
+
+.data-table td .btn-sm:hover,
+.data-table td .btn-xs:hover,
+.data-table td .btn-action:hover {
+    transform: translateY(-2px);
+    filter: saturate(1.08);
+    box-shadow: 0 6px 14px rgba(27, 39, 51, 0.18);
+}
+
+.data-table td .btn-sm:hover i,
+.data-table td .btn-xs:hover i,
+.data-table td .btn-action:hover i {
+    transform: scale(1.08);
+}
+
+.data-table td .btn-sm:active,
+.data-table td .btn-xs:active,
+.data-table td .btn-action:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(27, 39, 51, 0.18);
+}
+
+.data-table td .btn-outline,
+.data-table td .btn-outline-warning,
+.data-table td .btn-outline-success,
+.data-table td .btn-outline-info,
+.data-table td .btn-outline-primary {
+    border-color: #d7dee9;
+    background: #fff;
+}
+
+.data-table td .btn-danger {
+    box-shadow: 0 3px 10px rgba(244, 67, 54, 0.25);
+}
+
+.data-table td .btn-success {
+    box-shadow: 0 3px 10px rgba(76, 175, 80, 0.25);
+}
+
+.data-table td .btn-warning {
+    box-shadow: 0 3px 10px rgba(255, 152, 0, 0.24);
+}
+
+.data-table td .btn-info,
+.data-table td .btn-primary,
+.data-table td .btn-secondary {
+    box-shadow: 0 3px 10px rgba(25, 118, 210, 0.2);
+}
+
+@media (max-width: 768px) {
+    .management-actions,
+    .car-actions,
+    .data-table td .d-flex.gap-5 {
+        gap: 6px;
+        padding: 6px;
+    }
+
+    .data-table td .btn-sm,
+    .data-table td .btn-xs,
+    .data-table td .btn-action {
+        min-height: 40px;
+        min-width: 40px;
+    }
+}
+
+/* Consistent ordering across action groups */
+.management-actions > .btn,
+.car-actions > .btn,
+.data-table td .d-flex.gap-5 > .btn {
+    order: 50;
+}
+
+/* 1) Read actions */
+.management-actions > .btn[title*="View"],
+.car-actions > .btn[title*="View"],
+.data-table td .d-flex.gap-5 > .btn[title*="View"],
+.management-actions > .btn[title*="Image"],
+.car-actions > .btn[title*="Image"],
+.data-table td .d-flex.gap-5 > .btn[title*="Image"] {
+    order: 10;
+}
+
+/* 2) Edit/manage actions */
+.management-actions > .btn[title*="Edit"],
+.car-actions > .btn[title*="Edit"],
+.data-table td .d-flex.gap-5 > .btn[title*="Edit"],
+.management-actions > .btn[title*="Code"],
+.car-actions > .btn[title*="Code"],
+.data-table td .d-flex.gap-5 > .btn[title*="Code"] {
+    order: 20;
+}
+
+/* 3) Positive actions */
+.management-actions > .btn[title*="Approve"],
+.car-actions > .btn[title*="Approve"],
+.data-table td .d-flex.gap-5 > .btn[title*="Approve"],
+.management-actions > .btn[title*="Verify"],
+.car-actions > .btn[title*="Verify"],
+.data-table td .d-flex.gap-5 > .btn[title*="Verify"],
+.management-actions > .btn[title*="Primary"],
+.car-actions > .btn[title*="Primary"],
+.data-table td .d-flex.gap-5 > .btn[title*="Primary"],
+.management-actions > .btn[title*="Feature"],
+.car-actions > .btn[title*="Feature"],
+.data-table td .d-flex.gap-5 > .btn[title*="Feature"] {
+    order: 30;
+}
+
+/* 4) Caution actions */
+.management-actions > .btn[title*="Reject"],
+.car-actions > .btn[title*="Reject"],
+.data-table td .d-flex.gap-5 > .btn[title*="Reject"],
+.management-actions > .btn[title*="Suspend"],
+.car-actions > .btn[title*="Suspend"],
+.data-table td .d-flex.gap-5 > .btn[title*="Suspend"],
+.management-actions > .btn[title*="Disable"],
+.car-actions > .btn[title*="Disable"],
+.data-table td .d-flex.gap-5 > .btn[title*="Disable"] {
+    order: 40;
+}
+
+/* 5) Dangerous actions always last */
+.management-actions > .btn[title*="Delete"],
+.car-actions > .btn[title*="Delete"],
+.data-table td .d-flex.gap-5 > .btn[title*="Delete"],
+.management-actions > .btn[title*="Remove"],
+.car-actions > .btn[title*="Remove"],
+.data-table td .d-flex.gap-5 > .btn[title*="Remove"] {
+    order: 90;
+}
+
+/* Interactive tooltip style from existing title text */
+.management-actions > .btn[title],
+.car-actions > .btn[title],
+.data-table td .d-flex.gap-5 > .btn[title] {
+    overflow: visible;
+}
+
+.management-actions > .btn[title]::after,
+.car-actions > .btn[title]::after,
+.data-table td .d-flex.gap-5 > .btn[title]::after {
+    content: attr(title);
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 6px 9px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    z-index: 30;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.35);
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+}
+
+.management-actions > .btn[title]::before,
+.car-actions > .btn[title]::before,
+.data-table td .d-flex.gap-5 > .btn[title]::before {
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #0f172a transparent transparent transparent;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+    pointer-events: none;
+    z-index: 30;
+}
+
+.management-actions > .btn[title]:hover::after,
+.car-actions > .btn[title]:hover::after,
+.data-table td .d-flex.gap-5 > .btn[title]:hover::after,
+.management-actions > .btn[title]:focus-visible::after,
+.car-actions > .btn[title]:focus-visible::after,
+.data-table td .d-flex.gap-5 > .btn[title]:focus-visible::after,
+.management-actions > .btn[title]:hover::before,
+.car-actions > .btn[title]:hover::before,
+.data-table td .d-flex.gap-5 > .btn[title]:hover::before,
+.management-actions > .btn[title]:focus-visible::before,
+.car-actions > .btn[title]:focus-visible::before,
+.data-table td .d-flex.gap-5 > .btn[title]:focus-visible::before {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 768px) {
+    .management-actions > .btn[title]::after,
+    .car-actions > .btn[title]::after,
+    .data-table td .d-flex.gap-5 > .btn[title]::after,
+    .management-actions > .btn[title]::before,
+    .car-actions > .btn[title]::before,
+    .data-table td .d-flex.gap-5 > .btn[title]::before {
+        display: none;
+    }
 }
 
 .analytics-kpi {

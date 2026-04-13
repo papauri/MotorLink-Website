@@ -156,25 +156,27 @@ class CarHireDashboard {
             const make = vehicle.make_name || vehicle.make || 'Vehicle';
             const model = vehicle.model_name || vehicle.model || '';
             const year = vehicle.year || '';
-            
+
             // Get vehicle details with fallbacks
             const plate = vehicle.license_plate || vehicle.registration_number || 'No Plate';
-            const color = vehicle.exterior_color || '';
-            
+            const color = vehicle.exterior_color || vehicle.color || '';
+
             // Format status label for display
-            const statusLabel = this.formatStatusLabel(vehicle.status || 'available');
-            
+            const status = vehicle.status || 'available';
+            const statusLabel = this.formatStatusLabel(status);
+            const imageUrl = vehicle.image_url || (vehicle.image ? `uploads/fleet/${vehicle.image}` : '');
+
             // Build info string
             let infoText = `${make} ${model} • ${plate}`;
             if (color) {
                 infoText += ` • ${color}`;
             }
-            
+
             return `
             <div class="car-card">
                 <div class="car-image">
-                    ${vehicle.image_url ?
-                        `<img src="${vehicle.image_url}" alt="${make} ${model}">` :
+                    ${imageUrl ?
+                        `<img src="${imageUrl}" alt="${make} ${model}">` :
                         `<div class="car-placeholder">
                             <i class="fas fa-car-side"></i>
                             <p>No Image</p>
@@ -186,23 +188,24 @@ class CarHireDashboard {
                     <p class="car-year-make">${infoText}</p>
                     <div class="car-price">MWK ${vehicle.daily_rate ? parseInt(vehicle.daily_rate).toLocaleString() : '0'}/day</div>
                     <div class="car-meta">
-                        <span class="status-badge status-${vehicle.status || 'available'}">${statusLabel}</span>
+                        <span class="status-badge status-${status}">${statusLabel}</span>
                         <span class="car-seats"><i class="fas fa-users"></i> ${vehicle.seats || 5} seats</span>
                     </div>
                     <div class="card-actions">
-                        <button class="btn btn-small btn-primary" onclick="carHireDashboard.editVehicle(${vehicle.id})">
+                        <button class="btn btn-small btn-primary" onclick="carHireDashboard.editVehicle(${vehicle.id})" title="Edit vehicle details">
                             <i class="fas fa-edit"></i> Edit
                         </button>
-                        <button class="btn btn-small ${vehicle.status === 'available' ? 'btn-secondary' : 'btn-primary'}"
-                                onclick="carHireDashboard.toggleVehicleStatus(${vehicle.id}, '${vehicle.status || 'available'}')">
-                            <i class="fas fa-${vehicle.status === 'available' ? 'pause' : 'check'}"></i>
-                            ${vehicle.status === 'available' ? 'Mark Rented' : 'Mark Available'}
+                        <button class="btn btn-small ${status === 'available' ? 'btn-secondary' : 'btn-primary'}"
+                                onclick="carHireDashboard.toggleVehicleStatus(${vehicle.id}, '${status}')"
+                                title="${status === 'available' ? 'Mark as rented' : 'Mark as available'}">
+                            <i class="fas fa-${status === 'available' ? 'pause' : 'check'}"></i>
+                            ${status === 'available' ? 'Mark Rented' : 'Mark Available'}
                         </button>
-                        <button class="btn btn-small btn-secondary" onclick="carHireDashboard.setMaintenance(${vehicle.id})">
-                            <i class="fas fa-tools"></i>
+                        <button class="btn btn-small btn-secondary" onclick="carHireDashboard.setMaintenance(${vehicle.id})" title="Set maintenance status">
+                            <i class="fas fa-tools"></i> Maintenance
                         </button>
-                        <button class="btn btn-small btn-danger" onclick="carHireDashboard.deleteVehicle(${vehicle.id})">
-                            <i class="fas fa-trash"></i>
+                        <button class="btn btn-small btn-danger" onclick="carHireDashboard.deleteVehicle(${vehicle.id})" title="Delete vehicle">
+                            <i class="fas fa-trash"></i> Delete
                         </button>
                     </div>
                 </div>
@@ -522,20 +525,22 @@ class CarHireDashboard {
 
     filterFleet() {
         const statusFilter = document.getElementById('statusFilter').value;
-        const searchTerm = document.getElementById('searchFleet').value.toLowerCase();
+        const searchTerm = document.getElementById('searchFleet').value.toLowerCase().trim();
 
         let filtered = this.fleet;
 
         if (statusFilter) {
-            filtered = filtered.filter(vehicle => vehicle.status === statusFilter);
+            filtered = filtered.filter(vehicle => (vehicle.status || 'available') === statusFilter);
         }
 
         if (searchTerm) {
-            filtered = filtered.filter(vehicle =>
-                vehicle.make.toLowerCase().includes(searchTerm) ||
-                vehicle.model.toLowerCase().includes(searchTerm) ||
-                vehicle.license_plate.toLowerCase().includes(searchTerm)
-            );
+            filtered = filtered.filter(vehicle => {
+                const make = (vehicle.make_name || vehicle.make || '').toLowerCase();
+                const model = (vehicle.model_name || vehicle.model || '').toLowerCase();
+                const plate = (vehicle.license_plate || vehicle.registration_number || '').toLowerCase();
+                const year = (vehicle.year || '').toString().toLowerCase();
+                return make.includes(searchTerm) || model.includes(searchTerm) || plate.includes(searchTerm) || year.includes(searchTerm);
+            });
         }
 
         this.displayFleet(filtered);

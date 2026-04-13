@@ -1280,6 +1280,12 @@ function servePlaceholderImage() {
 // API ROUTING & MAIN EXECUTION
 // ============================================================================
 
+// Allow other APIs (e.g. admin-api.php) to require this file purely for shared
+// constants and function definitions without executing the action router.
+if (defined('MOTORLINK_CONSTANTS_ONLY')) {
+    return;
+}
+
 try {
     $db = getDB();
 
@@ -7510,12 +7516,12 @@ function addCarHireVehicle($db) {
             $model['name'],
             $year,
             $vehicleName,
-            $dailyRate,
             $licensePlate,
             $transmission,
             $fuelType,
             max(1, $seats),
             $color,
+            $dailyRate,
             $status
         ]);
 
@@ -7529,6 +7535,7 @@ function addCarHireVehicle($db) {
             }
 
             $imageCount = count($_FILES['images']['name']);
+            $firstUploadedFilename = null;
             for ($i = 0; $i < min($imageCount, MAX_VEHICLE_IMAGES); $i++) {
                 if ($_FILES['images']['error'][$i] === UPLOAD_ERR_OK) {
                     $validation = validateUploadedImageFile(
@@ -7545,8 +7552,16 @@ function addCarHireVehicle($db) {
                     $filename = 'fleet_' . $vehicleId . '_' . time() . '_' . $i . '.' . $validation['extension'];
                     $filepath = $uploadDir . $filename;
 
-                    move_uploaded_file($_FILES['images']['tmp_name'][$i], $filepath);
+                    if (move_uploaded_file($_FILES['images']['tmp_name'][$i], $filepath) && $firstUploadedFilename === null) {
+                        $firstUploadedFilename = $filename;
+                    }
                 }
+            }
+
+            // Persist primary image so fleet cards and edit modal have a stable thumbnail.
+            if ($firstUploadedFilename !== null) {
+                $imageStmt = $db->prepare("UPDATE car_hire_fleet SET image = ?, updated_at = NOW() WHERE id = ?");
+                $imageStmt->execute([$firstUploadedFilename, $vehicleId]);
             }
         }
 

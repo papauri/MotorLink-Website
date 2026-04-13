@@ -202,20 +202,7 @@ class MyListingsManager {
             });
         }
 
-        // Get image URL
-        let imageUrl = '';
-        if (listing.featured_image) {
-            imageUrl = `${CONFIG.BASE_URL}uploads/${listing.featured_image}`;
-        } else if (listing.featured_image_id) {
-            imageUrl = `${CONFIG.API_URL}?action=image&id=${listing.featured_image_id}`;
-        } else if (listing.images && listing.images.length > 0) {
-            const img = listing.images[0];
-            if (img.id) {
-                imageUrl = `${CONFIG.API_URL}?action=image&id=${img.id}`;
-            } else if (img.filename) {
-                imageUrl = `${CONFIG.BASE_URL}uploads/${img.filename}`;
-            }
-        }
+        const imageUrl = this.resolveListingImageUrl(listing);
 
         // Status display
         const statusMap = {
@@ -336,6 +323,51 @@ class MyListingsManager {
                 </div>
             </div>
         `;
+    }
+
+    resolveListingImageUrl(listing) {
+        const normalizeUploadPath = (path) => {
+            if (!path) return '';
+            const rawPath = String(path).trim();
+            if (!rawPath) return '';
+            if (/^https?:\/\//i.test(rawPath) || rawPath.startsWith('//') || rawPath.startsWith('data:')) {
+                return rawPath;
+            }
+            if (rawPath.startsWith('uploads/')) {
+                return rawPath;
+            }
+            if (rawPath.startsWith('/uploads/')) {
+                return rawPath.slice(1);
+            }
+            return `uploads/${rawPath.replace(/^\/+/, '')}`;
+        };
+
+        if (listing.featured_image_id) {
+            return `${CONFIG.API_URL}?action=image&id=${listing.featured_image_id}`;
+        }
+
+        if (listing.featured_image) {
+            return normalizeUploadPath(listing.featured_image);
+        }
+
+        if (listing.primary_image) {
+            return normalizeUploadPath(listing.primary_image);
+        }
+
+        if (listing.images && listing.images.length > 0) {
+            const img = listing.images[0];
+            if (img.id) {
+                return `${CONFIG.API_URL}?action=image&id=${img.id}`;
+            }
+            if (img.filename) {
+                return normalizeUploadPath(img.filename);
+            }
+            if (img.file_path) {
+                return normalizeUploadPath(img.file_path);
+            }
+        }
+
+        return '';
     }
 
     showEmptyState() {
@@ -791,13 +823,7 @@ class MyListingsManager {
             const data = await response.json();
 
             if (data.success) {
-                // Update local data
-                const listing = this.listings.find(l => l.id == listingId);
-                if (listing) {
-                    listing.status = 'sold';
-                }
-                this.updateStats();
-                this.filterListings(this.currentFilter);
+                await this.loadListings();
                 this.showToast('Listing marked as sold!', 'success');
             } else {
                 this.showToast(data.message || 'Failed to update listing', 'error');
@@ -812,14 +838,7 @@ class MyListingsManager {
         if (!listing) return;
 
         this.listingToDelete = listingId;
-
-        // Get image URL
-        let imageUrl = '';
-        if (listing.featured_image) {
-            imageUrl = `${CONFIG.BASE_URL}uploads/${listing.featured_image}`;
-        } else if (listing.featured_image_id) {
-            imageUrl = `${CONFIG.API_URL}?action=image&id=${listing.featured_image_id}`;
-        }
+        const imageUrl = this.resolveListingImageUrl(listing);
 
         document.getElementById('deleteListingPreview').innerHTML = `
             ${imageUrl ? `<img src="${imageUrl}" alt="${this.escapeHtml(listing.title)}">` : ''}
@@ -848,10 +867,7 @@ class MyListingsManager {
             const data = await response.json();
 
             if (data.success) {
-                // Remove from local data
-                this.listings = this.listings.filter(l => l.id != this.listingToDelete);
-                this.updateStats();
-                this.filterListings(this.currentFilter);
+                await this.loadListings();
                 closeDeleteModal();
                 this.showToast('Listing deleted successfully', 'success');
             } else {

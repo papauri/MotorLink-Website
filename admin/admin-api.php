@@ -191,6 +191,10 @@ try {
         case 'reject_payment':
             handleRejectPayment($db);
             break;
+
+        case 'record_manual_payment':
+            handleRecordManualPayment($db);
+            break;
             
         case 'get_dealers':
             loadDealers($db);
@@ -439,6 +443,10 @@ try {
             handleGetAILearningStats($db);
             break;
 
+        case 'manage_guest_listing_auth':
+            handleManageGuestListingAuth($db);
+            break;
+
             
 
         default:
@@ -521,6 +529,60 @@ function sendAdminError($message, $errorCode, $httpCode = 400) {
         'code' => $errorCode
     ]);
     exit();
+}
+
+function adminTableColumnExists($db, $tableName, $columnName) {
+    try {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+        $stmt->execute([$tableName, $columnName]);
+        return ((int)$stmt->fetchColumn() > 0);
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+function ensureGuestListingAuthColumns($db) {
+    try {
+        $db->exec("ALTER TABLE car_listings ADD COLUMN listing_email_verified TINYINT(1) DEFAULT 0");
+    } catch (Exception $e) {
+        // Column already exists.
+    }
+
+    try {
+        $db->exec("ALTER TABLE car_listings ADD COLUMN listing_email_verified_at DATETIME DEFAULT NULL");
+    } catch (Exception $e) {
+        // Column already exists.
+    }
+
+    try {
+        $db->exec("ALTER TABLE car_listings ADD COLUMN listing_email_verification_token VARCHAR(128) DEFAULT NULL");
+    } catch (Exception $e) {
+        // Column already exists.
+    }
+
+    try {
+        $db->exec("ALTER TABLE car_listings ADD COLUMN listing_email_verification_expires DATETIME DEFAULT NULL");
+    } catch (Exception $e) {
+        // Column already exists.
+    }
+
+    try {
+        $db->exec("ALTER TABLE car_listings ADD COLUMN guest_manage_code_hash VARCHAR(255) DEFAULT NULL");
+    } catch (Exception $e) {
+        // Column already exists.
+    }
+
+    try {
+        $db->exec("ALTER TABLE car_listings ADD COLUMN guest_manage_code_expires DATETIME DEFAULT NULL");
+    } catch (Exception $e) {
+        // Column already exists.
+    }
+
+    try {
+        $db->exec("ALTER TABLE car_listings ADD COLUMN guest_manage_code_last_sent DATETIME DEFAULT NULL");
+    } catch (Exception $e) {
+        // Column already exists.
+    }
 }
 
 function requireSuperAdmin($db) {
@@ -950,8 +1012,9 @@ function handleGetCars($db) {
         }
 
         if (!empty($_GET['search'])) {
-            $where[] = "(cl.title LIKE ? OR cl.description LIKE ?)";
+            $where[] = "(cl.title LIKE ? OR cl.description LIKE ? OR cl.reference_number LIKE ?)";
             $searchTerm = "%" . $_GET['search'] . "%";
+            $params[] = $searchTerm;
             $params[] = $searchTerm;
             $params[] = $searchTerm;
         }
@@ -995,7 +1058,38 @@ function handleGetCars($db) {
             cl.guest_listing_expires_at,
             cl.guest_listing_expired_at,
             COALESCE(cl.listing_email_verified, 0) as listing_email_verified,
-            (SELECT filename FROM car_listing_images WHERE listing_id = cl.id AND is_primary = 1 LIMIT 1) as primary_image
+            (
+                SELECT COALESCE(
+                    NULLIF(filename, ''),
+                    NULLIF(thumbnail_path, ''),
+                    NULLIF(file_path, '')
+                )
+                FROM car_listing_images
+                WHERE id = cl.featured_image_id
+                LIMIT 1
+            ) as featured_image,
+            (
+                SELECT COALESCE(
+                    NULLIF(filename, ''),
+                    NULLIF(thumbnail_path, ''),
+                    NULLIF(file_path, '')
+                )
+                FROM car_listing_images
+                WHERE listing_id = cl.id AND is_primary = 1
+                ORDER BY id DESC
+                LIMIT 1
+            ) as primary_image,
+            (
+                SELECT COALESCE(
+                    NULLIF(filename, ''),
+                    NULLIF(thumbnail_path, ''),
+                    NULLIF(file_path, '')
+                )
+                FROM car_listing_images
+                WHERE listing_id = cl.id
+                ORDER BY is_primary DESC, sort_order ASC, id ASC
+                LIMIT 1
+            ) as fallback_image
         FROM car_listings cl
         LEFT JOIN car_makes cm ON cl.make_id = cm.id
         LEFT JOIN car_models cmo ON cl.model_id = cmo.id
@@ -1034,9 +1128,26 @@ function handleApproveCar($db) {
     }
     
     try {
-        $listingMetaStmt = $db->prepare("SELECT COALESCE(is_guest, 0) AS is_guest, COALESCE(listing_email_verified, 0) AS listing_email_verified, COALESCE(payment_required, 0) AS payment_required, COALESCE(payment_status, 'not_required') AS payment_status FROM car_listings WHERE id = ? LIMIT 1");
-        $listingMetaStmt->execute([$id]);
-        $listingMeta = $listingMetaStmt->fetch(PDO::FETCH_ASSOC);
+        // Fetch listing meta — handle missing optional columns gracefully.
+        $listingMeta = null;
+        try {
+            $listingMetaStmt = $db->prepare("SELECT COALESCE(is_guest, 0) AS is_guest, COALESCE(listing_email_verified, 0) AS listing_email_verified, COALESCE(payment_required, 0) AS payment_required, COALESCE(payment_status, 'not_required') AS payment_status FROM car_listings WHERE id = ? LIMIT 1");
+            $listingMetaStmt->execute([$id]);
+            $listingMeta = $listingMetaStmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $colErr) {
+            // Fallback: select only guaranteed columns if optional ones don't exist yet.
+            $listingMetaStmt = $db->prepare("SELECT id FROM car_listings WHERE id = ? LIMIT 1");
+            $listingMetaStmt->execute([$id]);
+            $row = $listingMetaStmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $listingMeta = [
+                    'is_guest' => 0,
+                    'listing_email_verified' => 1,
+                    'payment_required' => 0,
+                    'payment_status' => 'not_required'
+                ];
+            }
+        }
 
         if (!$listingMeta) {
             echo json_encode(['success' => false, 'message' => 'Car listing not found']);
@@ -1932,6 +2043,7 @@ function getPayments($db) {
 
         $where = ["1=1"];
         $params = [];
+        $includeFreeListings = (int)($_GET['include_free_listings'] ?? 0) === 1;
         
         // Apply filters
         if (!empty($_GET['status'])) {
@@ -1956,20 +2068,95 @@ function getPayments($db) {
         
         $whereClause = implode(' AND ', $where);
 
-        $sql = "
-            SELECT 
-                p.*,
+        $paymentSql = "
+            SELECT
+                p.id,
+                p.listing_id,
+                p.user_id,
                 COALESCE(u.full_name, p.user_name, 'Guest Seller') as user_name,
-                COALESCE(u.email, p.user_email, '') as user_email
+                COALESCE(u.email, p.user_email, '') as user_email,
+                COALESCE(cl.title, '') as listing_title,
+                COALESCE(cl.status, '') as listing_status,
+                p.service_type,
+                p.amount,
+                p.payment_method,
+                p.reference,
+                p.proof_path,
+                p.status,
+                p.notes,
+                p.verified_at,
+                p.verified_by,
+                p.created_at,
+                p.updated_at,
+                0 as is_free_listing
             FROM payments p
             LEFT JOIN users u ON p.user_id = u.id
+            LEFT JOIN car_listings cl ON p.listing_id = cl.id
             WHERE {$whereClause}
-            ORDER BY p.created_at DESC
-            LIMIT 100
         ";
 
+        $sql = $paymentSql;
+        $allParams = $params;
+
+        if ($includeFreeListings) {
+            $statusFilter = strtolower(trim((string)($_GET['status'] ?? '')));
+            $serviceFilter = strtolower(trim((string)($_GET['service_type'] ?? '')));
+
+            $canIncludeByStatus = ($statusFilter === '' || $statusFilter === 'free');
+            $canIncludeByService = ($serviceFilter === '' || $serviceFilter === 'free_listing');
+
+            if ($canIncludeByStatus && $canIncludeByService) {
+                $freeWhere = ["cl.status != 'deleted'", "(COALESCE(cl.payment_required, 0) = 0 OR COALESCE(cl.payment_amount, 0) <= 0)"];
+                $freeParams = [];
+
+                if (!empty($_GET['date_from'])) {
+                    $freeWhere[] = "DATE(cl.created_at) >= ?";
+                    $freeParams[] = $_GET['date_from'];
+                }
+
+                if (!empty($_GET['date_to'])) {
+                    $freeWhere[] = "DATE(cl.created_at) <= ?";
+                    $freeParams[] = $_GET['date_to'];
+                }
+
+                $freeWhereClause = implode(' AND ', $freeWhere);
+                $freeSql = "
+                    SELECT
+                        CONCAT('FREE-', cl.id) as id,
+                        cl.id as listing_id,
+                        cl.user_id,
+                        COALESCE(u.full_name, cl.guest_seller_name, cl.guest_seller_email, 'Guest Seller') as user_name,
+                        COALESCE(u.email, cl.guest_seller_email, '') as user_email,
+                        COALESCE(cl.title, '') as listing_title,
+                        COALESCE(cl.status, '') as listing_status,
+                        'free_listing' as service_type,
+                        0 as amount,
+                        'free' as payment_method,
+                        cl.reference_number as reference,
+                        NULL as proof_path,
+                        'free' as status,
+                        'Free listing (no payment required)' as notes,
+                        NULL as verified_at,
+                        NULL as verified_by,
+                        cl.created_at,
+                        COALESCE(cl.updated_at, cl.created_at) as updated_at,
+                        1 as is_free_listing
+                    FROM car_listings cl
+                    LEFT JOIN users u ON cl.user_id = u.id
+                    WHERE {$freeWhereClause}
+                ";
+
+                $sql = "SELECT * FROM (({$paymentSql}) UNION ALL ({$freeSql})) as all_payments ORDER BY created_at DESC LIMIT 100";
+                $allParams = array_merge($params, $freeParams);
+            } else {
+                $sql = "SELECT * FROM ({$paymentSql}) as all_payments ORDER BY created_at DESC LIMIT 100";
+            }
+        } else {
+            $sql = "SELECT * FROM ({$paymentSql}) as all_payments ORDER BY created_at DESC LIMIT 100";
+        }
+
         $stmt = $db->prepare($sql);
-        $stmt->execute($params);
+        $stmt->execute($allParams);
         $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['success' => true, 'payments' => $payments]);
@@ -2119,6 +2306,135 @@ function handleRejectPayment($db) {
         error_log('handleRejectPayment error: ' . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Failed to reject payment']);
         exit();
+    }
+}
+
+function handleRecordManualPayment($db) {
+    requireAdmin();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $listingId = (int)($input['listing_id'] ?? 0);
+    $amount = (float)($input['amount'] ?? 0);
+    $paymentMethod = trim((string)($input['payment_method'] ?? 'manual'));
+    $reference = trim((string)($input['reference'] ?? ''));
+    $status = strtolower(trim((string)($input['status'] ?? 'verified')));
+    $serviceType = trim((string)($input['service_type'] ?? 'listing_submission'));
+    $notes = trim((string)($input['notes'] ?? ''));
+
+    if ($listingId <= 0) {
+        sendAdminError('Listing ID is required', 'LISTING_ID_REQUIRED', 400);
+    }
+
+    if ($amount < 0) {
+        sendAdminError('Amount cannot be negative', 'INVALID_AMOUNT', 400);
+    }
+
+    if (!in_array($status, ['pending', 'verified', 'rejected'], true)) {
+        sendAdminError('Invalid payment status', 'INVALID_PAYMENT_STATUS', 400);
+    }
+
+    try {
+        ensurePaymentsTableAdmin($db);
+
+        $listingStmt = $db->prepare("SELECT id, user_id, title, reference_number, COALESCE(guest_seller_name, '') AS guest_seller_name, COALESCE(guest_seller_email, '') AS guest_seller_email FROM car_listings WHERE id = ? LIMIT 1");
+        $listingStmt->execute([$listingId]);
+        $listing = $listingStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$listing) {
+            sendAdminError('Listing not found', 'LISTING_NOT_FOUND', 404);
+        }
+
+        $userId = !empty($listing['user_id']) ? (int)$listing['user_id'] : null;
+        $userName = $listing['guest_seller_name'] !== '' ? $listing['guest_seller_name'] : 'Guest Seller';
+        $userEmail = $listing['guest_seller_email'] !== '' ? $listing['guest_seller_email'] : '';
+
+        if ($userId) {
+            $userStmt = $db->prepare("SELECT full_name, email FROM users WHERE id = ? LIMIT 1");
+            $userStmt->execute([$userId]);
+            $userRow = $userStmt->fetch(PDO::FETCH_ASSOC);
+            if ($userRow) {
+                $userName = $userRow['full_name'] ?: $userName;
+                $userEmail = $userRow['email'] ?: $userEmail;
+            }
+        }
+
+        $adminId = $_SESSION['admin_id'] ?? null;
+        $verifiedAt = ($status === 'verified' || $status === 'rejected') ? date('Y-m-d H:i:s') : null;
+
+        $db->beginTransaction();
+
+        $insertStmt = $db->prepare("INSERT INTO payments (listing_id, user_id, user_name, user_email, service_type, amount, payment_method, reference, status, notes, verified_at, verified_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+        $insertStmt->execute([
+            $listingId,
+            $userId,
+            $userName,
+            $userEmail,
+            $serviceType !== '' ? $serviceType : 'listing_submission',
+            $amount,
+            $paymentMethod !== '' ? $paymentMethod : 'manual',
+            $reference !== '' ? $reference : null,
+            $status,
+            $notes !== '' ? $notes : null,
+            $verifiedAt,
+            ($status === 'verified' || $status === 'rejected') ? $adminId : null
+        ]);
+
+        $paymentStatusForListing = $status === 'verified' ? 'verified' : ($status === 'rejected' ? 'rejected' : 'pending');
+        $hasPaymentRequired = adminTableColumnExists($db, 'car_listings', 'payment_required');
+        $hasPaymentAmount = adminTableColumnExists($db, 'car_listings', 'payment_amount');
+        $hasPaymentMethod = adminTableColumnExists($db, 'car_listings', 'payment_method');
+        $hasPaymentReference = adminTableColumnExists($db, 'car_listings', 'payment_reference');
+        $hasPaymentStatus = adminTableColumnExists($db, 'car_listings', 'payment_status');
+
+        $setParts = [];
+        $setParams = [];
+        if ($hasPaymentRequired) {
+            $setParts[] = 'payment_required = 1';
+        }
+        if ($hasPaymentAmount) {
+            $setParts[] = 'payment_amount = ?';
+            $setParams[] = $amount;
+        }
+        if ($hasPaymentMethod) {
+            $setParts[] = 'payment_method = ?';
+            $setParams[] = ($paymentMethod !== '' ? $paymentMethod : 'manual');
+        }
+        if ($hasPaymentReference) {
+            $setParts[] = 'payment_reference = ?';
+            $setParams[] = ($reference !== '' ? $reference : null);
+        }
+        if ($hasPaymentStatus) {
+            $setParts[] = 'payment_status = ?';
+            $setParams[] = $paymentStatusForListing;
+        }
+
+        if (!empty($setParts)) {
+            $setParams[] = $listingId;
+            $listingUpdateStmt = $db->prepare('UPDATE car_listings SET ' . implode(', ', $setParts) . ' WHERE id = ? LIMIT 1');
+            $listingUpdateStmt->execute($setParams);
+        }
+
+        logActivity(
+            $db,
+            'manual_payment_recorded',
+            'Manual payment recorded for listing',
+            'Listing ID: ' . $listingId . ', Amount: ' . number_format($amount, 2) . ', Status: ' . $status,
+            $adminId
+        );
+
+        $db->commit();
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Manual payment recorded successfully'
+        ]);
+        exit();
+    } catch (Exception $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log('handleRecordManualPayment error: ' . $e->getMessage());
+        sendAdminError('Failed to record manual payment', 'MANUAL_PAYMENT_RECORD_FAILED', 500);
     }
 }
 
@@ -6102,5 +6418,90 @@ function handleSaveAdminDbCredentials($db) {
         }
         error_log('handleSaveAdminDbCredentials error: ' . $e->getMessage());
         sendAdminError('Failed to save admin DB credentials', 'ADMIN_DB_SAVE_FAILED', 500);
+    }
+}
+
+function handleManageGuestListingAuth($db) {
+    requireAdmin();
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $listingId = (int)($input['id'] ?? 0);
+    $operation = trim((string)($input['operation'] ?? ''));
+
+    if ($listingId <= 0 || $operation === '') {
+        sendAdminError('Listing ID and operation are required', 'INVALID_INPUT', 400);
+    }
+
+    try {
+        ensureGuestListingAuthColumns($db);
+
+        $listingStmt = $db->prepare("SELECT id, COALESCE(is_guest, 0) AS is_guest, status, approval_status FROM car_listings WHERE id = ? LIMIT 1");
+        $listingStmt->execute([$listingId]);
+        $listing = $listingStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$listing) {
+            sendAdminError('Guest listing not found', 'LISTING_NOT_FOUND', 404);
+        }
+
+        if ((int)$listing['is_guest'] !== 1) {
+            sendAdminError('This action is only available for guest listings', 'NOT_GUEST_LISTING', 400);
+        }
+
+        if ($operation === 'override_email_verification') {
+            $hasVerifiedAt = adminTableColumnExists($db, 'car_listings', 'listing_email_verified_at');
+
+            $setParts = [
+                "listing_email_verified = 1",
+                "listing_email_verification_token = NULL",
+                "listing_email_verification_expires = NULL",
+                "status = CASE WHEN status = 'pending_email_verification' THEN 'pending_approval' ELSE status END",
+                "approval_status = CASE WHEN approval_status = 'pending_email_verification' THEN 'pending' ELSE approval_status END"
+            ];
+
+            if ($hasVerifiedAt) {
+                $setParts[] = "listing_email_verified_at = COALESCE(listing_email_verified_at, NOW())";
+            }
+
+            $sql = "UPDATE car_listings SET " . implode(', ', $setParts) . " WHERE id = ? LIMIT 1";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([$listingId]);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Guest listing email verification overridden successfully'
+            ]);
+            exit();
+        }
+
+        if ($operation === 'set_guest_manage_code') {
+            $providedCode = trim((string)($input['code'] ?? ''));
+            $expiresHours = (int)($input['expires_hours'] ?? 24);
+            if ($expiresHours < 1) $expiresHours = 1;
+            if ($expiresHours > 168) $expiresHours = 168;
+
+            $code = $providedCode !== '' ? $providedCode : str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+            if (!preg_match('/^\d{4,8}$/', $code)) {
+                sendAdminError('Code must be 4 to 8 digits', 'INVALID_CODE_FORMAT', 400);
+            }
+
+            $codeHash = password_hash($code, PASSWORD_DEFAULT);
+            $expiresAt = date('Y-m-d H:i:s', strtotime('+' . $expiresHours . ' hours'));
+
+            $stmt = $db->prepare("UPDATE car_listings SET guest_manage_code_hash = ?, guest_manage_code_expires = ?, guest_manage_code_last_sent = NOW() WHERE id = ? LIMIT 1");
+            $stmt->execute([$codeHash, $expiresAt, $listingId]);
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Guest manage code has been set successfully',
+                'code' => $code,
+                'expires_at' => $expiresAt
+            ]);
+            exit();
+        }
+
+        sendAdminError('Unsupported guest listing auth operation', 'UNSUPPORTED_OPERATION', 400);
+    } catch (Exception $e) {
+        error_log('handleManageGuestListingAuth error: ' . $e->getMessage());
+        sendAdminError('Failed to process guest listing auth action', 'GUEST_AUTH_UPDATE_FAILED', 500);
     }
 }

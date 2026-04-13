@@ -271,23 +271,23 @@ class DealerDashboard {
                             <span class="date"><i class="fas fa-calendar"></i> ${this.formatDate(car.created_at)}</span>
                         </div>
                         <div class="card-actions">
+                            <button class="btn btn-small btn-secondary" onclick="dealerDashboard.viewCar(${car.id})" title="View Listing">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                            <button class="btn btn-small btn-primary" onclick="dealerDashboard.editCar(${car.id})" title="Edit Listing">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
                             ${car.status === 'active' ? `
                                 <button class="btn btn-small btn-success" onclick="dealerDashboard.markAsSold(${car.id})" title="Mark as Sold">
                                     <i class="fas fa-handshake"></i> Mark Sold
                                 </button>
                             ` : ''}
                             ${car.status === 'sold' ? `
-                                <button class="btn btn-small btn-warning" onclick="dealerDashboard.markAsActive(${car.id})" title="Mark as Active">
+                                <button class="btn btn-small btn-warning" onclick="dealerDashboard.markAsActive(${car.id})" title="Reactivate Listing">
                                     <i class="fas fa-redo"></i> Reactivate
                                 </button>
                             ` : ''}
-                            <button class="btn btn-small btn-primary" onclick="dealerDashboard.editCar(${car.id})">
-                                <i class="fas fa-edit"></i> Edit
-                            </button>
-                            <button class="btn btn-small btn-secondary" onclick="dealerDashboard.viewCar(${car.id})">
-                                <i class="fas fa-eye"></i> View
-                            </button>
-                            <button class="btn btn-small btn-danger" onclick="dealerDashboard.deleteCar(${car.id})">
+                            <button class="btn btn-small btn-danger" onclick="dealerDashboard.deleteCar(${car.id})" title="Delete Listing">
                                 <i class="fas fa-trash"></i> Delete
                             </button>
                         </div>
