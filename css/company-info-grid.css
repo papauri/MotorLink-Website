@@ -684,8 +684,12 @@
 .company-info-section .company-info-grid .social-link {
     width: 42px;
     height: 42px;
-    border-radius: 12px;
+    border-radius: 50%;
     box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
 }
 
 .company-info-section .company-info-grid .hours-grid {
@@ -724,18 +728,138 @@
         min-height: auto;
     }
 
-    .company-info-section .company-info-grid .contact-actions {
-        grid-template-columns: 1fr;
+    .company-info-section .company-info-grid .contact-card,
+    .company-info-section .company-info-grid .hours-card,
+    .company-info-section .company-info-grid .services-card {
+        padding: 14px;
+        border-radius: 12px;
     }
 
+    .company-info-section .company-info-grid h3 {
+        font-size: 1rem;
+        margin-bottom: 12px;
+    }
+
+    /* Contact info: single column compact rows */
+    .company-info-section .company-info-grid .contact-info-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .company-info-section .company-info-grid .contact-info-item {
+        flex-direction: row;
+        align-items: center;
+        text-align: left;
+        padding: 8px 10px;
+        gap: 10px;
+    }
+
+    .company-info-section .company-info-grid .contact-icon {
+        margin: 0;
+        width: 30px;
+        height: 30px;
+        flex-shrink: 0;
+    }
+
+    .company-info-section .company-info-grid .contact-details {
+        text-align: left;
+    }
+
+    /* Contact action buttons: single column */
+    .company-info-section .company-info-grid .contact-actions {
+        grid-template-columns: 1fr;
+        gap: 7px;
+    }
+
+    .company-info-section .company-info-grid .quick-action-btn {
+        min-height: 38px;
+        padding: 8px 12px;
+        font-size: 0.82rem;
+    }
+
+    /* Hours: more compact rows */
+    .company-info-section .company-info-grid .hour-item {
+        padding: 6px 10px;
+    }
+
+    .company-info-section .company-info-grid .hours-grid {
+        gap: 4px;
+    }
+
+    /* Service items: compact */
+    .company-info-section .company-info-grid .service-item.fancy {
+        padding: 7px 10px;
+    }
+
+    .company-info-section .company-info-grid .services-grid {
+        gap: 5px;
+    }
+
+    /* Social links */
     .company-info-section .company-info-grid .social-links {
         grid-template-columns: repeat(4, minmax(0, 1fr));
         max-width: 100%;
+        gap: 8px;
     }
 
     .company-info-section .company-info-grid .social-link {
         width: 38px;
         height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.95rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .company-info-section .company-info-grid {
+        gap: 10px;
+    }
+
+    .company-info-section .company-info-grid .contact-card,
+    .company-info-section .company-info-grid .hours-card,
+    .company-info-section .company-info-grid .services-card {
+        padding: 12px;
         border-radius: 10px;
+    }
+
+    .company-info-section .company-info-grid h3 {
+        font-size: 0.95rem;
+        margin-bottom: 10px;
+    }
+
+    .company-info-section .company-info-grid .contact-info-item {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+    }
+
+    .company-info-section .company-info-grid .contact-icon {
+        width: 26px;
+        height: 26px;
+        font-size: 0.8rem;
+    }
+
+    .company-info-section .company-info-grid .hour-item {
+        padding: 5px 8px;
+        font-size: 0.8rem;
+    }
+
+    .company-info-section .company-info-grid .service-item.fancy {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+    }
+
+    .company-info-section .company-info-grid .quick-action-btn {
+        min-height: 36px;
+        font-size: 0.8rem;
+    }
+
+    .company-info-section .company-info-grid .social-link {
+        width: 34px;
+        height: 34px;
+        font-size: 0.9rem;
     }
 }

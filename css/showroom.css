@@ -1081,7 +1081,8 @@
 
 .showroom-header-content .company-header-left {
     flex: 1;
-    min-width: 280px;
+    min-width: 0;
+    width: 100%;
 }
 
 .showroom-header-content .company-meta {
@@ -1320,21 +1321,16 @@
 }
 
 .stat-item {
-    text-align: left;
-    padding: 14px;
     background: rgba(255, 255, 255, 0.15);
-    border-radius: 10px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.25);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: grid;
-    grid-template-columns: 28px 1fr;
-    grid-template-areas:
-        "icon value"
-        "icon label";
-    column-gap: 12px;
-    row-gap: 2px;
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
     align-items: center;
+    gap: 12px;
+    text-align: left;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .stat-item:hover {
@@ -1344,23 +1340,19 @@
 }
 
 .stat-item i {
-    grid-area: icon;
-    font-size: 1.4rem;
-    margin-bottom: 0;
+    font-size: 1.5rem;
     opacity: 0.95;
-    display: inline-flex;
-    align-self: center;
+    flex-shrink: 0;
+    margin: 0;
 }
 
 @media (min-width: 768px) {
     .stat-item i {
         font-size: 1.6rem;
-        margin-bottom: 5px;
     }
 }
 
 .stat-value {
-    grid-area: value;
     font-size: 0.85rem;
     font-weight: 600;
     margin-bottom: 2px;
@@ -1370,12 +1362,12 @@
 }
 
 .stat-label {
-    grid-area: label;
     font-size: 0.75rem;
     opacity: 0.85;
     font-weight: 500;
     line-height: 1.2;
     color: var(--text-white);
+    display: block;
 }
 
 .dealer-quick-actions {
@@ -2224,6 +2216,19 @@
         min-height: auto !important;
     }
 
+    .showroom-header-content {
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 100%;
+        padding: 0 16px;
+        box-sizing: border-box;
+        overflow-x: hidden;
+        gap: 14px;
+    }
+
     .showroom-header-content .header-top {
         grid-template-columns: 1fr;
         justify-items: center;
@@ -2238,6 +2243,8 @@
         align-items: center;
         width: 100%;
         max-width: 100%;
+        min-width: 0;
+        margin: 0 auto;
     }
 
     .dealer-name-minimal {
@@ -2266,20 +2273,27 @@
         text-align: center;
         width: 100%;
         max-width: 100%;
-        margin: 12px auto 16px;
+        margin: 12px auto 10px;
     }
 
-    .showroom-header-content .meta-item {
+    .showroom-header-content .meta-item:not([style*="display: none"]) {
         display: flex !important;
         align-items: center;
         justify-content: center;
         gap: 6px;
         width: 100%;
         max-width: 100%;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        box-sizing: border-box;
+        overflow: hidden;
+        text-overflow: ellipsis;
         white-space: nowrap;
     }
 
-    .showroom-header-content .meta-item:nth-child(n+3) {
+    .showroom-header-content .meta-item[style*="display: none"] {
         display: none !important;
     }
 
@@ -2288,29 +2302,7 @@
     }
 
     .showroom-header-content .quick-contact-box {
-        width: 100%;
-        padding: 14px;
-    }
-
-    .showroom-header-content .quick-contact-box h4 {
-        font-size: 0.9rem;
-    }
-
-    .showroom-header-content .quick-contact-buttons {
-        gap: 8px;
-    }
-
-    .showroom-header-content .quick-contact-btn {
-        font-size: 0.8rem;
-        padding: 8px 12px;
-    }
-
-    /* Stack badges vertically on mobile for better readability */
-    .dealer-name-minimal .verified-badge,
-    .dealer-name-minimal .featured-badge,
-    .dealer-name-minimal .certified-badge {
-        display: inline-flex;
-        margin: 4px auto;
+        display: none !important;
     }
 
     /* Hide dealer-description INSIDE header on mobile - will be moved outside by JS */
@@ -2339,7 +2331,7 @@
         margin: 0;
     }
 
-    /* Style showroom-stats to match key-features design */
+    /* Style showroom-stats to match car-hire feature-box design */
     .showroom-stats {
         display: grid !important;
         grid-template-columns: repeat(2, 1fr) !important;
@@ -2354,57 +2346,51 @@
     }
 
     .showroom-stats .stat-item {
-        background: rgba(255, 255, 255, 0.2) !important;
-        border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
-        border-radius: 12px !important;
-        padding: 12px 8px !important;
-        display: grid !important;
-        grid-template-columns: 24px 1fr !important;
-        grid-template-areas:
-            "icon value"
-            "icon label" !important;
+        background: rgba(255, 255, 255, 0.18) !important;
+        border: 1px solid rgba(255, 255, 255, 0.25) !important;
+        border-radius: 10px !important;
+        padding: 10px 8px !important;
+        display: flex !important;
         align-items: center !important;
-        column-gap: 8px !important;
-        row-gap: 2px !important;
+        gap: 8px !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
         overflow: hidden;
         min-width: 0;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
+        box-shadow: none !important;
     }
 
     .showroom-stats .stat-item:hover {
         background: rgba(255, 255, 255, 0.25) !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
     }
 
     .showroom-stats .stat-item i {
-        grid-area: icon;
-        font-size: 1.4rem !important;
-        margin-bottom: 0 !important;
+        font-size: 1.3rem !important;
+        margin: 0 !important;
+        flex-shrink: 0 !important;
     }
 
     .showroom-stats .stat-value {
-        grid-area: value;
         font-size: 0.8rem !important;
         font-weight: 700 !important;
         color: white !important;
         line-height: 1.2 !important;
-        margin: 0 !important;
+        margin: 0 0 2px 0 !important;
         text-align: left !important;
     }
 
     .showroom-stats .stat-label {
-        grid-area: label;
         font-size: 0.68rem !important;
         opacity: 0.9 !important;
         text-align: left !important;
         color: white !important;
         font-weight: 500 !important;
         line-height: 1.2 !important;
+        display: block !important;
     }
 }
 
@@ -2424,8 +2410,15 @@
         gap: 6px !important;
     }
 
-    .showroom-header-content .meta-item {
+    .showroom-header-content .meta-item:not([style*="display: none"]) {
+        display: flex !important;
         font-size: 0.7rem !important;
+        padding: 7px 10px !important;
+        border-radius: 8px !important;
+    }
+
+    .showroom-header-content .meta-item[style*="display: none"] {
+        display: none !important;
     }
 
     .dealer-meta-minimal {

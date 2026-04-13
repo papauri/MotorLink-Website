@@ -2640,6 +2640,7 @@
         padding: 0 16px;
         box-sizing: border-box;
         overflow-x: hidden;
+      gap: 14px;
     }
 
     .header-top {
@@ -2678,7 +2679,7 @@
         text-align: center;
         width: 100%;
         max-width: 100%;
-        margin: 12px auto 16px;
+      margin: 12px auto 10px;
     }
 
     .company-meta .meta-item {
@@ -2702,27 +2703,12 @@
         flex-shrink: 0;
     }
 
-    /* Hide all but first 2 meta items on mobile to keep it simple */
     .company-meta .meta-item:nth-child(n+3) {
-        display: none !important;
+      display: flex !important;
     }
     
     .quick-contact-box {
-        width: 100%;
-        padding: 14px;
-    }
-    
-    .quick-contact-box h4 {
-        font-size: 0.9rem;
-    }
-    
-    .quick-contact-buttons {
-        gap: 8px;
-    }
-    
-    .quick-contact-btn {
-        font-size: 0.8rem;
-        padding: 8px 12px;
+      display: none !important;
     }
     
     /* Hide company-description INSIDE header on mobile - will be moved outside by JS */
@@ -2961,9 +2947,15 @@
         font-size: 0.75rem;
     }
 
-    /* Show only location on small mobile - keep it super simple */
+    .company-meta .meta-item {
+      display: flex !important;
+      padding: 7px 10px;
+      font-size: 0.75rem;
+      border-radius: 8px;
+    }
+
     .company-meta .meta-item:nth-child(n+2) {
-        display: none !important;
+      display: flex !important;
     }
 
     /* Extra compact key-features on very small screens */
@@ -3011,17 +3003,7 @@
     }
     
     .quick-contact-box {
-        padding: 12px;
-    }
-    
-    .quick-contact-box h4 {
-        font-size: 0.85rem;
-        margin-bottom: 8px;
-    }
-    
-    .quick-contact-btn {
-        padding: 7px 10px;
-        font-size: 0.75rem;
+      display: none !important;
     }
     
     .fleet-title {
