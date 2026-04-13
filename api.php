@@ -1243,6 +1243,7 @@ try {
         case 'site_settings': 
         case 'get_site_settings': getSiteSettings($db); break;
         case 'listing_restrictions': getListingRestrictions($db); break;
+        case 'check_guest_identity': checkGuestIdentity($db); break;
         case 'get_public_client_config': getPublicClientConfig($db); break;
         case 'get_ai_chat_status': getAIChatStatus($db); break;
         case 'verify_listing_email': verifyListingEmail($db); break;
@@ -8161,6 +8162,53 @@ function getListingRestrictions($db) {
         error_log('getListingRestrictions error: ' . $e->getMessage());
         sendError('Failed to load listing restrictions', 500);
     }
+}
+
+/**
+ * Instant identity check for guest listing form.
+ * - email: is it a registered account? (blocks guest submission)
+ * - phone: is it already tied to an active listing? (duplicate-person warning)
+ * - name: fuzzy match against existing guest listing names for same phone/email domain?
+ *   (not needed server-side; JS handles name format validation; we only return phone signals here)
+ * Intentionally minimal — no account detail is returned.
+ */
+function checkGuestIdentity($db) {
+    $email = strtolower(trim($_GET['email'] ?? ''));
+    $phone  = trim($_GET['phone'] ?? '');
+    // Normalise phone: strip all non-digit chars except leading +
+    $phoneNorm = preg_replace('/[^\d]/', '', $phone);
+
+    $result = [
+        'email_registered'   => false,
+        'phone_in_use'       => false,
+        'phone_listing_count' => 0,
+    ];
+
+    // --- email check ----------------------------------------------------------
+    if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $stmt = $db->prepare("SELECT 1 FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1");
+        $stmt->execute([$email]);
+        $result['email_registered'] = (bool)$stmt->fetchColumn();
+    }
+
+    // --- phone check ----------------------------------------------------------
+    if (strlen($phoneNorm) >= 7) {
+        // Match last 7 digits of stored guest_seller_phone against all active listings
+        // Multiple REPLACE() strips common formatting chars (space, dash, parens, plus)
+        $suffix = '%' . substr($phoneNorm, -7);
+        $stmt = $db->prepare(
+            "SELECT COUNT(*) FROM car_listings
+             WHERE REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                   COALESCE(guest_seller_phone,''),' ',''),'-',''),'(',''),')',''),'+','') LIKE ?
+               AND status NOT IN ('deleted','rejected','expired')"
+        );
+        $stmt->execute([$suffix]);
+        $count = (int)$stmt->fetchColumn();
+        $result['phone_in_use']        = $count > 0;
+        $result['phone_listing_count'] = $count;
+    }
+
+    sendSuccess($result);
 }
 
 /**

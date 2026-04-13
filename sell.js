@@ -35,6 +35,8 @@ class SellManager {
             guest_active_listing_expires_at: null
         };
         this.guestLimitCheckTimeout = null;
+        this._phoneCheckTimeout = null;
+        this._emailIsRegistered = false;
         this.init();
     }
 
@@ -113,7 +115,77 @@ class SellManager {
             guestNotice.textContent = `Your listing will be reviewed within 2-4 hours before going live. ${guestLimitText}${lifetimeText}${validityText}${verificationText}${lifetimePrompt}${expiredPrompt}`;
         }
 
+        this.updateListingTypeCardsUI();
         this.renderListingLimitBanner();
+    }
+
+    updateListingTypeCardsUI() {
+        const freeCard = document.getElementById('listingCardFree');
+        const featuredCard = document.getElementById('listingCardFeatured');
+        const freeBadge = document.getElementById('listingBadgeFree');
+        const featuredBadge = document.getElementById('listingBadgeFeatured');
+        const freeMeta = document.getElementById('freeListingMeta');
+        const featuredMeta = document.getElementById('featuredListingMeta');
+        const freeFeatureValidity = document.getElementById('freeFeatureValidity');
+        const freeFeaturePolicy = document.getElementById('freeFeaturePolicy');
+        const listingTypeInput = document.getElementById('listingTypeInput');
+
+        if (!freeCard || !featuredCard) return;
+
+        const validityDays = Math.max(1, Number(this.listingRestrictions.guest_listing_validity_days || 30));
+        const dayLabel = validityDays === 1 ? 'day' : 'days';
+        const maxGuestListings = Number(this.listingRestrictions.max_guest_listings || 1);
+        const listingLabel = maxGuestListings === 1 ? 'listing' : 'listings';
+
+        // Default state for authenticated users
+        if (freeBadge) freeBadge.textContent = 'Most Popular';
+        if (featuredBadge) featuredBadge.textContent = 'Recommended';
+        if (freeMeta) freeMeta.textContent = 'Standard listing with admin review.';
+        if (featuredMeta) featuredMeta.textContent = 'Best for faster visibility and premium placement.';
+        if (freeFeatureValidity) {
+            freeFeatureValidity.innerHTML = `<i class="fas fa-check"></i> ${validityDays} ${dayLabel} visibility`;
+        }
+        if (freeFeaturePolicy) {
+            freeFeaturePolicy.innerHTML = '<i class="fas fa-check"></i> Basic listing features';
+        }
+
+        freeCard.classList.remove('disabled-option');
+        freeCard.removeAttribute('aria-disabled');
+        freeCard.removeAttribute('title');
+        featuredCard.classList.remove('disabled-option');
+        featuredCard.removeAttribute('aria-disabled');
+        featuredCard.removeAttribute('title');
+
+        // Guest flow: featured listing is not available and free listing shows validity details.
+        if (this.guestMode) {
+            if (freeBadge) freeBadge.textContent = 'Guest Listing';
+            if (freeMeta) freeMeta.textContent = `Valid for ${validityDays} ${dayLabel}. One guest listing is allowed per email.`;
+            if (freeFeaturePolicy) {
+                freeFeaturePolicy.innerHTML = `<i class="fas fa-check"></i> Guest limit: ${maxGuestListings} ${listingLabel} per email`;
+            }
+
+            featuredCard.classList.add('disabled-option');
+            featuredCard.setAttribute('aria-disabled', 'true');
+            featuredCard.title = 'Featured listing is available for registered users only.';
+            if (featuredBadge) featuredBadge.textContent = 'Members Only';
+            if (featuredMeta) featuredMeta.textContent = 'Login or register to unlock featured placement.';
+
+            if (listingTypeInput && listingTypeInput.value === 'featured') {
+                this.selectListingType('free', true);
+            }
+
+            // If guest lifetime limit has already been reached for the checked email, indicate it clearly.
+            if (this.listingRestrictions.guest_lifetime_limit_reached) {
+                freeCard.classList.add('disabled-option');
+                freeCard.setAttribute('aria-disabled', 'true');
+                freeCard.title = 'Guest listing lifetime limit reached for this email. Please register to continue.';
+                if (freeBadge) freeBadge.textContent = 'Limit Reached';
+                if (freeMeta) freeMeta.textContent = 'This email already used its guest listing. Create an account to list another car.';
+                if (freeFeaturePolicy) {
+                    freeFeaturePolicy.innerHTML = '<i class="fas fa-check"></i> Guest lifetime limit reached';
+                }
+            }
+        }
     }
 
     renderListingLimitBanner() {
@@ -484,6 +556,19 @@ class SellManager {
         this.updateProgress();
         this.populateYearDropdown();
         this.initializeSteps();
+        this.updateListingTypeCardsUI();
+
+        const titleInput = document.getElementById('titleInput');
+        const titleCounter = document.getElementById('titleCounter');
+        if (titleInput && titleCounter) {
+            titleCounter.textContent = `${titleInput.value.length}/100`;
+        }
+
+        const descriptionInput = document.getElementById('descriptionInput');
+        const descCounter = document.getElementById('descCounter');
+        if (descriptionInput && descCounter) {
+            descCounter.textContent = `${descriptionInput.value.length}/1000`;
+        }
     }
 
     // Setup instant validation for form fields
@@ -494,6 +579,12 @@ class SellManager {
             let validationTimeout;
             descriptionInput.addEventListener('input', (e) => {
                 clearTimeout(validationTimeout);
+                const cnt = document.getElementById('descCounter');
+                if (cnt) {
+                    const len = e.target.value.length;
+                    cnt.textContent = len + '/1000';
+                    cnt.className = 'char-counter' + (len > 900 ? ' warn' : '') + (len > 1000 ? ' over' : '');
+                }
                 const value = e.target.value.trim();
                 
                 // Only validate if there's content
@@ -540,6 +631,12 @@ class SellManager {
         if (titleInput) {
             titleInput.addEventListener('input', (e) => {
                 const value = e.target.value.trim();
+                const cnt = document.getElementById('titleCounter');
+                if (cnt) {
+                    const len = e.target.value.length;
+                    cnt.textContent = len + '/100';
+                    cnt.className = 'char-counter' + (len > 90 ? ' warn' : '') + (len > 100 ? ' over' : '');
+                }
                 if (value.length > 0 && value.length < 10) {
                     this.showFieldError(titleInput, 'Title must be at least 10 characters');
                 } else if (value.length > 100) {
@@ -559,10 +656,29 @@ class SellManager {
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                     if (!emailRegex.test(value)) {
                         this.showFieldError(emailInput, 'Please enter a valid email address');
+                        this._emailIsRegistered = false;
                     } else {
                         this.clearFieldError(emailInput);
                         clearTimeout(this.guestLimitCheckTimeout);
                         this.guestLimitCheckTimeout = setTimeout(async () => {
+                            // Check registered account first
+                            try {
+                                const identityRes = await fetch(
+                                    `${CONFIG.API_URL}?action=check_guest_identity&email=${encodeURIComponent(value)}`,
+                                    { credentials: 'include' }
+                                );
+                                const identity = await identityRes.json();
+                                if (identity.success && identity.email_registered) {
+                                    this._emailIsRegistered = true;
+                                    this.showFieldError(emailInput,
+                                        'This email has a MotorLink account — please login to post your listing.');
+                                    return;
+                                }
+                                this._emailIsRegistered = false;
+                            } catch (_) {
+                                this._emailIsRegistered = false;
+                            }
+                            // Then check guest listing quota
                             await this.loadListingRestrictions(value);
                             const remaining = this.listingRestrictions.remaining_guest_listings;
                             if (typeof remaining === 'number' && remaining <= 0) {
@@ -571,7 +687,25 @@ class SellManager {
                         }, 350);
                     }
                 } else {
+                    this._emailIsRegistered = false;
                     this.clearFieldError(emailInput);
+                }
+            });
+            // Also fire on blur to catch paste/autofill
+            emailInput.addEventListener('blur', () => emailInput.dispatchEvent(new Event('input')));
+        }
+
+        // Full name validation (for guest mode)
+        const nameInput = document.querySelector('[name="seller_name"]');
+        if (nameInput) {
+            nameInput.addEventListener('input', (e) => {
+                const value = e.target.value ? e.target.value.trim() : '';
+                if (!value) { this.clearFieldError(nameInput); return; }
+                const nameError = this._validateFullName(value);
+                if (nameError) {
+                    this.showFieldError(nameInput, nameError);
+                } else {
+                    this.clearFieldError(nameInput);
                 }
             });
         }
@@ -587,9 +721,57 @@ class SellManager {
                         this.showFieldError(phoneInput, 'Please enter a valid phone number');
                     } else {
                         this.clearFieldError(phoneInput);
+                        clearTimeout(this._phoneCheckTimeout);
+                        this._phoneCheckTimeout = setTimeout(async () => {
+                            try {
+                                const res = await fetch(
+                                    `${CONFIG.API_URL}?action=check_guest_identity&phone=${encodeURIComponent(value)}`,
+                                    { credentials: 'include' }
+                                );
+                                const data = await res.json();
+                                if (data.success && data.phone_in_use) {
+                                    this.showFieldError(phoneInput,
+                                        `This phone number already has ${data.phone_listing_count} active listing${data.phone_listing_count > 1 ? 's' : ''}. Each person may only post once as a guest.`);
+                                } else {
+                                    this.clearFieldError(phoneInput);
+                                }
+                            } catch (_) { /* non-blocking */ }
+                        }, 500);
                     }
                 } else {
                     this.clearFieldError(phoneInput);
+                }
+            });
+        }
+
+        // Mileage validation
+        const mileageInput = document.getElementById('mileageInput');
+        if (mileageInput) {
+            mileageInput.addEventListener('input', (e) => {
+                const raw = e.target.value;
+                if (raw === '') { this.clearFieldError(mileageInput); return; }
+                const km = parseInt(raw, 10);
+                if (isNaN(km) || !Number.isInteger(Number(raw)) || Number(raw) < 0) {
+                    this.showFieldError(mileageInput, 'Mileage must be a whole number (e.g. 45000)');
+                } else if (km > 999999) {
+                    this.showFieldError(mileageInput, 'Mileage seems too high — double-check the value');
+                } else {
+                    this.clearFieldError(mileageInput);
+                }
+            });
+        }
+
+        // WhatsApp number validation (optional field, but validate format if filled)
+        const whatsappInput = document.querySelector('[name="seller_whatsapp"]');
+        if (whatsappInput) {
+            whatsappInput.addEventListener('input', (e) => {
+                const value = e.target.value ? e.target.value.trim() : '';
+                if (value.length === 0) { this.clearFieldError(whatsappInput); return; }
+                const phoneRegex = /^[+]?[0-9\s\-()]{7,15}$/;
+                if (!phoneRegex.test(value)) {
+                    this.showFieldError(whatsappInput, 'Enter a valid WhatsApp number (e.g. +265 99 123 4567)');
+                } else {
+                    this.clearFieldError(whatsappInput);
                 }
             });
         }
@@ -612,6 +794,18 @@ class SellManager {
                 }
             });
         }
+    }
+
+    // Validate full name — must be two+ words, letters/hyphens/apostrophes only
+    _validateFullName(name) {
+        if (!name || name.trim().length < 3) return 'Full name must be at least 3 characters';
+        if (name.trim().length > 70)        return 'Full name must be 70 characters or less';
+        if (/[0-9]/.test(name))             return 'Full name must not contain numbers';
+        if (/[^a-zA-Z\s'\-\.]/.test(name)) return 'Full name may only contain letters, spaces, hyphens, and apostrophes';
+        const words = name.trim().split(/\s+/).filter(w => w.length > 0);
+        if (words.length < 2)              return 'Please enter your first and last name';
+        if (words.some(w => w.length < 2)) return 'Each part of your name must be at least 2 characters';
+        return null; // valid
     }
 
     // Show field error message
@@ -963,6 +1157,29 @@ setupPhotoUpload() {
 
     // FIXED: Ensure multiple attribute is properly set
     input.setAttribute('multiple', 'multiple');
+
+    // --- Camera button (mobile: capture="environment") ---
+    const cameraBtn = document.getElementById('photoUploadCamera');
+    const cameraInput = document.getElementById('photoInputCamera');
+    if (cameraBtn && cameraInput) {
+        if (!cameraBtn.hasAttribute('data-cam-attached')) {
+            cameraBtn.setAttribute('data-cam-attached', 'true');
+            cameraBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (isFileDialogOpen) return;
+                cameraInput.value = '';
+                isFileDialogOpen = true;
+                try { cameraInput.click(); } catch (_) { isFileDialogOpen = false; }
+            });
+            cameraInput.addEventListener('change', (e) => {
+                isFileDialogOpen = false;
+                if (e.target.files && e.target.files.length > 0) {
+                    this.handlePhotoSelection(e);
+                }
+            });
+        }
+    }
 }
 
 // Add this method to ensure proper step initialization
@@ -1388,6 +1605,70 @@ removePhoto(index) {
             }
         }
 
+        // Guest-specific field validation
+        if (this.guestMode) {
+            // Full name
+            const nameInput = document.querySelector('[name="seller_name"]');
+            if (nameInput) {
+                const nameError = this._validateFullName(nameInput.value);
+                if (nameError) {
+                    this.showFieldError(nameInput, nameError);
+                    this.showToast(nameError, 'error');
+                    nameInput.focus();
+                    return false;
+                }
+            }
+
+            // Phone format
+            const phoneInput = document.querySelector('[name="seller_phone"]');
+            if (phoneInput) {
+                const phoneVal = (phoneInput.value || '').trim();
+                const phoneRegex = /^[\+]?[0-9\s\-\(\)]{7,15}$/;
+                if (!phoneRegex.test(phoneVal)) {
+                    this.showFieldError(phoneInput, 'Please enter a valid phone number');
+                    this.showToast('Please enter a valid phone number', 'error');
+                    phoneInput.focus();
+                    return false;
+                }
+            }
+
+            // Email: registered account check (instant — uses cached flag + re-verify if stale)
+            const emailInput = document.querySelector('[name="seller_email"]');
+            if (emailInput) {
+                const emailVal = (emailInput.value || '').trim();
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(emailVal)) {
+                    this.showFieldError(emailInput, 'Please enter a valid email address');
+                    this.showToast('Please enter a valid email address', 'error');
+                    emailInput.focus();
+                    return false;
+                }
+                if (this._emailIsRegistered) {
+                    this.showFieldError(emailInput,
+                        'This email has a MotorLink account — please login to post your listing.');
+                    this.showToast('This email already has an account. Please login instead.', 'error');
+                    emailInput.focus();
+                    return false;
+                }
+                // Re-verify in case user bypassed the debounce
+                try {
+                    const res = await fetch(
+                        `${CONFIG.API_URL}?action=check_guest_identity&email=${encodeURIComponent(emailVal)}`,
+                        { credentials: 'include' }
+                    );
+                    const data = await res.json();
+                    if (data.success && data.email_registered) {
+                        this._emailIsRegistered = true;
+                        this.showFieldError(emailInput,
+                            'This email has a MotorLink account — please login to post your listing.');
+                        this.showToast('This email already has an account. Please login instead.', 'error');
+                        emailInput.focus();
+                        return false;
+                    }
+                } catch (_) { /* non-blocking network error — backend will re-enforce */ }
+            }
+        }
+
         // Add custom price validation
         const priceInput = document.querySelector('[name="price"]');
         const price = parseInt(priceInput.value);
@@ -1505,6 +1786,17 @@ removePhoto(index) {
         const listingType = document.getElementById('listingTypeInput')?.value;
         if (!listingType) {
             this.showToast('Please select a listing type', 'error');
+            return false;
+        }
+
+        if (this.guestMode && listingType !== 'free') {
+            this.showToast('Guests can only use Free Listing. Please register to use Featured Listing.', 'error');
+            return false;
+        }
+
+        const selectedCard = document.querySelector(`.listing-type-card[data-type="${listingType}"]`);
+        if (selectedCard && selectedCard.classList.contains('disabled-option')) {
+            this.showToast('The selected listing type is currently unavailable for this account.', 'error');
             return false;
         }
         return true;
@@ -1746,11 +2038,28 @@ removePhoto(index) {
     }
 
     // LISTING TYPE SELECTION
-    selectListingType(type) {
+    selectListingType(type, silent = false) {
+        const selectedCard = document.querySelector(`.listing-type-card[data-type="${type}"]`);
+        if (selectedCard && selectedCard.classList.contains('disabled-option')) {
+            if (!silent) {
+                const msg = type === 'featured'
+                    ? 'Featured listing is available for registered users only.'
+                    : 'This listing option is currently unavailable for this account.';
+                this.showToast(msg, 'error');
+            }
+            return;
+        }
+
+        if (this.guestMode && type === 'featured') {
+            if (!silent) {
+                this.showToast('Guests can only use Free Listing. Please register to use Featured Listing.', 'error');
+            }
+            return;
+        }
+
         document.querySelectorAll('.listing-type-card').forEach(card => {
             card.classList.remove('selected');
         });
-        const selectedCard = document.querySelector(`[data-type="${type}"]`);
         if (selectedCard) {
             selectedCard.classList.add('selected');
         }
@@ -1759,6 +2068,8 @@ removePhoto(index) {
         if (listingTypeInput) {
             listingTypeInput.value = type;
         }
+
+        this.updateListingTypeReview();
     }
 
     // REVIEW SECTION
@@ -1858,7 +2169,13 @@ removePhoto(index) {
             'featured': 'MWK 15,000'
         };
 
-        const html = `<div><strong>${typeNames[listingType] || 'Unknown'}</strong> - ${typePrices[listingType] || 'Unknown'}</div>`;
+        let extraNote = '';
+        if (listingType === 'free' && this.guestMode) {
+            const days = Math.max(1, Number(this.listingRestrictions.guest_listing_validity_days || 30));
+            extraNote = ` <span style="color:#6c757d;">(Guest validity: ${days} day${days === 1 ? '' : 's'})</span>`;
+        }
+
+        const html = `<div><strong>${typeNames[listingType] || 'Unknown'}</strong> - ${typePrices[listingType] || 'Unknown'}${extraNote}</div>`;
 
         reviewListingType.innerHTML = html;
     }
@@ -2017,6 +2334,10 @@ removePhoto(index) {
                 listing_type: formData.get('listing_type'),
                 featured_photo_index: this.featuredPhotoIndex
             };
+
+            if (this.guestMode) {
+                listingData.listing_type = 'free';
+            }
 
             let listingId;
 

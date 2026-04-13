@@ -402,6 +402,7 @@
     border-radius: var(--border-radius);
     font-size: 14px;
     transition: var(--transition);
+    background: var(--bg-white);
 }
 
 /* Field Error Styling */
@@ -438,8 +439,6 @@
         opacity: 1;
         transform: translateY(0);
     }
-}
-    background: var(--bg-white);
 }
 
 .form-control:focus {
@@ -779,6 +778,7 @@
     border: 2px solid var(--border-light);
     border-radius: var(--border-radius-lg);
     padding: var(--space-lg);
+    min-height: 300px;
     cursor: pointer;
     transition: var(--transition);
     background: var(--bg-white);
@@ -841,19 +841,37 @@
 }
 
 .listing-type-badge {
-    position: absolute;
-    top: var(--space-md);
-    right: var(--space-md);
+    position: static;
+    display: inline-flex;
+    align-items: center;
     background: var(--primary-green);
     color: var(--text-white);
     padding: var(--space-xs) var(--space-sm);
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
+    margin-bottom: var(--space-sm);
 }
 
 .listing-type-badge.featured {
     background: var(--primary-green);
+}
+
+.listing-type-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+}
+
+.listing-type-card.disabled-option {
+    opacity: 0.65;
+    cursor: not-allowed;
+    border-style: dashed;
+}
+
+.listing-type-card.disabled-option:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 /* Review Section */
@@ -1085,6 +1103,7 @@
     
     .listing-type-card {
         padding: var(--space-md);
+        min-height: auto;
     }
     
     .listing-type-card h3 {
@@ -1098,6 +1117,16 @@
     .listing-type-card li {
         font-size: 13px;
         padding: 6px 0;
+    }
+
+    .listing-type-badge {
+        font-size: 11px;
+        margin-bottom: 8px;
+    }
+
+    .listing-type-meta {
+        font-size: 12px;
+        margin-bottom: 8px;
     }
     
     /* Review cards - More compact */
@@ -1715,4 +1744,196 @@
     .guest-limit-content p {
         font-size: 0.8rem;
     }
+}
+
+
+/* ========================================================
+   MOBILE PHOTO UPLOAD - Camera + Gallery dual buttons
+   ======================================================== */
+
+/* Hide both file inputs visually */
+#photoInput,
+#photoInputCamera {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Desktop drag-drop cue - hidden on mobile */
+.upload-drop-cue {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 18px;
+    color: var(--text-tertiary);
+    font-size: 0.9rem;
+}
+.upload-drop-cue i { font-size: 2rem; color: var(--primary-green); }
+.upload-drop-cue.desktop-only { display: flex; }
+
+/* Button row */
+.upload-btn-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    width: 100%;
+    padding: 8px 0 12px;
+    flex-wrap: wrap;
+}
+
+/* Shared button base */
+.upload-btn-camera,
+.upload-btn-gallery {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 130px;
+    min-height: 80px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.15s, box-shadow 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+.upload-btn-camera i, .upload-btn-gallery i { font-size: 1.6rem; }
+.upload-btn-camera span, .upload-btn-gallery span { font-size: 0.95rem; font-weight: 600; }
+.upload-btn-camera small, .upload-btn-gallery small { font-size: 0.72rem; opacity: 0.8; }
+
+/* Camera (green filled) */
+.upload-btn-camera {
+    background: var(--primary-green);
+    color: #fff;
+    border-color: var(--primary-green);
+    box-shadow: 0 4px 14px rgba(0,200,83,0.35);
+}
+.upload-btn-camera:hover,
+.upload-btn-camera:active {
+    background: var(--primary-green-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,200,83,0.45);
+}
+
+/* Gallery (outlined) */
+.upload-btn-gallery {
+    background: transparent;
+    color: var(--primary-green);
+    border-color: var(--primary-green);
+}
+.upload-btn-gallery:hover,
+.upload-btn-gallery:active {
+    background: var(--primary-green-bg);
+    transform: translateY(-2px);
+}
+
+/* Rules line */
+.upload-rules {
+    font-size: 0.78rem;
+    color: var(--text-tertiary);
+    text-align: center;
+    margin: 0 0 8px;
+    letter-spacing: 0.02em;
+}
+
+/* ========================================================
+   CHARACTER COUNTERS
+   ======================================================== */
+
+.form-hint-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 4px;
+}
+.form-hint-row .form-hint { margin-top: 0; flex: 1; }
+
+.char-counter {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    background: var(--bg-gray);
+    color: var(--text-tertiary);
+    border: 1px solid var(--border-light);
+    transition: background 0.2s, color 0.2s;
+}
+.char-counter.warn { background: #fff3cd; color: #856404; border-color: #ffc107; }
+.char-counter.over  { background: #fdecea; color: #c62828; border-color: #ef9a9a; }
+
+/* ========================================================
+   MOBILE ENHANCEMENTS
+   ======================================================== */
+
+@media (max-width: 768px) {
+
+    /* Larger tap targets for all form inputs */
+    .form-control,
+    .form-control:not(select) {
+        min-height: 48px;
+        font-size: 16px; /* prevents iOS zoom */
+    }
+
+    /* Desktop drag cue: hidden on mobile */
+    .upload-drop-cue.desktop-only { display: none; }
+
+    /* Buttons fill width on mobile */
+    .upload-btn-camera,
+    .upload-btn-gallery {
+        flex: 1 1 calc(50% - 12px);
+        min-width: 100px;
+    }
+
+    /* Photo action buttons always visible (not hover-only) */
+    .photo-actions {
+        opacity: 1 !important;
+        background: rgba(0,0,0,0.55);
+    }
+
+    /* Sticky navigation bar */
+    .form-navigation {
+        position: sticky;
+        bottom: 0;
+        background: var(--bg-white);
+        padding: 12px 16px;
+        box-shadow: 0 -2px 12px rgba(0,0,0,0.12);
+        z-index: 100;
+        margin: 0 -16px;
+    }
+
+    /* Step indicator: compact on mobile */
+    .step-indicator {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        gap: 4px;
+        padding: 8px 4px;
+    }
+    .step-indicator::-webkit-scrollbar { display: none; }
+    .step-indicator .step {
+        min-width: 70px;
+        font-size: 0.72rem;
+        padding: 8px 6px;
+    }
+    .step-indicator .step i { font-size: 1rem; }
+}
+
+@media (max-width: 480px) {
+    .upload-btn-row { gap: 8px; }
+
+    .upload-btn-camera,
+    .upload-btn-gallery {
+        min-height: 70px;
+        padding: 10px 12px;
+    }
+    .upload-btn-camera i, .upload-btn-gallery i { font-size: 1.35rem; }
 }

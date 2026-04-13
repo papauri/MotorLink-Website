@@ -235,7 +235,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label>Price (MWK) <span class="required">*</span></label>
-                                    <input type="number" id="priceInput" name="price" class="form-control" placeholder="e.g., 25000000">
+                                    <input type="number" id="priceInput" name="price" class="form-control" placeholder="e.g., 25000000" min="100000" inputmode="numeric">
                                     <div class="form-hint">Set a competitive price to attract more buyers (minimum: MWK 100,000)</div>
                                 </div>
                             </div>
@@ -250,7 +250,7 @@
                             <div class="form-grid">
                                 <div class="form-group">
                                     <label>Mileage (KM)</label>
-                                    <input type="number" name="mileage" class="form-control" placeholder="e.g., 50000" min="0">
+                                    <input type="number" name="mileage" id="mileageInput" class="form-control" placeholder="e.g., 50000" min="0" max="999999" inputmode="numeric">
                                 </div>
                                 <div class="form-group">
                                     <label>Location <span class="required">*</span></label>
@@ -363,13 +363,13 @@
                             <div class="form-group">
                                 <label>Listing Title <span class="required">*</span></label>
                                 <input type="text" name="title" id="titleInput" class="form-control" placeholder="e.g., 2020 Toyota Hilux - Excellent Condition" maxlength="100">
-                                <div class="form-hint">Auto-generated from your selections above • Max 100 characters • Edit as needed</div>
+                                <div class="form-hint-row"><div class="form-hint">Auto-generated from your selections above • Edit as needed</div><span class="char-counter" id="titleCounter">0/100</span></div>
                             </div>
 
                             <div class="form-group">
                                 <label>Description</label>
-                                <textarea name="description" class="form-control" rows="4" placeholder="Describe your car's history, maintenance record, special features, recent repairs, etc. Be honest and detailed to attract serious buyers." maxlength="1000"></textarea>
-                                <div class="form-hint">Detailed descriptions get more inquiries • Max 1000 characters</div>
+                                <textarea name="description" id="descriptionInput" class="form-control" rows="4" placeholder="Describe your car's history, maintenance record, special features, recent repairs, etc. Be honest and detailed to attract serious buyers." maxlength="1000"></textarea>
+                                <div class="form-hint-row"><div class="form-hint">Detailed descriptions get more inquiries</div><span class="char-counter" id="descCounter">0/1000</span></div>
                             </div>
                         </div>
 
@@ -397,34 +397,38 @@
                                 </div>
                             </div>
 
-                            <!-- Photo Upload Area -->
+                            <!-- Photo Upload Area - mobile-optimised -->
                             <div class="photo-upload-area" id="photoUploadArea">
-                                <div class="upload-icon">
-                                    <i class="fas fa-camera"></i>
-                                </div>
-                                <div class="upload-title">Click here or drag photos to upload</div>
-                                <div class="upload-instructions">
-                                    <strong>Minimum 6 photos required</strong><br>
-                                    Maximum 15 photos allowed<br>
-                                    JPG, PNG, WEBP formats<br>
-                                    Maximum 5MB per photo<br>
-                                    <strong class="multiple-enabled">✓ Multiple selection enabled</strong>
-                                </div>
                                 <input type="file" id="photoInput" name="images[]" multiple accept="image/jpeg,image/png,image/jpg,image/webp">
-                                <button type="button" class="btn btn-primary" id="photoUploadButton">
-                                    <i class="fas fa-upload"></i> Choose Photos
-                                </button>
+                                <input type="file" id="photoInputCamera" accept="image/jpeg,image/png,image/jpg,image/webp" capture="environment">
+                                <div class="upload-drop-cue desktop-only">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <span>Drag &amp; drop photos here</span>
+                                </div>
+                                <div class="upload-btn-row">
+                                    <button type="button" class="upload-btn-camera" id="photoUploadCamera">
+                                        <i class="fas fa-camera"></i>
+                                        <span>Take Photo</span>
+                                        <small>Use camera</small>
+                                    </button>
+                                    <button type="button" class="upload-btn-gallery" id="photoUploadButton">
+                                        <i class="fas fa-images"></i>
+                                        <span>Choose Files</span>
+                                        <small>Gallery / multi-select</small>
+                                    </button>
+                                </div>
+                                <p class="upload-rules">JPG &middot; PNG &middot; WEBP &nbsp;|&nbsp; Max 5 MB each &nbsp;|&nbsp; Up to 15 photos</p>
                             </div>
 
                             <div class="photo-tips">
-                                <h4><i class="fas fa-lightbulb"></i> Photo Tips</h4>
+                                <h4><i class="fas fa-lightbulb"></i> Photo Checklist</h4>
                                 <ul>
-                                    <li><strong>Front view</strong> - Make sure the car is clean and well-lit</li>
-                                    <li><strong>Interior</strong> - Show dashboard, seats, and steering wheel</li>
-                                    <li><strong>Engine bay</strong> - Clean engine shows good maintenance</li>
-                                    <li><strong>All sides</strong> - Include rear, left, and right views</li>
-                                    <li><strong>Wheels & tires</strong> - Close-up shots of tire condition</li>
-                                    <li><strong>Any issues</strong> - Be transparent about any damage</li>
+                                    <li><i class="fas fa-check-circle" style="color:var(--primary-green)"></i> <strong>Front &amp; rear</strong> &mdash; car clean, well-lit</li>
+                                    <li><i class="fas fa-check-circle" style="color:var(--primary-green)"></i> <strong>Both sides</strong> &mdash; left and right profiles</li>
+                                    <li><i class="fas fa-check-circle" style="color:var(--primary-green)"></i> <strong>Interior</strong> &mdash; dashboard, seats, steering wheel</li>
+                                    <li><i class="fas fa-check-circle" style="color:var(--primary-green)"></i> <strong>Engine bay</strong> &mdash; shows maintenance care</li>
+                                    <li><i class="fas fa-check-circle" style="color:var(--primary-green)"></i> <strong>Wheels &amp; tyres</strong> &mdash; close-up condition shot</li>
+                                    <li><i class="fas fa-check-circle" style="color:var(--primary-green)"></i> <strong>Any damage</strong> &mdash; be transparent, builds trust</li>
                                 </ul>
                             </div>
 
@@ -438,22 +442,24 @@
                             <p>Select the best listing package for your needs. Featured listings get more visibility and faster results.</p>
 
                             <div class="listing-types">
-                                <div class="listing-type-card selected" data-type="free" onclick="selectListingType('free')">
-                                    <div class="listing-type-badge">Most Popular</div>
+                                <div class="listing-type-card selected" id="listingCardFree" data-type="free" onclick="selectListingType('free')">
+                                    <div class="listing-type-badge" id="listingBadgeFree">Most Popular</div>
                                     <h3><i class="fas fa-gift"></i>Free Listing</h3>
                                     <div class="listing-type-price free">FREE</div>
+                                    <div class="listing-type-meta" id="freeListingMeta">Standard listing with admin review.</div>
                                     <ul>
-                                        <li><i class="fas fa-check"></i> 30 days visibility</li>
+                                        <li id="freeFeatureValidity"><i class="fas fa-check"></i> 30 days visibility</li>
                                         <li><i class="fas fa-check"></i> Up to 10 photos</li>
                                         <li><i class="fas fa-check"></i> Contact information shown</li>
                                         <li><i class="fas fa-check"></i> Standard search results</li>
-                                        <li><i class="fas fa-check"></i> Basic listing features</li>
+                                        <li id="freeFeaturePolicy"><i class="fas fa-check"></i> Basic listing features</li>
                                     </ul>
                                 </div>
-                                <div class="listing-type-card" data-type="featured" onclick="selectListingType('featured')">
-                                    <div class="listing-type-badge featured">Recommended</div>
+                                <div class="listing-type-card" id="listingCardFeatured" data-type="featured" onclick="selectListingType('featured')">
+                                    <div class="listing-type-badge featured" id="listingBadgeFeatured">Recommended</div>
                                     <h3><i class="fas fa-star"></i>Featured Listing</h3>
                                     <div class="listing-type-price featured">MWK 15,000</div>
+                                    <div class="listing-type-meta" id="featuredListingMeta">Best for faster visibility and premium placement.</div>
                                     <ul>
                                         <li><i class="fas fa-star"></i> <strong>Priority placement</strong></li>
                                         <li><i class="fas fa-star"></i> Featured badge display</li>
