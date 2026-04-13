@@ -576,6 +576,9 @@
     border-left: 3px solid transparent;
     transition: all 0.3s ease;
     border-radius: 12px;
+    padding: 12px;
+    gap: 8px;
+    min-height: auto;
   }
   
   /* Unique left border colors */
@@ -601,12 +604,13 @@
 
   /* Compact header */
   .garage-card-header {
-    padding: 8px 10px 6px;
+    padding: 0;
     background: white;
+    min-height: 52px;
   }
 
   .garage-header-left {
-    padding-right: 60px; /* Less space needed on mobile */
+    padding-right: 55px; /* Less space needed on mobile */
   }
 
   .garage-service-name {
@@ -654,8 +658,8 @@
 
   /* Compact body */
   .garage-card-body {
-    padding: 6px 10px;
-    gap: 5px;
+    padding: 0;
+    gap: 4px;
   }
   
   /* Compact status indicator */
@@ -756,7 +760,7 @@
 
   /* Compact actions */
   .garage-card-actions {
-    padding: 8px 10px;
+    padding: 6px 0 0;
     gap: 5px;
     flex-wrap: nowrap;
   }
@@ -791,12 +795,18 @@
 
 @media (max-width: 480px) {
   /* Even more compact for small screens */
+  .garage-service-card {
+    padding: 10px;
+    gap: 6px;
+  }
+
   .garage-card-header {
-    padding: 6px 8px 5px;
+    padding: 0;
+    min-height: 46px;
   }
   
   .garage-header-left {
-    padding-right: 50px; /* Even less space on small screens */
+    padding-right: 46px;
   }
   
   .garage-service-name {
@@ -828,7 +838,7 @@
   }
   
   .garage-card-actions {
-    padding: 6px 8px;
+    padding: 5px 0 0;
     gap: 4px;
   }
   
