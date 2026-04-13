@@ -24,6 +24,12 @@ class SellManager {
             max_guest_listings: 1,
             guest_listing_validity_days: 30,
             max_registered_listings: 10,
+            payments_enabled: false,
+            free_listing_price: 0,
+            featured_listing_price: 15000,
+            payment_methods: ['mobile_money', 'bank_transfer'],
+            payment_instructions: '',
+            payment_reference_prefix: 'ML',
             require_listing_email_validation: true,
             is_authenticated: false,
             current_registered_count: null,
@@ -128,6 +134,8 @@ class SellManager {
         const featuredMeta = document.getElementById('featuredListingMeta');
         const freeFeatureValidity = document.getElementById('freeFeatureValidity');
         const freeFeaturePolicy = document.getElementById('freeFeaturePolicy');
+        const freePriceEl = document.getElementById('freeListingPrice');
+        const featuredPriceEl = document.getElementById('featuredListingPrice');
         const listingTypeInput = document.getElementById('listingTypeInput');
 
         if (!freeCard || !featuredCard) return;
@@ -136,6 +144,20 @@ class SellManager {
         const dayLabel = validityDays === 1 ? 'day' : 'days';
         const maxGuestListings = Number(this.listingRestrictions.max_guest_listings || 1);
         const listingLabel = maxGuestListings === 1 ? 'listing' : 'listings';
+        const paymentEnabled = !!this.listingRestrictions.payments_enabled;
+        const freePrice = Number(this.listingRestrictions.free_listing_price || 0);
+        const featuredPrice = Number(this.listingRestrictions.featured_listing_price || 0);
+
+        if (freePriceEl) {
+            freePriceEl.textContent = paymentEnabled && freePrice > 0
+                ? `MWK ${Math.round(freePrice).toLocaleString()}`
+                : 'FREE';
+        }
+        if (featuredPriceEl) {
+            featuredPriceEl.textContent = paymentEnabled && featuredPrice > 0
+                ? `MWK ${Math.round(featuredPrice).toLocaleString()}`
+                : 'MWK 15,000';
+        }
 
         // Default state for authenticated users
         if (freeBadge) freeBadge.textContent = 'Most Popular';
@@ -185,6 +207,63 @@ class SellManager {
                     freeFeaturePolicy.innerHTML = '<i class="fas fa-check"></i> Guest lifetime limit reached';
                 }
             }
+        }
+
+        this.updatePaymentRequirementUI();
+    }
+
+    getListingPayableAmount(listingType) {
+        if (!this.listingRestrictions.payments_enabled) return 0;
+        if (listingType === 'featured') {
+            return Number(this.listingRestrictions.featured_listing_price || 0);
+        }
+        return Number(this.listingRestrictions.free_listing_price || 0);
+    }
+
+    updatePaymentRequirementUI() {
+        const panel = document.getElementById('listingPaymentPanel');
+        const summary = document.getElementById('listingPaymentSummary');
+        const methodSelect = document.getElementById('listingPaymentMethod');
+        const instructions = document.getElementById('listingPaymentInstructions');
+        const listingType = document.getElementById('listingTypeInput')?.value || 'free';
+
+        if (!panel || !summary || !methodSelect) return;
+
+        const amount = this.getListingPayableAmount(listingType);
+        const methods = Array.isArray(this.listingRestrictions.payment_methods)
+            ? this.listingRestrictions.payment_methods
+            : [];
+
+        if (this.editMode || !this.listingRestrictions.payments_enabled || amount <= 0) {
+            panel.classList.add('hidden');
+            return;
+        }
+
+        panel.classList.remove('hidden');
+        summary.textContent = `Manual payment required: MWK ${Math.round(amount).toLocaleString()} for this listing. Admin verifies POP before approval.`;
+
+        const current = methodSelect.value;
+        const labels = {
+            mobile_money: 'Mobile Money',
+            bank_transfer: 'Bank Transfer',
+            cash_deposit: 'Cash Deposit'
+        };
+        methodSelect.innerHTML = '<option value="">Select payment method</option>';
+        methods.forEach((m) => {
+            const option = document.createElement('option');
+            option.value = m;
+            option.textContent = labels[m] || m.replace(/_/g, ' ');
+            methodSelect.appendChild(option);
+        });
+        if (current && methods.includes(current)) {
+            methodSelect.value = current;
+        }
+
+        if (instructions) {
+            const refPrefix = this.listingRestrictions.payment_reference_prefix || 'ML';
+            const methodText = methods.length > 0 ? methods.map(m => labels[m] || m).join(' / ') : 'configured methods';
+            const custom = this.listingRestrictions.payment_instructions || '';
+            instructions.innerHTML = `<strong>How to pay (manual):</strong> Pay via ${methodText}. Use reference prefix <strong>${refPrefix}</strong>. Upload POP, then wait for manual admin verification. ${custom}`;
         }
     }
 
@@ -1799,6 +1878,34 @@ removePhoto(index) {
             this.showToast('The selected listing type is currently unavailable for this account.', 'error');
             return false;
         }
+
+        const amount = this.getListingPayableAmount(listingType);
+        if (!this.editMode && amount > 0) {
+            const methodEl = document.getElementById('listingPaymentMethod');
+            const refEl = document.getElementById('listingPaymentReference');
+            const proofEl = document.getElementById('listingPaymentProof');
+
+            const method = methodEl ? String(methodEl.value || '').trim() : '';
+            const reference = refEl ? String(refEl.value || '').trim() : '';
+            const proof = proofEl && proofEl.files ? proofEl.files[0] : null;
+
+            if (!method) {
+                this.showToast('Please select a payment method for this listing.', 'error');
+                return false;
+            }
+            if (!reference || reference.length < 4) {
+                this.showToast('Please enter a valid payment reference.', 'error');
+                return false;
+            }
+            if (!proof) {
+                this.showToast('Please upload proof of payment (POP).', 'error');
+                return false;
+            }
+            if (proof.size > 5 * 1024 * 1024) {
+                this.showToast('Payment proof file must be 5MB or smaller.', 'error');
+                return false;
+            }
+        }
         return true;
     }
 
@@ -2070,6 +2177,7 @@ removePhoto(index) {
         }
 
         this.updateListingTypeReview();
+        this.updatePaymentRequirementUI();
     }
 
     // REVIEW SECTION
@@ -2168,6 +2276,15 @@ removePhoto(index) {
             'free': 'FREE',
             'featured': 'MWK 15,000'
         };
+
+        if (this.listingRestrictions.payments_enabled) {
+            typePrices.free = Number(this.listingRestrictions.free_listing_price || 0) > 0
+                ? `MWK ${Math.round(Number(this.listingRestrictions.free_listing_price || 0)).toLocaleString()}`
+                : 'FREE';
+            typePrices.featured = Number(this.listingRestrictions.featured_listing_price || 0) > 0
+                ? `MWK ${Math.round(Number(this.listingRestrictions.featured_listing_price || 0)).toLocaleString()}`
+                : 'FREE';
+        }
 
         let extraNote = '';
         if (listingType === 'free' && this.guestMode) {
@@ -2405,6 +2522,22 @@ removePhoto(index) {
                     listingData.is_guest = 1;
                 }
 
+                const payableAmount = this.getListingPayableAmount(listingData.listing_type);
+                if (payableAmount > 0) {
+                    const methodEl = document.getElementById('listingPaymentMethod');
+                    const refEl = document.getElementById('listingPaymentReference');
+                    const proofEl = document.getElementById('listingPaymentProof');
+                    const proofFile = proofEl && proofEl.files ? proofEl.files[0] : null;
+
+                    if (proofFile) {
+                        const proofDataUrl = await this.fileToBase64(proofFile);
+                        listingData.payment_method = methodEl ? methodEl.value : '';
+                        listingData.payment_reference = refEl ? refEl.value : '';
+                        listingData.payment_proof_filename = proofFile.name;
+                        listingData.payment_proof_data_url = proofDataUrl;
+                    }
+                }
+
 
                 const response = await fetch(`${CONFIG.API_URL}?action=submit_listing`, {
                     method: 'POST',
@@ -2504,11 +2637,21 @@ removePhoto(index) {
         }
     }
 
+    async fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.readAsDataURL(file);
+        });
+    }
+
     showSuccessMessage(listingId, submitResponse = null) {
         const container = document.querySelector('.form-container');
         if (!container) return;
 
         const emailVerificationRequired = !!submitResponse?.email_verification_required;
+        const paymentRequired = !!submitResponse?.payment_required;
         const verificationLink = submitResponse?.verification_link || '';
         const guestExpiresAt = submitResponse?.guest_listing_expires_at || '';
         const formattedGuestExpiry = guestExpiresAt
@@ -2529,14 +2672,14 @@ removePhoto(index) {
             ? `
                 <ol style="margin: 0; padding-left: 20px; line-height: 1.8;">
                     <li>Verify your listing email using the link we sent</li>
-                    <li>After verification, our team reviews your listing within 2-4 hours</li>
+                    <li>${paymentRequired ? 'After email verification, our team manually checks your payment POP and listing details' : 'After verification, our team reviews your listing within 2-4 hours'}</li>
                     <li>You'll receive an email notification once approved</li>
                     <li>Your listing then goes live and is visible to buyers</li>
                 </ol>
             `
             : `
                 <ol style="margin: 0; padding-left: 20px; line-height: 1.8;">
-                    <li>Our team will review your listing within 2-4 hours</li>
+                    <li>${paymentRequired ? 'Our team will manually verify your payment POP and review your listing within 2-4 hours' : 'Our team will review your listing within 2-4 hours'}</li>
                     <li>We'll check all details and photos for quality and accuracy</li>
                     <li>You'll receive an email notification once approved</li>
                     <li>Your listing will go live and be visible to thousands of buyers</li>
@@ -2544,6 +2687,9 @@ removePhoto(index) {
             `;
         const fallbackVerificationBlock = emailVerificationRequired && verificationLink
             ? `<div style="margin-top: 14px; padding: 12px; border-radius: 8px; background: #fff8e1; border: 1px solid #f2cc62;"><strong>Email test mode:</strong> <a href="${verificationLink}" target="_blank" rel="noopener">Verify listing email</a></div>`
+            : '';
+        const paymentPendingBlock = paymentRequired
+            ? `<div style="margin-top: 14px; padding: 12px; border-radius: 8px; background: #fff7ed; border: 1px solid #fdba74;"><strong>Payment status:</strong> Payment awaiting manual verification. Your listing will be approved only after POP verification by admin.</div>`
             : '';
 
         const successHTML = `
@@ -2559,6 +2705,7 @@ removePhoto(index) {
                 <div style="background: #d4edda; border: 1px solid #c3e6cb; border-radius: 12px; padding: 24px; margin: 32px 0; text-align: left;">
                     <h3 style="color: var(--success-green); margin-top: 0;">${nextStepHeader}</h3>
                     ${nextStepList}
+                    ${paymentPendingBlock}
                     ${fallbackVerificationBlock}
                     ${guestExpiryBlock}
                     ${guestManageHint}

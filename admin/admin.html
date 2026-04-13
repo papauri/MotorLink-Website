@@ -352,6 +352,13 @@
                         <select id="carMakeFilter" class="form-control" onchange="admin.loadCars()">
                             <option value="">All Makes</option>
                         </select>
+                        <select id="carPaymentStatusFilter" class="form-control" onchange="admin.loadCars()">
+                            <option value="">All Payment States</option>
+                            <option value="not_required">Not Required</option>
+                            <option value="pending">Pending</option>
+                            <option value="verified">Verified</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
                         <input type="text" id="carSearchFilter" class="form-control" placeholder="Search cars..." onkeyup="admin.loadCars()">
                         <button class="btn btn-outline" onclick="admin.loadCars()">
                             <i class="fas fa-sync"></i> Refresh
@@ -373,13 +380,14 @@
                                     <th>Price</th>
                                     <th>Location</th>
                                     <th>Status</th>
+                                    <th>Payment</th>
                                     <th>Views</th>
                                     <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="carsTableBody">
-                                <tr><td colspan="12" class="text-center">Loading cars...</td></tr>
+                                <tr><td colspan="13" class="text-center">Loading cars...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -409,7 +417,17 @@
                     
                     <!-- Add this to the pending-cars-section after the alert -->
 <div class="filters-bar">
+    <select id="pendingCarPaymentStatusFilter" class="form-control" onchange="admin.filterPendingCars()">
+        <option value="">All Payment States</option>
+        <option value="pending">Pending</option>
+        <option value="verified">Verified</option>
+        <option value="rejected">Rejected</option>
+        <option value="not_required">Not Required</option>
+    </select>
     <input type="text" id="pendingCarSearchFilter" class="form-control" placeholder="Search pending cars..." onkeyup="admin.filterPendingCars()">
+    <button class="btn btn-outline" onclick="admin.setPendingPaymentFilter('pending')">
+        <i class="fas fa-receipt"></i> Payment Pending Only
+    </button>
     <button class="btn btn-outline" onclick="admin.filterPendingCars()">
         <i class="fas fa-sync"></i> Refresh
     </button>
@@ -429,12 +447,13 @@
                                     <th>Year</th>
                                     <th>Price</th>
                                     <th>Location</th>
+                                    <th>Payment</th>
                                     <th>Submitted</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="pendingCarsTableBody">
-                                <tr><td colspan="10" class="text-center">Loading pending cars...</td></tr>
+                                <tr><td colspan="11" class="text-center">Loading pending cars...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -577,7 +596,7 @@
                 <!-- Payments Section -->
                 <div class="content-section" id="payments-section">
                     <div class="section-header">
-                        <h2><i class="fas fa-credit-card"></i> Payments Management</h2>
+                        <h2><i class="fas fa-credit-card"></i> Manual Payments Management</h2>
                         <div class="section-actions">
                             <button class="btn btn-success" onclick="showAddPaymentModal()">
                                 <i class="fas fa-plus"></i> Record Payment
@@ -586,6 +605,11 @@
                                 <i class="fas fa-download"></i> Export
                             </button>
                         </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Payments are currently handled manually. Sellers upload POP, then admins verify or reject each payment before listing approval.
                     </div>
 
                     <div class="payment-stats">
@@ -1273,6 +1297,32 @@
                             <div class="form-group">
                                 <label for="featured-listing-price">Featured Listing Price (MWK)</label>
                                 <input type="number" id="featured-listing-price" value="5000" class="form-control">
+                            </div>
+                            <hr style="margin: 14px 0; border: 0; border-top: 1px solid #e5e7eb;">
+                            <div class="form-group">
+                                <label for="enable-paid-listings">
+                                    <input type="checkbox" id="enable-paid-listings">
+                                    Enable paid listings (one-click activation)
+                                </label>
+                                <small class="form-text">When off, listing posting remains free. When on, users must submit POP and admins verify payments manually before approval.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="free-listing-price">Standard Listing Price (MWK)</label>
+                                <input type="number" id="free-listing-price" value="0" min="0" class="form-control">
+                                <small class="form-text">Set 0 if Standard listing should stay free.</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="payment-methods">Allowed Payment Methods</label>
+                                <input type="text" id="payment-methods" value="mobile_money,bank_transfer" class="form-control" placeholder="mobile_money,bank_transfer">
+                                <small class="form-text">Comma-separated values. Example: mobile_money,bank_transfer</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="payment-reference-prefix">Payment Reference Prefix</label>
+                                <input type="text" id="payment-reference-prefix" value="ML" maxlength="10" class="form-control">
+                            </div>
+                            <div class="form-group">
+                                <label for="payment-instructions">Payment Instructions</label>
+                                <textarea id="payment-instructions" rows="3" class="form-control" placeholder="Enter bank or mobile money payment instructions for sellers"></textarea>
                             </div>
                             <div class="form-group">
                                 <label for="max-listings-registered">Max Listings Per Registered User</label>

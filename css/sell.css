@@ -874,6 +874,35 @@
     box-shadow: none;
 }
 
+.listing-payment-panel {
+    margin-top: var(--space-md);
+    border: 1px solid var(--border-light);
+    border-radius: var(--border-radius);
+    padding: var(--space-md);
+    background: var(--bg-light);
+}
+
+.listing-payment-panel h3 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.listing-payment-summary {
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+}
+
+.listing-payment-instructions {
+    margin-top: 8px;
+    padding: 10px;
+    border-left: 3px solid var(--primary-green);
+    background: #ecfdf3;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
 /* Review Section */
 .review-section {
     display: grid;

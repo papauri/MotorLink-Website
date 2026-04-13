@@ -1013,10 +1013,12 @@ async loadCars() {
         const filters = {};
         const statusFilter = document.getElementById('carStatusFilter').value;
         const makeFilter = document.getElementById('carMakeFilter').value;
+        const paymentStatusFilter = document.getElementById('carPaymentStatusFilter')?.value;
         const searchFilter = document.getElementById('carSearchFilter').value;
         
         if (statusFilter) filters.status = statusFilter;
         if (makeFilter) filters.make_id = makeFilter;
+        if (paymentStatusFilter) filters.payment_status = paymentStatusFilter;
         if (searchFilter) filters.search = searchFilter;
         
         const response = await this.apiCall('get_cars', 'GET', filters);
@@ -1034,7 +1036,7 @@ async loadCars() {
         }
     } catch (error) {
         document.getElementById('carsTableBody').innerHTML = 
-            '<tr><td colspan="12" class="text-center text-muted">Error loading cars</td></tr>';
+            '<tr><td colspan="13" class="text-center text-muted">Error loading cars</td></tr>';
     }
 }
 
@@ -1163,8 +1165,10 @@ async loadPendingCars() {
         
         const filters = { status: 'pending_approval' };
         const searchFilter = document.getElementById('pendingCarSearchFilter')?.value;
+        const paymentStatusFilter = document.getElementById('pendingCarPaymentStatusFilter')?.value;
         
         if (searchFilter) filters.search = searchFilter;
+        if (paymentStatusFilter) filters.payment_status = paymentStatusFilter;
         
         const response = await this.apiCall('get_cars', 'GET', filters);
         
@@ -1176,7 +1180,7 @@ async loadPendingCars() {
         }
     } catch (error) {
         document.getElementById('pendingCarsTableBody').innerHTML = 
-            '<tr><td colspan="10" class="text-center text-muted">Error loading pending cars</td></tr>';
+            '<tr><td colspan="11" class="text-center text-muted">Error loading pending cars</td></tr>';
     }
 }
 
@@ -1271,7 +1275,7 @@ displayGuestListingsTable(cars) {
         const tbody = document.getElementById('pendingCarsTableBody');
         
         if (!cars || cars.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="text-center text-success"><i class="fas fa-check-circle"></i> No pending cars for approval</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="text-center text-success"><i class="fas fa-check-circle"></i> No pending cars for approval</td></tr>';
             return;
         }
 
@@ -1291,10 +1295,11 @@ displayGuestListingsTable(cars) {
                 <td>${car.year}</td>
                 <td>MWK ${this.formatNumber(car.price)}</td>
                 <td>${this.escapeHtml(car.location_name)}</td>
+                <td>${this.renderListingPaymentBadge(car)}</td>
                 <td>${this.formatDateShort(car.created_at)}</td>
                 <td>
                     <div class="d-flex gap-5">
-                        <button class="btn btn-sm btn-success" onclick="admin.approveCar(${car.id}, 'approve')" title="Approve">
+                        <button class="btn btn-sm btn-success" onclick="admin.approveCar(${car.id}, 'approve')" title="${((Number(car.payment_required || 0) === 1 || Number(car.payment_amount || 0) > 0) && String(car.payment_status || '').toLowerCase() !== 'verified') ? 'Payment must be verified before approval' : 'Approve'}" ${((Number(car.payment_required || 0) === 1 || Number(car.payment_amount || 0) > 0) && String(car.payment_status || '').toLowerCase() !== 'verified') ? 'disabled' : ''}>
                             <i class="fas fa-check"></i> Approve
                         </button>
                         <button class="btn btn-sm btn-warning" onclick="admin.approveCar(${car.id}, 'reject')" title="Reject">
@@ -2258,6 +2263,14 @@ async filterCars() {
 
 async filterPendingCars() {
     await this.loadPendingCars();
+}
+
+setPendingPaymentFilter(status) {
+    const select = document.getElementById('pendingCarPaymentStatusFilter');
+    if (select) {
+        select.value = status || '';
+    }
+    this.loadPendingCars();
 }
 
 async filterPayments() {
@@ -3858,7 +3871,7 @@ async filterMakesModels() {
         const tbody = document.getElementById('carsTableBody');
         
         if (!cars || cars.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted">No cars found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="13" class="text-center text-muted">No cars found</td></tr>';
             return;
         }
 
@@ -3894,12 +3907,13 @@ async filterMakesModels() {
                     ${car.is_featured ? `<div class="text-warning small"><i class="fas fa-star"></i> Featured</div>` : ''}
                     ${car.is_premium ? `<div class="text-success small"><i class="fas fa-crown"></i> Premium</div>` : ''}
                 </td>
+                <td>${this.renderListingPaymentBadge(car)}</td>
                 <td>${car.views_count || 0}</td>
                 <td>${this.formatDateShort(car.created_at)}</td>
                 <td>
                     <div class="d-flex gap-5" style="flex-wrap: wrap;">
                         ${car.status === 'pending_approval' ? `
-                            <button class="btn btn-sm btn-success" onclick="admin.approveCar(${car.id}, 'approve')" title="Approve">
+                            <button class="btn btn-sm btn-success" onclick="admin.approveCar(${car.id}, 'approve')" title="${((Number(car.payment_required || 0) === 1 || Number(car.payment_amount || 0) > 0) && String(car.payment_status || '').toLowerCase() !== 'verified') ? 'Payment must be verified before approval' : 'Approve'}" ${((Number(car.payment_required || 0) === 1 || Number(car.payment_amount || 0) > 0) && String(car.payment_status || '').toLowerCase() !== 'verified') ? 'disabled' : ''}>
                                 <i class="fas fa-check"></i>
                             </button>
                             <button class="btn btn-sm btn-warning" onclick="admin.approveCar(${car.id}, 'reject')" title="Reject">
@@ -4012,17 +4026,20 @@ async filterMakesModels() {
                 </td>
                 <td>${this.formatServiceType(payment.service_type)}</td>
                 <td>MWK ${this.formatNumber(payment.amount)}</td>
-                <td>${this.capitalize(payment.payment_method.replace('_', ' '))}</td>
-                <td>${payment.reference || '-'}</td>
-                <td><span class="status-badge status-${payment.status}">${payment.status}</span></td>
+                <td>${payment.payment_method ? this.capitalize(String(payment.payment_method).replace('_', ' ')) : '-'}</td>
+                <td>
+                    <div>${payment.reference || '-'}</div>
+                    ${payment.proof_path ? `<div class="small"><a href="../${payment.proof_path}" target="_blank" rel="noopener">View POP</a></div>` : ''}
+                </td>
+                <td><span class="status-badge status-${payment.status}">${this.formatManualPaymentStatus(payment.status)}</span></td>
                 <td>${this.formatDateShort(payment.created_at)}</td>
                 <td>
                     <div class="d-flex gap-5">
                         ${payment.status === 'pending' ? `
-                            <button class="btn btn-sm btn-success" onclick="admin.verifyPayment(${payment.id})" title="Verify">
+                            <button class="btn btn-sm btn-success" onclick="admin.verifyPayment(${payment.id})" title="Verify Manually">
                                 <i class="fas fa-check"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger" onclick="admin.rejectPayment(${payment.id})" title="Reject">
+                            <button class="btn btn-sm btn-danger" onclick="admin.rejectPayment(${payment.id})" title="Reject POP">
                                 <i class="fas fa-times"></i>
                             </button>
                         ` : ''}
@@ -4245,7 +4262,7 @@ async filterMakesModels() {
     }
 
     async verifyPayment(id) {
-        if (!confirm('Are you sure you want to verify this payment?')) {
+        if (!confirm('Are you sure you want to mark this payment as manually verified?')) {
             return;
         }
 
@@ -4254,7 +4271,7 @@ async filterMakesModels() {
             const response = await this.apiCall('verify_payment', 'POST', { id });
             
             if (response.success) {
-                this.showAlert('success', 'Payment verified successfully');
+                this.showAlert('success', 'Payment marked as manually verified');
                 this.loadPayments();
                 this.loadPaymentStats();
             } else {
@@ -4266,7 +4283,7 @@ async filterMakesModels() {
     }
 
     async rejectPayment(id) {
-        if (!confirm('Are you sure you want to reject this payment?')) {
+        if (!confirm('Are you sure you want to reject this POP submission?')) {
             return;
         }
 
@@ -4275,7 +4292,7 @@ async filterMakesModels() {
             const response = await this.apiCall('reject_payment', 'POST', { id });
 
             if (response.success) {
-                this.showAlert('success', 'Payment rejected');
+                this.showAlert('success', 'POP submission rejected');
                 this.loadPayments();
                 this.loadPaymentStats();
             } else {
@@ -4766,6 +4783,31 @@ async filterMakesModels() {
             'car_hire_listing': 'Car Hire Listing'
         };
         return types[serviceType] || serviceType;
+    }
+
+    renderListingPaymentBadge(car) {
+        const amount = Number(car.payment_amount || 0);
+        const requiresPayment = Number(car.payment_required || 0) === 1 || amount > 0;
+
+        if (!requiresPayment) {
+            return '<span class="status-badge status-active">Not required</span>';
+        }
+
+        const status = String(car.payment_status || 'pending').toLowerCase();
+        if (status === 'verified') {
+            return '<span class="status-badge status-verified">Verified</span>';
+        }
+        if (status === 'rejected') {
+            return '<span class="status-badge status-rejected">Rejected</span>';
+        }
+        return '<span class="status-badge status-pending">Pending Manual Review</span>';
+    }
+
+    formatManualPaymentStatus(status) {
+        const normalized = String(status || 'pending').toLowerCase();
+        if (normalized === 'verified') return 'Manually Verified';
+        if (normalized === 'rejected') return 'Rejected';
+        return 'Pending Manual Review';
     }
 
     getActivityIcon(type) {
@@ -5341,6 +5383,11 @@ async function saveListingSettings() {
         expiryDays: parseInt(document.getElementById('listing-expiry-days').value),
         maxImages: parseInt(document.getElementById('max-images-per-listing').value),
         featuredPrice: parseFloat(document.getElementById('featured-listing-price').value),
+        paymentsEnabled: document.getElementById('enable-paid-listings').checked,
+        freeListingPrice: parseFloat(document.getElementById('free-listing-price').value || '0'),
+        paymentMethods: document.getElementById('payment-methods').value,
+        paymentReferencePrefix: document.getElementById('payment-reference-prefix').value,
+        paymentInstructions: document.getElementById('payment-instructions').value,
         maxRegisteredListings: parseInt(document.getElementById('max-listings-registered').value),
         maxGuestListings: parseInt(document.getElementById('max-listings-guest').value),
         requireEmailValidation: document.getElementById('require-listing-email-validation').checked
@@ -5663,6 +5710,11 @@ async function loadSettings() {
             if (settings['listing_expiryDays']) document.getElementById('listing-expiry-days').value = settings['listing_expiryDays'];
             if (settings['listing_maxImages']) document.getElementById('max-images-per-listing').value = settings['listing_maxImages'];
             if (settings['listing_featuredPrice']) document.getElementById('featured-listing-price').value = settings['listing_featuredPrice'];
+            if (settings['listing_paymentsEnabled'] !== undefined) document.getElementById('enable-paid-listings').checked = settings['listing_paymentsEnabled'];
+            if (settings['listing_freeListingPrice'] !== undefined) document.getElementById('free-listing-price').value = settings['listing_freeListingPrice'];
+            if (settings['listing_paymentMethods'] !== undefined) document.getElementById('payment-methods').value = settings['listing_paymentMethods'];
+            if (settings['listing_paymentReferencePrefix'] !== undefined) document.getElementById('payment-reference-prefix').value = settings['listing_paymentReferencePrefix'];
+            if (settings['listing_paymentInstructions'] !== undefined) document.getElementById('payment-instructions').value = settings['listing_paymentInstructions'];
             if (settings['listing_maxRegisteredListings'] !== undefined) document.getElementById('max-listings-registered').value = settings['listing_maxRegisteredListings'];
             if (settings['listing_maxGuestListings'] !== undefined) document.getElementById('max-listings-guest').value = settings['listing_maxGuestListings'];
             if (settings['listing_requireEmailValidation'] !== undefined) document.getElementById('require-listing-email-validation').checked = settings['listing_requireEmailValidation'];

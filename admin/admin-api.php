@@ -179,6 +179,18 @@ try {
         case 'get_payments':
             getPayments($db);
             break;
+
+        case 'payment_stats':
+            getPaymentStats($db);
+            break;
+
+        case 'verify_payment':
+            handleVerifyPayment($db);
+            break;
+
+        case 'reject_payment':
+            handleRejectPayment($db);
+            break;
             
         case 'get_dealers':
             loadDealers($db);
@@ -885,6 +897,24 @@ function handleGetCars($db) {
         }
 
         try {
+            $db->exec("ALTER TABLE car_listings ADD COLUMN payment_required TINYINT(1) DEFAULT 0");
+        } catch (Exception $e) {
+            // Column already exists, ignore
+        }
+
+        try {
+            $db->exec("ALTER TABLE car_listings ADD COLUMN payment_amount DECIMAL(12,2) DEFAULT 0");
+        } catch (Exception $e) {
+            // Column already exists, ignore
+        }
+
+        try {
+            $db->exec("ALTER TABLE car_listings ADD COLUMN payment_status VARCHAR(30) DEFAULT 'not_required'");
+        } catch (Exception $e) {
+            // Column already exists, ignore
+        }
+
+        try {
             $db->exec("\n                UPDATE car_listings\n                SET\n                    status = 'expired',\n                    guest_listing_expired_at = COALESCE(guest_listing_expired_at, NOW())\n                WHERE is_guest = 1\n                  AND guest_listing_expires_at IS NOT NULL\n                  AND guest_listing_expires_at <= NOW()\n                  AND status IN ('active', 'pending_approval', 'pending_email_verification')\n            ");
         } catch (Exception $e) {
             // Non-blocking.
@@ -930,6 +960,21 @@ function handleGetCars($db) {
             $isGuest = (int)$_GET['is_guest'] === 1 ? 1 : 0;
             $where[] = "COALESCE(cl.is_guest, 0) = ?";
             $params[] = $isGuest;
+        }
+
+        if (!empty($_GET['payment_status'])) {
+            $paymentStatus = strtolower(trim((string)$_GET['payment_status']));
+
+            if ($paymentStatus === 'not_required') {
+                $where[] = "(COALESCE(cl.payment_required, 0) = 0 OR COALESCE(cl.payment_amount, 0) <= 0)";
+            } elseif ($paymentStatus === 'pending') {
+                $where[] = "COALESCE(cl.payment_required, 0) = 1";
+                $where[] = "LOWER(COALESCE(cl.payment_status, 'pending')) IN ('pending', 'pending_verification')";
+            } elseif ($paymentStatus === 'verified' || $paymentStatus === 'rejected') {
+                $where[] = "COALESCE(cl.payment_required, 0) = 1";
+                $where[] = "LOWER(COALESCE(cl.payment_status, '')) = ?";
+                $params[] = $paymentStatus;
+            }
         }
 
         $whereClause = implode(' AND ', $where);
@@ -989,7 +1034,7 @@ function handleApproveCar($db) {
     }
     
     try {
-        $listingMetaStmt = $db->prepare("SELECT COALESCE(is_guest, 0) AS is_guest, COALESCE(listing_email_verified, 0) AS listing_email_verified FROM car_listings WHERE id = ? LIMIT 1");
+        $listingMetaStmt = $db->prepare("SELECT COALESCE(is_guest, 0) AS is_guest, COALESCE(listing_email_verified, 0) AS listing_email_verified, COALESCE(payment_required, 0) AS payment_required, COALESCE(payment_status, 'not_required') AS payment_status FROM car_listings WHERE id = ? LIMIT 1");
         $listingMetaStmt->execute([$id]);
         $listingMeta = $listingMetaStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -1000,6 +1045,11 @@ function handleApproveCar($db) {
 
         if ($action === 'approve' && (int)$listingMeta['is_guest'] === 1 && (int)$listingMeta['listing_email_verified'] !== 1) {
             echo json_encode(['success' => false, 'message' => 'Guest listing must complete email verification before approval']);
+            exit();
+        }
+
+        if ($action === 'approve' && (int)$listingMeta['payment_required'] === 1 && strtolower((string)$listingMeta['payment_status']) !== 'verified') {
+            echo json_encode(['success' => false, 'message' => 'Listing payment has not been verified yet']);
             exit();
         }
 
@@ -1878,6 +1928,8 @@ function getPayments($db) {
     requireAdmin();
     
     try {
+        ensurePaymentsTableAdmin($db);
+
         $where = ["1=1"];
         $params = [];
         
@@ -1903,13 +1955,12 @@ function getPayments($db) {
         }
         
         $whereClause = implode(' AND ', $where);
-        
-        // This is a placeholder - you'll need to create a payments table or adjust based on your schema
+
         $sql = "
             SELECT 
                 p.*,
-                u.full_name as user_name,
-                u.email as user_email
+                COALESCE(u.full_name, p.user_name, 'Guest Seller') as user_name,
+                COALESCE(u.email, p.user_email, '') as user_email
             FROM payments p
             LEFT JOIN users u ON p.user_id = u.id
             WHERE {$whereClause}
@@ -1917,12 +1968,156 @@ function getPayments($db) {
             LIMIT 100
         ";
 
-        // For now, return empty array since payments table might not exist
-        echo json_encode(['success' => true, 'payments' => []]);
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        echo json_encode(['success' => true, 'payments' => $payments]);
         exit();
     } catch (Exception $e) {
         error_log("getPayments error: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Failed to load payments']);
+        exit();
+    }
+}
+
+function ensurePaymentsTableAdmin($db) {
+    $db->exec("CREATE TABLE IF NOT EXISTS payments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        listing_id INT NULL,
+        user_id INT NULL,
+        user_name VARCHAR(120) DEFAULT NULL,
+        user_email VARCHAR(255) DEFAULT NULL,
+        service_type VARCHAR(60) NOT NULL DEFAULT 'listing_submission',
+        amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+        payment_method VARCHAR(50) DEFAULT NULL,
+        reference VARCHAR(100) DEFAULT NULL,
+        proof_path VARCHAR(255) DEFAULT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'pending',
+        notes TEXT DEFAULT NULL,
+        verified_at DATETIME DEFAULT NULL,
+        verified_by INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_listing_id (listing_id),
+        INDEX idx_user_id (user_id),
+        INDEX idx_status (status),
+        INDEX idx_service_type (service_type)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+function getPaymentStats($db) {
+    requireAdmin();
+
+    try {
+        ensurePaymentsTableAdmin($db);
+
+        $today = date('Y-m-d');
+        $monthStart = date('Y-m-01');
+
+        $todayStmt = $db->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount),0) as amount FROM payments WHERE DATE(created_at) = ?");
+        $todayStmt->execute([$today]);
+        $todayRow = $todayStmt->fetch(PDO::FETCH_ASSOC);
+
+        $monthStmt = $db->prepare("SELECT COUNT(*) as count, COALESCE(SUM(amount),0) as amount FROM payments WHERE DATE(created_at) >= ?");
+        $monthStmt->execute([$monthStart]);
+        $monthRow = $monthStmt->fetch(PDO::FETCH_ASSOC);
+
+        $pendingStmt = $db->query("SELECT COUNT(*) as count, COALESCE(SUM(amount),0) as amount FROM payments WHERE status = 'pending'");
+        $pendingRow = $pendingStmt->fetch(PDO::FETCH_ASSOC);
+
+        echo json_encode([
+            'success' => true,
+            'stats' => [
+                'today' => ['count' => (int)$todayRow['count'], 'amount' => (float)$todayRow['amount']],
+                'month' => ['count' => (int)$monthRow['count'], 'amount' => (float)$monthRow['amount']],
+                'pending' => ['count' => (int)$pendingRow['count'], 'amount' => (float)$pendingRow['amount']]
+            ]
+        ]);
+        exit();
+    } catch (Exception $e) {
+        error_log('getPaymentStats error: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to load payment stats']);
+        exit();
+    }
+}
+
+function handleVerifyPayment($db) {
+    requireAdmin();
+    $input = json_decode(file_get_contents('php://input'), true);
+    $id = (int)($input['id'] ?? 0);
+
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Payment id is required']);
+        exit();
+    }
+
+    try {
+        ensurePaymentsTableAdmin($db);
+        $db->beginTransaction();
+
+        $stmt = $db->prepare("SELECT id, listing_id FROM payments WHERE id = ? LIMIT 1");
+        $stmt->execute([$id]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$payment) {
+            throw new Exception('Payment not found');
+        }
+
+        $upd = $db->prepare("UPDATE payments SET status = 'verified', verified_at = NOW(), verified_by = ? WHERE id = ?");
+        $upd->execute([$_SESSION['admin_id'] ?? null, $id]);
+
+        if (!empty($payment['listing_id'])) {
+            $listingUpd = $db->prepare("UPDATE car_listings SET payment_status = 'verified' WHERE id = ?");
+            $listingUpd->execute([(int)$payment['listing_id']]);
+        }
+
+        $db->commit();
+        echo json_encode(['success' => true, 'message' => 'Payment verified successfully']);
+        exit();
+    } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        error_log('handleVerifyPayment error: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to verify payment']);
+        exit();
+    }
+}
+
+function handleRejectPayment($db) {
+    requireAdmin();
+    $input = json_decode(file_get_contents('php://input'), true);
+    $id = (int)($input['id'] ?? 0);
+
+    if ($id <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Payment id is required']);
+        exit();
+    }
+
+    try {
+        ensurePaymentsTableAdmin($db);
+        $db->beginTransaction();
+
+        $stmt = $db->prepare("SELECT id, listing_id FROM payments WHERE id = ? LIMIT 1");
+        $stmt->execute([$id]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$payment) {
+            throw new Exception('Payment not found');
+        }
+
+        $upd = $db->prepare("UPDATE payments SET status = 'rejected', verified_at = NOW(), verified_by = ? WHERE id = ?");
+        $upd->execute([$_SESSION['admin_id'] ?? null, $id]);
+
+        if (!empty($payment['listing_id'])) {
+            $listingUpd = $db->prepare("UPDATE car_listings SET payment_status = 'rejected' WHERE id = ?");
+            $listingUpd->execute([(int)$payment['listing_id']]);
+        }
+
+        $db->commit();
+        echo json_encode(['success' => true, 'message' => 'Payment rejected']);
+        exit();
+    } catch (Exception $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        error_log('handleRejectPayment error: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to reject payment']);
         exit();
     }
 }

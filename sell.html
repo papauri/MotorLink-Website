@@ -445,7 +445,7 @@
                                 <div class="listing-type-card selected" id="listingCardFree" data-type="free" onclick="selectListingType('free')">
                                     <div class="listing-type-badge" id="listingBadgeFree">Most Popular</div>
                                     <h3><i class="fas fa-gift"></i>Free Listing</h3>
-                                    <div class="listing-type-price free">FREE</div>
+                                    <div class="listing-type-price free" id="freeListingPrice">FREE</div>
                                     <div class="listing-type-meta" id="freeListingMeta">Standard listing with admin review.</div>
                                     <ul>
                                         <li id="freeFeatureValidity"><i class="fas fa-check"></i> 30 days visibility</li>
@@ -458,7 +458,7 @@
                                 <div class="listing-type-card" id="listingCardFeatured" data-type="featured" onclick="selectListingType('featured')">
                                     <div class="listing-type-badge featured" id="listingBadgeFeatured">Recommended</div>
                                     <h3><i class="fas fa-star"></i>Featured Listing</h3>
-                                    <div class="listing-type-price featured">MWK 15,000</div>
+                                    <div class="listing-type-price featured" id="featuredListingPrice">MWK 15,000</div>
                                     <div class="listing-type-meta" id="featuredListingMeta">Best for faster visibility and premium placement.</div>
                                     <ul>
                                         <li><i class="fas fa-star"></i> <strong>Priority placement</strong></li>
@@ -469,6 +469,35 @@
                                     </ul>
                                 </div>
                             </div>
+
+                            <div class="listing-payment-panel hidden" id="listingPaymentPanel">
+                                <h3><i class="fas fa-receipt"></i> Listing Payment Details</h3>
+                                <p id="listingPaymentSummary" class="listing-payment-summary">
+                                    Manual payment is required for this listing. Complete the details below.
+                                </p>
+
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="listingPaymentMethod">Payment Method <span class="required">*</span></label>
+                                        <select id="listingPaymentMethod" class="form-control">
+                                            <option value="">Select payment method</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="listingPaymentReference">Payment Reference <span class="required">*</span></label>
+                                        <input type="text" id="listingPaymentReference" class="form-control" maxlength="80" placeholder="Transaction ID / bank reference">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="listingPaymentProof">Upload Proof of Payment (POP) <span class="required">*</span></label>
+                                    <input type="file" id="listingPaymentProof" class="form-control" accept="image/jpeg,image/png,image/jpg,image/webp,application/pdf">
+                                    <small class="form-hint">Accepted: JPG, PNG, WEBP, PDF. Max 5MB. Your listing is approved only after manual payment verification.</small>
+                                </div>
+
+                                <div class="listing-payment-instructions" id="listingPaymentInstructions"></div>
+                            </div>
+
                             <input type="hidden" name="listing_type" id="listingTypeInput" value="free">
                         </div>
 

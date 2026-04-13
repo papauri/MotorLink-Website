@@ -695,6 +695,102 @@ function ensureGuestListingManagementColumns($db) {
 }
 
 /**
+ * Ensure listing-payment columns exist on car_listings.
+ */
+function ensureListingPaymentColumns($db) {
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN payment_required TINYINT(1) DEFAULT 0");
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN payment_amount DECIMAL(12,2) DEFAULT 0");
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN payment_method VARCHAR(50) DEFAULT NULL");
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN payment_reference VARCHAR(100) DEFAULT NULL");
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN payment_proof_path VARCHAR(255) DEFAULT NULL");
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN payment_status VARCHAR(30) DEFAULT 'not_required'");
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN payment_submitted_at DATETIME DEFAULT NULL");
+}
+
+/**
+ * Ensure payments table exists for admin payment verification workflow.
+ */
+function ensurePaymentsTable($db) {
+    $db->exec("CREATE TABLE IF NOT EXISTS payments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        listing_id INT NULL,
+        user_id INT NULL,
+        user_name VARCHAR(120) DEFAULT NULL,
+        user_email VARCHAR(255) DEFAULT NULL,
+        service_type VARCHAR(60) NOT NULL DEFAULT 'listing_submission',
+        amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+        payment_method VARCHAR(50) DEFAULT NULL,
+        reference VARCHAR(100) DEFAULT NULL,
+        proof_path VARCHAR(255) DEFAULT NULL,
+        status VARCHAR(30) NOT NULL DEFAULT 'pending',
+        notes TEXT DEFAULT NULL,
+        verified_at DATETIME DEFAULT NULL,
+        verified_by INT DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_listing_id (listing_id),
+        INDEX idx_user_id (user_id),
+        INDEX idx_status (status),
+        INDEX idx_service_type (service_type)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+}
+
+/**
+ * Save base64 payment proof file and return relative path.
+ */
+function persistPaymentProofFromDataUrl($dataUrl, $originalFilename = '') {
+    if (empty($dataUrl) || strpos($dataUrl, 'data:') !== 0) {
+        throw new Exception('Invalid payment proof payload');
+    }
+
+    if (!preg_match('/^data:([a-zA-Z0-9\/+\-.]+);base64,(.+)$/', $dataUrl, $matches)) {
+        throw new Exception('Unsupported payment proof format');
+    }
+
+    $mimeType = strtolower(trim($matches[1]));
+    $raw = base64_decode($matches[2], true);
+    if ($raw === false) {
+        throw new Exception('Could not decode payment proof file');
+    }
+
+    if (strlen($raw) > 5 * 1024 * 1024) {
+        throw new Exception('Payment proof exceeds 5MB limit');
+    }
+
+    $allowed = [
+        'image/jpeg' => 'jpg',
+        'image/jpg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp',
+        'application/pdf' => 'pdf'
+    ];
+
+    if (!isset($allowed[$mimeType])) {
+        throw new Exception('Unsupported payment proof file type');
+    }
+
+    $ext = $allowed[$mimeType];
+    $safeName = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', (string)$originalFilename);
+    if (empty($safeName)) {
+        $safeName = 'payment_proof';
+    }
+
+    $targetDir = __DIR__ . '/uploads/payment-proofs';
+    if (!is_dir($targetDir) && !mkdir($targetDir, 0777, true) && !is_dir($targetDir)) {
+        throw new Exception('Failed to create payment proof upload directory');
+    }
+
+    $uniqueName = 'proof_' . date('Ymd_His') . '_' . bin2hex(random_bytes(5)) . '.' . $ext;
+    $targetFile = $targetDir . '/' . $uniqueName;
+
+    if (file_put_contents($targetFile, $raw) === false) {
+        throw new Exception('Failed to save payment proof file');
+    }
+
+    return 'uploads/payment-proofs/' . $uniqueName;
+}
+
+/**
  * Check if a table column exists.
  */
 function tableColumnExists($db, $tableName, $columnName) {
@@ -3213,6 +3309,14 @@ function submitListing($db) {
     $maxRegisteredListings = (int)getPlatformSetting($db, 'listing_maxRegisteredListings', 10);
     $requireListingEmailValidation = (bool)getPlatformSetting($db, 'listing_requireEmailValidation', true);
     $guestListingValidityDays = max(1, (int)getPlatformSetting($db, 'listing_expiryDays', 30));
+    $paymentsEnabled = (bool)getPlatformSetting($db, 'listing_paymentsEnabled', false);
+    $freeListingPrice = max(0, (float)getPlatformSetting($db, 'listing_freeListingPrice', 0));
+    $featuredListingPrice = max(0, (float)getPlatformSetting($db, 'listing_featuredPrice', 15000));
+    $paymentMethodsRaw = (string)getPlatformSetting($db, 'listing_paymentMethods', 'mobile_money,bank_transfer');
+    $allowedPaymentMethods = array_values(array_filter(array_map('trim', explode(',', $paymentMethodsRaw))));
+    if (empty($allowedPaymentMethods)) {
+        $allowedPaymentMethods = ['mobile_money', 'bank_transfer'];
+    }
     
     // Validate required fields
     $required = ['title', 'make_id', 'model_id', 'year', 'price', 'location_id', 'fuel_type', 'transmission', 'condition_type'];
@@ -3230,11 +3334,34 @@ function submitListing($db) {
     if ($isGuest && !$allowGuestListings) {
         sendError('Guest listings are currently disabled. Please register to continue.', 403);
     }
+
+    $listingType = strtolower(trim((string)($input['listing_type'] ?? 'free')));
+    $payableAmount = ($listingType === 'featured') ? $featuredListingPrice : $freeListingPrice;
+    $paymentRequired = $paymentsEnabled && $payableAmount > 0;
+
+    $paymentMethod = trim((string)($input['payment_method'] ?? ''));
+    $paymentReference = trim((string)($input['payment_reference'] ?? ''));
+    $paymentProofDataUrl = (string)($input['payment_proof_data_url'] ?? '');
+    $paymentProofFilename = (string)($input['payment_proof_filename'] ?? '');
+
+    if ($paymentRequired) {
+        if (empty($paymentMethod) || !in_array($paymentMethod, $allowedPaymentMethods, true)) {
+            sendError('A valid payment method is required for this listing.', 400);
+        }
+        if (strlen($paymentReference) < 4) {
+            sendError('A valid payment reference is required for this listing.', 400);
+        }
+        if (empty($paymentProofDataUrl)) {
+            sendError('Proof of payment (POP) is required for this listing.', 400);
+        }
+    }
     
     try {
         // Ensure schema columns outside transaction because ALTER TABLE causes implicit commits.
         ensureListingEmailVerificationColumns($db);
         ensureGuestListingLifecycleColumns($db);
+        ensureListingPaymentColumns($db);
+        ensurePaymentsTable($db);
         expireGuestListings($db);
 
         $db->beginTransaction();
@@ -3300,6 +3427,14 @@ function submitListing($db) {
             $listingEmailToken = bin2hex(random_bytes(32));
             $listingEmailExpiry = date('Y-m-d H:i:s', strtotime('+24 hours'));
         }
+
+        $paymentProofPath = null;
+        $paymentStatus = $paymentRequired ? 'pending_verification' : 'not_required';
+        $paymentSubmittedAt = $paymentRequired ? date('Y-m-d H:i:s') : null;
+
+        if ($paymentRequired) {
+            $paymentProofPath = persistPaymentProofFromDataUrl($paymentProofDataUrl, $paymentProofFilename);
+        }
         
         // Generate a unique reference number
         $referenceNumber = generateReferenceNumber($db);
@@ -3328,6 +3463,13 @@ function submitListing($db) {
         $columns[] = 'listing_email_verification_sent_to';
         $columns[] = 'listing_email_verification_expires';
         $columns[] = 'guest_listing_expires_at';
+        $columns[] = 'payment_required';
+        $columns[] = 'payment_amount';
+        $columns[] = 'payment_method';
+        $columns[] = 'payment_reference';
+        $columns[] = 'payment_proof_path';
+        $columns[] = 'payment_status';
+        $columns[] = 'payment_submitted_at';
         
         if ($hasDealerId) {
             $columns[] = 'dealer_id';
@@ -3374,7 +3516,14 @@ function submitListing($db) {
             $listingEmailToken,
             $listingValidationEmail,
             $listingEmailExpiry,
-            $guestListingExpiresAt
+            $guestListingExpiresAt,
+            $paymentRequired ? 1 : 0,
+            $paymentRequired ? $payableAmount : 0,
+            $paymentRequired ? $paymentMethod : null,
+            $paymentRequired ? $paymentReference : null,
+            $paymentProofPath,
+            $paymentStatus,
+            $paymentSubmittedAt
         ];
         
         if ($hasDealerId) {
@@ -3383,6 +3532,20 @@ function submitListing($db) {
         
         $stmt->execute($values);
         $listingId = $db->lastInsertId();
+
+        if ($paymentRequired) {
+            $payStmt = $db->prepare("INSERT INTO payments (listing_id, user_id, user_name, user_email, service_type, amount, payment_method, reference, proof_path, status, created_at) VALUES (?, ?, ?, ?, 'listing_submission', ?, ?, ?, ?, 'pending', NOW())");
+            $payStmt->execute([
+                (int)$listingId,
+                $isGuest ? null : (int)($user['id'] ?? 0),
+                $isGuest ? (string)($input['seller_name'] ?? 'Guest Seller') : (string)($user['name'] ?? $user['full_name'] ?? 'Registered Seller'),
+                (string)$listingValidationEmail,
+                $payableAmount,
+                $paymentMethod,
+                $paymentReference,
+                $paymentProofPath
+            ]);
+        }
 
         $guestManageCode = null;
         $guestManageCodeExpiresAt = null;
@@ -3438,6 +3601,9 @@ function submitListing($db) {
             'listing_id' => $listingId,
             'reference_number' => $referenceNumber,
             'guest_listing_expires_at' => $guestListingExpiresAt,
+            'payment_required' => $paymentRequired,
+            'payment_amount' => $paymentRequired ? $payableAmount : 0,
+            'payment_status' => $paymentStatus,
             'email_verification_required' => $requireListingEmailValidation,
             'email_sent' => $listingEmailSent,
             'verification_link' => $listingEmailSent ? null : $listingVerificationLink,
@@ -8095,6 +8261,16 @@ function getListingRestrictions($db) {
         $maxRegisteredListings = (int)getPlatformSetting($db, 'listing_maxRegisteredListings', 10);
         $requireListingEmailValidation = (bool)getPlatformSetting($db, 'listing_requireEmailValidation', true);
         $guestListingValidityDays = max(1, (int)getPlatformSetting($db, 'listing_expiryDays', 30));
+        $paymentsEnabled = (bool)getPlatformSetting($db, 'listing_paymentsEnabled', false);
+        $freeListingPrice = max(0, (float)getPlatformSetting($db, 'listing_freeListingPrice', 0));
+        $featuredListingPrice = max(0, (float)getPlatformSetting($db, 'listing_featuredPrice', 15000));
+        $paymentMethodsRaw = (string)getPlatformSetting($db, 'listing_paymentMethods', 'mobile_money,bank_transfer');
+        $paymentMethods = array_values(array_filter(array_map('trim', explode(',', $paymentMethodsRaw))));
+        if (empty($paymentMethods)) {
+            $paymentMethods = ['mobile_money', 'bank_transfer'];
+        }
+        $paymentInstructions = (string)getPlatformSetting($db, 'listing_paymentInstructions', '');
+        $paymentReferencePrefix = (string)getPlatformSetting($db, 'listing_paymentReferencePrefix', 'ML');
 
         $isAuthenticated = isLoggedIn();
         $currentUser = getCurrentUser(false);
@@ -8146,6 +8322,12 @@ function getListingRestrictions($db) {
                 'max_guest_listings' => $maxGuestListings,
                 'guest_listing_validity_days' => $guestListingValidityDays,
                 'max_registered_listings' => $maxRegisteredListings,
+                'payments_enabled' => $paymentsEnabled,
+                'free_listing_price' => $freeListingPrice,
+                'featured_listing_price' => $featuredListingPrice,
+                'payment_methods' => $paymentMethods,
+                'payment_instructions' => $paymentInstructions,
+                'payment_reference_prefix' => $paymentReferencePrefix,
                 'require_listing_email_validation' => $requireListingEmailValidation,
                 'is_authenticated' => $isAuthenticated,
                 'current_registered_count' => $currentRegisteredCount,
