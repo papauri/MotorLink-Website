@@ -21,14 +21,18 @@ class SellManager {
         this.boundReviewConfirmHandler = null;
         this.listingRestrictions = {
             allow_guest_listings: true,
-            max_guest_listings: 2,
+            max_guest_listings: 1,
+            guest_listing_validity_days: 30,
             max_registered_listings: 10,
             require_listing_email_validation: true,
             is_authenticated: false,
             current_registered_count: null,
             remaining_registered_listings: null,
             current_guest_count: null,
-            remaining_guest_listings: null
+            remaining_guest_listings: null,
+            guest_has_expired_listing: false,
+            guest_last_expired_at: null,
+            guest_active_listing_expires_at: null
         };
         this.guestLimitCheckTimeout = null;
         this.init();
@@ -72,10 +76,16 @@ class SellManager {
         const guestLimitText = this.listingRestrictions.max_guest_listings > 0
             ? `Guests can post up to ${this.listingRestrictions.max_guest_listings} listing${this.listingRestrictions.max_guest_listings === 1 ? '' : 's'}.`
             : 'Guest listing limit is currently unlimited.';
+        const lifetimeText = this.listingRestrictions.max_guest_listings === 1
+            ? ' This is a lifetime limit per email.'
+            : '';
+        const validityText = this.listingRestrictions.guest_listing_validity_days > 0
+            ? ` Each guest listing stays active for ${this.listingRestrictions.guest_listing_validity_days} day${this.listingRestrictions.guest_listing_validity_days === 1 ? '' : 's'}.`
+            : '';
 
         if (guestDescription) {
             guestDescription.textContent = this.listingRestrictions.allow_guest_listings
-                ? `${guestLimitText} We will need your contact information and your listing will be reviewed before going live.`
+                ? `${guestLimitText}${lifetimeText}${validityText} We will need your contact information and your listing will be reviewed before going live.`
                 : 'Guest listings are currently disabled. Please create an account to list your car.';
         }
 
@@ -94,7 +104,13 @@ class SellManager {
             const verificationText = this.listingRestrictions.require_listing_email_validation
                 ? ' You will need to verify your email before admin review starts.'
                 : '';
-            guestNotice.textContent = `Your listing will be reviewed within 2-4 hours before going live. ${guestLimitText}${verificationText}`;
+            const lifetimePrompt = this.listingRestrictions.guest_lifetime_limit_reached
+                ? ' Guest listing lifetime limit reached for this email. Please register to list another vehicle.'
+                : '';
+            const expiredPrompt = this.listingRestrictions.guest_has_expired_listing
+                ? ' Your previous guest listing expired. Please register for easier renewals and multiple listings.'
+                : '';
+            guestNotice.textContent = `Your listing will be reviewed within 2-4 hours before going live. ${guestLimitText}${lifetimeText}${validityText}${verificationText}${lifetimePrompt}${expiredPrompt}`;
         }
 
         this.renderListingLimitBanner();
@@ -223,17 +239,34 @@ class SellManager {
         
         if (authRequired) authRequired.classList.remove('hidden');
         if (sellForm) sellForm.classList.add('hidden');
-        if (guestOption) guestOption.style.display = 'none';
+        if (guestOption) guestOption.style.display = '';
         if (authDescription) {
-            authDescription.textContent = 'You must be logged in to create and save listings. Please login or create an account to continue.';
+            authDescription.textContent = 'Create an account for the best selling experience, or continue as guest with one time-limited listing.';
         }
     }
 
     enableGuestSelling() {
-        this.showToast('Please login to save listings.', 'error');
-        setTimeout(() => {
-            window.location.href = 'login.html?redirect=sell.html';
-        }, 400);
+        if (!this.listingRestrictions.allow_guest_listings) {
+            this.showToast('Guest listings are currently disabled. Please create an account to continue.', 'error');
+            return;
+        }
+
+        this.guestMode = true;
+        this.currentUser = null;
+
+        const authRequired = document.getElementById('authRequired');
+        const sellForm = document.getElementById('sellForm');
+        const guestNotice = document.getElementById('guestNotice');
+        const guestFields = document.getElementById('guestContactFields');
+
+        if (authRequired) authRequired.classList.add('hidden');
+        if (sellForm) sellForm.classList.remove('hidden');
+        if (guestNotice) guestNotice.classList.remove('hidden');
+        if (guestFields) guestFields.classList.remove('hidden');
+
+        this.initializeSellForm();
+        this.applyListingRestrictionsUI();
+        this.showGuestLimitReminder();
     }
 
     /**
@@ -1897,11 +1930,8 @@ removePhoto(index) {
         }
 
         // Validate ALL steps before submission
-        if (!this.currentUser) {
-            this.showToast('You must be logged in to save listings.', 'error');
-            setTimeout(() => {
-                window.location.href = 'login.html?redirect=sell.html';
-            }, 500);
+        if (!this.currentUser && !this.guestMode) {
+            this.showToast('Please login or continue as guest to submit a listing.', 'error');
             return;
         }
 
@@ -2159,6 +2189,18 @@ removePhoto(index) {
 
         const emailVerificationRequired = !!submitResponse?.email_verification_required;
         const verificationLink = submitResponse?.verification_link || '';
+        const guestExpiresAt = submitResponse?.guest_listing_expires_at || '';
+        const formattedGuestExpiry = guestExpiresAt
+            ? new Date(guestExpiresAt).toLocaleDateString('en-MW', { year: 'numeric', month: 'short', day: 'numeric' })
+            : '';
+        const guestManageLink = submitResponse?.guest_manage_link || '';
+        const guestManageCodeSent = !!submitResponse?.guest_manage_code_sent;
+        const guestManageHint = this.guestMode
+            ? `<div style="margin-top: 14px; padding: 12px; border-radius: 8px; background: #eef7ff; border: 1px solid #b8d9ff;"><strong>Guest listing management:</strong> ${guestManageCodeSent ? 'A temporary login code has been sent to your email.' : 'Request a temporary login code from the guest manager page.'} ${guestManageLink ? `<a href="${guestManageLink}" style="font-weight: 600;">Open Guest Listing Manager</a>` : '<a href="guest-manage.html" style="font-weight: 600;">Open Guest Listing Manager</a>'}</div>`
+            : '';
+        const guestExpiryBlock = this.guestMode && guestExpiresAt
+            ? `<div style="margin-top: 14px; padding: 12px; border-radius: 8px; background: #e8f5e9; border: 1px solid #b7dfbc;"><strong>Guest expiry:</strong> This listing will expire on ${formattedGuestExpiry}. <a href="register.html" style="font-weight: 600;">Create an account</a> to avoid expiry limits.</div>`
+            : '';
         const nextStepHeader = emailVerificationRequired
             ? 'Complete email verification to continue'
             : 'What happens next?';
@@ -2197,6 +2239,8 @@ removePhoto(index) {
                     <h3 style="color: var(--success-green); margin-top: 0;">${nextStepHeader}</h3>
                     ${nextStepList}
                     ${fallbackVerificationBlock}
+                    ${guestExpiryBlock}
+                    ${guestManageHint}
                 </div>
 
                 <div style="background: #f8f9fa; border-radius: 8px; padding: 16px; margin-bottom: 32px;">

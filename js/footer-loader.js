@@ -114,6 +114,7 @@ class FooterLoader {
                     <ul>
                         <li><a href="index.html">Browse Cars</a></li>
                         <li><a href="sell.html">Sell Your Car</a></li>
+                        <li><a href="guest-manage.html">Manage Guest Listing</a></li>
                         <li><a href="garages.html">Find Garages</a></li>
                         <li><a href="dealers.html">Car Dealers</a></li>
                         <li><a href="car-hire.html">Car Hire</a></li>

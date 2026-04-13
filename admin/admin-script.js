@@ -27,10 +27,13 @@ const getAdminAPIUrl = () => {
     
     if (typeof CONFIG !== 'undefined' && CONFIG.MODE === 'UAT') {
         if (checkIsLocal) {
-            // Local development: use proxy to forward to production admin API
-            // Use current origin (localhost or 127.0.0.1) to avoid CORS issues
-            const currentOrigin = window.location.origin;
-            return `${currentOrigin}/proxy.php?endpoint=admin-api`;
+            // Local development should default to local admin API.
+            // If served from static localhost port, target the local PHP server.
+            const currentPort = window.location.port || '';
+            if (protocol === 'file:' || (currentPort && currentPort !== '80' && currentPort !== '443' && currentPort !== '8000')) {
+                return `${window.location.protocol}//${window.location.hostname}:8000/admin/admin-api.php`;
+            }
+            return 'admin-api.php';
         } else {
             // UAT on production server: use local admin-api.php
             return 'admin-api.php';
@@ -295,6 +298,7 @@ class AdminDashboard {
             'cars': 'Car Listings',
             'reports': 'Listing Reports',
             'pending-cars': 'Pending Cars',
+            'guest-listings': 'Guest Listings',
             'rejected-cars': 'Rejected Cars',
             'payments': 'Payments',
             'users': 'User Management',
@@ -629,6 +633,9 @@ class AdminDashboard {
                 break;
             case 'pending-cars':
                 this.loadPendingCars();
+                break;
+            case 'guest-listings':
+                this.loadGuestListings();
                 break;
             case 'rejected-cars':
                 this.loadRejectedCars();
@@ -1171,6 +1178,92 @@ async loadPendingCars() {
         document.getElementById('pendingCarsTableBody').innerHTML = 
             '<tr><td colspan="10" class="text-center text-muted">Error loading pending cars</td></tr>';
     }
+}
+
+async loadGuestListings() {
+    try {
+        debugLog('Loading guest listings...');
+
+        const filters = { is_guest: 1 };
+        const statusFilter = document.getElementById('guestListingStatusFilter')?.value || 'pending_approval';
+        const searchFilter = document.getElementById('guestListingSearchFilter')?.value;
+
+        if (statusFilter) {
+            if (statusFilter === 'rejected') {
+                filters.status = 'rejected';
+                filters.approval_status = 'denied';
+            } else {
+                filters.status = statusFilter;
+            }
+        }
+
+        if (searchFilter) filters.search = searchFilter;
+
+        const response = await this.apiCall('get_cars', 'GET', filters);
+
+        if (response.success && response.cars) {
+            this.displayGuestListingsTable(response.cars);
+            debugLog(`Loaded ${response.cars.length} guest listings`);
+        } else {
+            throw new Error(response.message || 'Invalid guest listings response');
+        }
+    } catch (error) {
+        const tbody = document.getElementById('guestListingsTableBody');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Error loading guest listings</td></tr>';
+        }
+    }
+}
+
+displayGuestListingsTable(cars) {
+    const tbody = document.getElementById('guestListingsTableBody');
+    if (!tbody) return;
+
+    if (!cars || cars.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No guest listings found</td></tr>';
+        return;
+    }
+
+    const html = cars.map(car => {
+        const sellerName = car.guest_seller_name || car.guest_seller_email || 'Guest Seller';
+        const sellerEmail = car.guest_seller_email || 'N/A';
+        const verifiedBadge = car.listing_email_verified
+            ? '<span class="status-badge status-active">Verified</span>'
+            : '<span class="status-badge status-pending">Not Verified</span>';
+        const statusValue = (car.status || 'pending').replace('_', ' ');
+        const statusBadge = `<span class="status-badge status-${car.status || 'pending'}">${statusValue}</span>`;
+        const expiresAt = car.guest_listing_expires_at ? this.formatDateShort(car.guest_listing_expires_at) : 'N/A';
+
+        return `
+            <tr>
+                <td>${car.id}</td>
+                <td>${this.escapeHtml(car.title || 'Untitled')}</td>
+                <td>
+                    <div>${this.escapeHtml(sellerName)}</div>
+                    <div class="text-muted small">${this.escapeHtml(sellerEmail)}</div>
+                </td>
+                <td>${verifiedBadge}</td>
+                <td>${statusBadge}</td>
+                <td>${expiresAt}</td>
+                <td>${this.formatDateShort(car.created_at)}</td>
+                <td>
+                    <div class="d-flex gap-5">
+                        <button class="btn btn-sm btn-info" onclick="admin.viewCarDetails(${car.id})" title="View Details">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-sm btn-success" onclick="admin.approveCar(${car.id}, 'approve')" title="Approve" ${car.listing_email_verified ? '' : 'disabled'}>
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="admin.approveCar(${car.id}, 'reject')" title="Reject">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.innerHTML = html;
 }
 
 
@@ -3721,7 +3814,14 @@ async filterMakesModels() {
             return;
         }
 
-        const html = items.map(item => `
+        const html = items.map(item => {
+            const isEmailVerificationWait = item.type === 'guest_listing_email_verification';
+            const showApproveReject = !isEmailVerificationWait;
+            const statusHint = isEmailVerificationWait
+                ? '<span class="text-warning">Awaiting seller email verification</span>'
+                : `<span class="text-primary">${item.owner_name}</span>`;
+
+            return `
             <div class="pending-item mb-15">
                 <div class="d-flex justify-between align-center">
                     <div>
@@ -3729,20 +3829,27 @@ async filterMakesModels() {
                         <div class="pending-meta text-muted">
                             <span class="pending-type">${String(item.type || '').replace('_', ' ')}</span> • 
                             ${this.formatDate(item.created_at)} • 
-                            <span class="text-primary">${item.owner_name}</span>
+                            ${statusHint}
                         </div>
                     </div>
                     <div class="d-flex gap-5">
-                        <button class="btn btn-sm btn-success" onclick="admin.approveItem('${item.type}', ${item.id}, 'approve')" title="Approve">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="admin.approveItem('${item.type}', ${item.id}, 'reject')" title="Reject">
-                            <i class="fas fa-times"></i>
-                        </button>
+                        ${showApproveReject ? `
+                            <button class="btn btn-sm btn-success" onclick="admin.approveItem('${item.type}', ${item.id}, 'approve')" title="Approve">
+                                <i class="fas fa-check"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="admin.approveItem('${item.type}', ${item.id}, 'reject')" title="Reject">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        ` : `
+                            <button class="btn btn-sm btn-warning" disabled title="Waiting for email verification">
+                                <i class="fas fa-clock"></i>
+                            </button>
+                        `}
                     </div>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
 
         container.innerHTML = html;
     }
@@ -4051,6 +4158,7 @@ async filterMakesModels() {
             let endpoint = '';
             switch (type) {
                 case 'car':
+                case 'guest_listing':
                     endpoint = 'approve_car';
                     break;
                 case 'user':

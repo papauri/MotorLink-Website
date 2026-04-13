@@ -81,6 +81,16 @@ const getAPIUrl = () => {
         return '/motorlink/api.php';
     }
 
+    // Local development on static ports (e.g. Live Server 5500):
+    // force API calls to the local PHP server so localhost testing works.
+    if (isLocal && protocol !== 'file:' && port && port !== '80' && port !== '443' && port !== '8000') {
+        return `${window.location.protocol}//${window.location.hostname}:8000/api.php`;
+    }
+
+    if (protocol === 'file:') {
+        return 'http://127.0.0.1:8000/api.php';
+    }
+
     // UAT/Local development: ALWAYS use local api.php
     // Never reference promanaged.com in development
     return 'api.php';

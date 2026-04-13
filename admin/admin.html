@@ -141,6 +141,9 @@
                     <a href="#" class="nav-item" data-section="pending-cars">
                         <i class="fas fa-clock"></i> Pending Cars
                     </a>
+                    <a href="#" class="nav-item" data-section="guest-listings">
+                        <i class="fas fa-user-clock"></i> Guest Listings
+                    </a>
                     <a href="#" class="nav-item" data-section="rejected-cars">
                         <i class="fas fa-times-circle"></i> Rejected Cars
                     </a>
@@ -432,6 +435,53 @@
                             </thead>
                             <tbody id="pendingCarsTableBody">
                                 <tr><td colspan="10" class="text-center">Loading pending cars...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Guest Listings Section -->
+                <div class="content-section" id="guest-listings-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-user-clock"></i> Guest Listings Queue</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-outline" onclick="admin.loadGuestListings()">
+                                <i class="fas fa-sync"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        Dedicated moderation queue for guest listings (email verification, expiry and contact details).
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="guestListingStatusFilter" class="form-control" onchange="admin.loadGuestListings()">
+                            <option value="pending_approval">Pending Approval</option>
+                            <option value="active">Active</option>
+                            <option value="expired">Expired</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                        <input type="text" id="guestListingSearchFilter" class="form-control" placeholder="Search guest listings..." onkeyup="admin.loadGuestListings()">
+                    </div>
+
+                    <div class="table-container">
+                        <table id="guestListingsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Title</th>
+                                    <th>Guest Seller</th>
+                                    <th>Email Verified</th>
+                                    <th>Status</th>
+                                    <th>Expires</th>
+                                    <th>Submitted</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guestListingsTableBody">
+                                <tr><td colspan="8" class="text-center">Loading guest listings...</td></tr>
                             </tbody>
                         </table>
                     </div>

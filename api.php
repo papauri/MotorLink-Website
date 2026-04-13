@@ -586,6 +586,23 @@ function getRuntimeBaseUrl() {
 }
 
 /**
+ * Determine if current runtime host is localhost/private network.
+ */
+function isLocalRuntimeHost() {
+    $host = strtolower((string)($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? ''));
+    if ($host === '') {
+        return false;
+    }
+
+    $hostname = explode(':', $host)[0];
+    if (in_array($hostname, ['localhost', '127.0.0.1', '::1'], true)) {
+        return true;
+    }
+
+    return (bool)preg_match('/^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/', $hostname);
+}
+
+/**
  * Validate an uploaded image and return canonical mime + extension.
  */
 function validateUploadedImageFile($tmpName, $originalName, $fileSize, $clientMimeType, $maxFileSize = 10485760) {
@@ -658,6 +675,319 @@ function ensureListingEmailVerificationColumns($db) {
     applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN listing_email_verification_sent_to VARCHAR(255) DEFAULT NULL");
     applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN listing_email_verification_expires DATETIME DEFAULT NULL");
     applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN listing_email_verified_at DATETIME DEFAULT NULL");
+}
+
+/**
+ * Ensure guest-listing lifecycle columns are present.
+ */
+function ensureGuestListingLifecycleColumns($db) {
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN guest_listing_expires_at DATETIME DEFAULT NULL");
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN guest_listing_expired_at DATETIME DEFAULT NULL");
+}
+
+/**
+ * Ensure guest listing temporary-management columns are present.
+ */
+function ensureGuestListingManagementColumns($db) {
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN guest_manage_code_hash VARCHAR(255) DEFAULT NULL");
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN guest_manage_code_expires DATETIME DEFAULT NULL");
+    applyRuntimeSchemaChange($db, "ALTER TABLE car_listings ADD COLUMN guest_manage_code_last_sent DATETIME DEFAULT NULL");
+}
+
+/**
+ * Check if a table column exists.
+ */
+function tableColumnExists($db, $tableName, $columnName) {
+    try {
+        $stmt = $db->prepare("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+        $stmt->execute([$tableName, $columnName]);
+        return ((int)$stmt->fetchColumn() > 0);
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
+/**
+ * Generate and persist a temporary guest listing management code.
+ */
+function issueGuestListingManageCode($db, $listingId) {
+    ensureGuestListingManagementColumns($db);
+
+    $hasCodeHash = tableColumnExists($db, 'car_listings', 'guest_manage_code_hash');
+    $hasCodeExpiry = tableColumnExists($db, 'car_listings', 'guest_manage_code_expires');
+    $hasCodeSent = tableColumnExists($db, 'car_listings', 'guest_manage_code_last_sent');
+
+    if (!$hasCodeHash || !$hasCodeExpiry) {
+        throw new Exception('Guest listing management columns are missing');
+    }
+
+    $code = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    $codeHash = password_hash($code, PASSWORD_DEFAULT);
+    $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+    $setParts = [
+        'guest_manage_code_hash = ?',
+        'guest_manage_code_expires = ?'
+    ];
+    $params = [$codeHash, $expiresAt];
+
+    if ($hasCodeSent) {
+        $setParts[] = 'guest_manage_code_last_sent = NOW()';
+    }
+
+    $params[] = (int)$listingId;
+    $sql = "UPDATE car_listings SET " . implode(', ', $setParts) . " WHERE id = ? LIMIT 1";
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+
+    return [
+        'code' => $code,
+        'expires_at' => $expiresAt
+    ];
+}
+
+/**
+ * Validate guest listing management session.
+ */
+function requireGuestListingManagerSession() {
+    $listingId = (int)($_SESSION['guest_manage_listing_id'] ?? 0);
+    $email = strtolower(trim((string)($_SESSION['guest_manage_email'] ?? '')));
+    $authAt = (int)($_SESSION['guest_manage_authenticated_at'] ?? 0);
+
+    if ($listingId <= 0 || empty($email) || $authAt <= 0) {
+        sendError('Guest listing authentication required', 401);
+    }
+
+    // Hard timeout for guest manager sessions.
+    if ((time() - $authAt) > 3600) {
+        unset($_SESSION['guest_manage_listing_id'], $_SESSION['guest_manage_email'], $_SESSION['guest_manage_authenticated_at']);
+        sendError('Guest listing session expired. Please login again.', 401);
+    }
+
+    return [
+        'listing_id' => $listingId,
+        'email' => $email
+    ];
+}
+
+/**
+ * Expire guest listings whose validity window has elapsed.
+ */
+function expireGuestListings($db) {
+    ensureGuestListingLifecycleColumns($db);
+
+    try {
+        $stmt = $db->prepare("\n            UPDATE car_listings\n            SET\n                status = 'expired',\n                guest_listing_expired_at = COALESCE(guest_listing_expired_at, NOW())\n            WHERE is_guest = 1\n              AND guest_listing_expires_at IS NOT NULL\n              AND guest_listing_expires_at <= NOW()\n              AND status IN ('active', 'pending_approval', 'pending_email_verification')\n        ");
+        $stmt->execute();
+    } catch (Exception $e) {
+        error_log('expireGuestListings warning: ' . $e->getMessage());
+    }
+}
+
+/**
+ * Request a temporary guest listing management login code.
+ */
+function requestGuestListingManageCode($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendError('POST method required', 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $email = strtolower(trim((string)($input['email'] ?? '')));
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        sendError('Valid email is required', 400);
+    }
+
+    try {
+        expireGuestListings($db);
+
+        $stmt = $db->prepare("\n            SELECT id, reference_number, guest_seller_name\n            FROM car_listings\n            WHERE is_guest = 1\n              AND LOWER(guest_seller_email) = LOWER(?)\n              AND status != 'deleted'\n            ORDER BY created_at DESC\n            LIMIT 1\n        ");
+        $stmt->execute([$email]);
+        $listing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $debugCode = null;
+        $debugExpiresAt = null;
+
+        if ($listing) {
+            $codePayload = issueGuestListingManageCode($db, (int)$listing['id']);
+            $debugCode = $codePayload['code'];
+            $debugExpiresAt = $codePayload['expires_at'];
+            sendGuestListingManageCodeEmail(
+                $db,
+                $email,
+                (string)($listing['guest_seller_name'] ?? 'Guest Seller'),
+                (string)($listing['reference_number'] ?? ''),
+                (int)$listing['id'],
+                $codePayload['code'],
+                $codePayload['expires_at']
+            );
+        }
+
+        // Always return generic success to avoid account/listing enumeration.
+        $response = ['message' => 'If a guest listing exists for this email, a temporary login code has been sent.'];
+
+        // Localhost-only diagnostics for smoke testing without relying on email delivery.
+        if (isLocalRuntimeHost() && $listing && $debugCode !== null) {
+            $response['debug_guest_manage_code'] = $debugCode;
+            $response['debug_guest_manage_code_expires_at'] = $debugExpiresAt;
+            $response['debug_guest_listing_id'] = (int)$listing['id'];
+        }
+
+        sendSuccess($response);
+    } catch (Exception $e) {
+        error_log('requestGuestListingManageCode error: ' . $e->getMessage());
+        sendError('Failed to request guest login code', 500);
+    }
+}
+
+/**
+ * Login guest listing manager with email + temporary code.
+ */
+function loginGuestListingManager($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendError('POST method required', 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true);
+    $email = strtolower(trim((string)($input['email'] ?? '')));
+    $code = trim((string)($input['code'] ?? ''));
+
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        sendError('Valid email is required', 400);
+    }
+    if (empty($code)) {
+        sendError('Login code is required', 400);
+    }
+
+    try {
+        expireGuestListings($db);
+
+        $stmt = $db->prepare("\n            SELECT id, title, reference_number, status, approval_status, guest_seller_email, guest_manage_code_hash, guest_manage_code_expires, created_at\n            FROM car_listings\n            WHERE is_guest = 1\n              AND LOWER(guest_seller_email) = LOWER(?)\n              AND status != 'deleted'\n            ORDER BY created_at DESC\n            LIMIT 1\n        ");
+        $stmt->execute([$email]);
+        $listing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$listing) {
+            sendError('Invalid email or login code', 401);
+        }
+
+        $codeHash = (string)($listing['guest_manage_code_hash'] ?? '');
+        $codeExpires = (string)($listing['guest_manage_code_expires'] ?? '');
+
+        if (empty($codeHash) || empty($codeExpires) || strtotime($codeExpires) < time() || !password_verify($code, $codeHash)) {
+            sendError('Invalid or expired login code', 401);
+        }
+
+        $_SESSION['guest_manage_listing_id'] = (int)$listing['id'];
+        $_SESSION['guest_manage_email'] = strtolower((string)$listing['guest_seller_email']);
+        $_SESSION['guest_manage_authenticated_at'] = time();
+
+        sendSuccess([
+            'message' => 'Guest listing login successful',
+            'listing' => [
+                'id' => (int)$listing['id'],
+                'title' => $listing['title'],
+                'reference_number' => $listing['reference_number'],
+                'status' => $listing['status'],
+                'approval_status' => $listing['approval_status'],
+                'created_at' => $listing['created_at']
+            ]
+        ]);
+    } catch (Exception $e) {
+        error_log('loginGuestListingManager error: ' . $e->getMessage());
+        sendError('Failed to login guest listing manager', 500);
+    }
+}
+
+/**
+ * Return authenticated guest listing manager session state.
+ */
+function getGuestListingManagerSession($db) {
+    try {
+        expireGuestListings($db);
+        $guestSession = requireGuestListingManagerSession();
+
+        $stmt = $db->prepare("\n            SELECT id, title, reference_number, status, approval_status, created_at\n            FROM car_listings\n            WHERE id = ?\n              AND is_guest = 1\n              AND LOWER(guest_seller_email) = LOWER(?)\n            LIMIT 1\n        ");
+        $stmt->execute([(int)$guestSession['listing_id'], $guestSession['email']]);
+        $listing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$listing) {
+            unset($_SESSION['guest_manage_listing_id'], $_SESSION['guest_manage_email'], $_SESSION['guest_manage_authenticated_at']);
+            sendError('Guest listing session is no longer valid', 401);
+        }
+
+        sendSuccess([
+            'authenticated' => true,
+            'listing' => [
+                'id' => (int)$listing['id'],
+                'title' => $listing['title'],
+                'reference_number' => $listing['reference_number'],
+                'status' => $listing['status'],
+                'approval_status' => $listing['approval_status'],
+                'created_at' => $listing['created_at']
+            ]
+        ]);
+    } catch (Exception $e) {
+        error_log('getGuestListingManagerSession error: ' . $e->getMessage());
+        sendError('Failed to load guest listing session', 500);
+    }
+}
+
+/**
+ * Logout guest listing manager session.
+ */
+function logoutGuestListingManager() {
+    unset($_SESSION['guest_manage_listing_id'], $_SESSION['guest_manage_email'], $_SESSION['guest_manage_authenticated_at']);
+    sendSuccess(['message' => 'Guest listing session ended']);
+}
+
+/**
+ * Minimal guest listing management actions: sold, delete.
+ */
+function manageGuestListing($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendError('POST method required', 405);
+    }
+
+    $guestSession = requireGuestListingManagerSession();
+    $input = json_decode(file_get_contents('php://input'), true);
+    $action = strtolower(trim((string)($input['action'] ?? '')));
+
+    if (!in_array($action, ['sold', 'delete'], true)) {
+        sendError('Invalid guest listing action', 400);
+    }
+
+    try {
+        $stmt = $db->prepare("\n            SELECT id, status\n            FROM car_listings\n            WHERE id = ?\n              AND is_guest = 1\n              AND LOWER(guest_seller_email) = LOWER(?)\n            LIMIT 1\n        ");
+        $stmt->execute([(int)$guestSession['listing_id'], $guestSession['email']]);
+        $listing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$listing) {
+            sendError('Listing not found or access denied', 404);
+        }
+
+        if ($action === 'sold') {
+            $updateStmt = $db->prepare("UPDATE car_listings SET status = 'sold', updated_at = NOW() WHERE id = ? LIMIT 1");
+            $updateStmt->execute([(int)$listing['id']]);
+
+            sendSuccess(['message' => 'Listing marked as sold']);
+        }
+
+        $db->beginTransaction();
+        deleteListingImages($db, (int)$listing['id']);
+        $deleteStmt = $db->prepare("UPDATE car_listings SET status = 'deleted', updated_at = NOW() WHERE id = ? LIMIT 1");
+        $deleteStmt->execute([(int)$listing['id']]);
+        $db->commit();
+
+        unset($_SESSION['guest_manage_listing_id'], $_SESSION['guest_manage_email'], $_SESSION['guest_manage_authenticated_at']);
+        sendSuccess(['message' => 'Listing deleted successfully']);
+    } catch (Exception $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        error_log('manageGuestListing error: ' . $e->getMessage());
+        sendError('Failed to manage guest listing', 500);
+    }
 }
 
 /**
@@ -916,6 +1246,11 @@ try {
         case 'get_public_client_config': getPublicClientConfig($db); break;
         case 'get_ai_chat_status': getAIChatStatus($db); break;
         case 'verify_listing_email': verifyListingEmail($db); break;
+        case 'guest_listing_request_code': requestGuestListingManageCode($db); break;
+        case 'guest_listing_login': loginGuestListingManager($db); break;
+        case 'guest_listing_session': getGuestListingManagerSession($db); break;
+        case 'guest_listing_logout': logoutGuestListingManager(); break;
+        case 'guest_listing_manage': manageGuestListing($db); break;
         case 'nhtsa': require_once __DIR__ . '/vin-decoder-api.php'; getNhtsaData($db); break;
 
         // ====================================================================
@@ -933,7 +1268,7 @@ try {
         // ====================================================================
         // USER ENDPOINTS (Authentication required except guest listing)
         // ====================================================================
-        case 'submit_listing': requireAuth(); submitListing($db); break;
+        case 'submit_listing': submitListing($db); break;
         case 'get_profile': requireAuth(); getProfile($db); break;
         case 'update_profile': requireAuth(); updateProfile($db); break;
         case 'user_stats': 
@@ -1339,6 +1674,8 @@ function getLocations($db) {
  */
 function getListings($db) {
     try {
+        expireGuestListings($db);
+
         // Build filters - ONLY show approved listings
         $whereConditions = ["l.status = 'active'", "l.approval_status = 'approved'"];
         $params = [];
@@ -2263,11 +2600,12 @@ function serveImage($db) {
                 readfile($image['file_path']);
                 exit;
             }
+
             // If we have a filename, look in uploads directory
             elseif (!empty($image['filename'])) {
                 $uploadPath = __DIR__ . '/uploads/' . $image['filename'];
                 if (file_exists($uploadPath)) {
-                    header('Content-Type: ' . $image['mime_type']);
+                    header('Content-Type: ' . ($image['mime_type'] ?? 'image/jpeg'));
                     readfile($uploadPath);
                     exit;
                 }
@@ -2630,6 +2968,9 @@ function handleRequestPasswordReset($db) {
         
         // Always return success message (security: don't reveal if email exists)
         // But only send email if user exists and is active
+        $emailSent = false;
+        $resetToken = null;
+        $debugResetUserId = 0;
         if ($user && ($user['status'] === 'active' || $user['status'] === 'pending')) {
             // Generate reset token
             $resetToken = bin2hex(random_bytes(32));
@@ -2644,6 +2985,7 @@ function handleRequestPasswordReset($db) {
                 WHERE id = ?
             ");
             $stmt->execute([$resetToken, $expiresAt, $user['id']]);
+            $debugResetUserId = (int)$user['id'];
             
             // Send password reset email
             $emailSent = sendPasswordResetEmail($db, $user['email'], $user['full_name'], $resetToken, $user['id']);
@@ -2656,9 +2998,22 @@ function handleRequestPasswordReset($db) {
         }
         
         // Always return success (security best practice - don't reveal if email exists)
-        sendSuccess([
+        $response = [
             'message' => 'If an account with that email exists, a password reset link has been sent. Please check your email (and spam folder).'
-        ]);
+        ];
+
+        // Localhost-only diagnostics for end-to-end reset testing.
+        if (isLocalRuntimeHost()) {
+            $response['debug_email_sent'] = $emailSent;
+            $response['debug_account_found'] = $user ? true : false;
+            if (!empty($resetToken) && $debugResetUserId > 0) {
+                $response['debug_reset_link'] = rtrim(getRuntimeBaseUrl(), '/') . '/reset-password.php?token=' . urlencode($resetToken) . '&id=' . urlencode((string)$debugResetUserId);
+                $response['debug_reset_token'] = $resetToken;
+                $response['debug_reset_user_id'] = $debugResetUserId;
+            }
+        }
+
+        sendSuccess($response);
         
     } catch (Exception $e) {
         error_log("Request password reset error: " . $e->getMessage());
@@ -2853,9 +3208,10 @@ function submitListing($db) {
     $isGuest = !isLoggedIn();
 
     $allowGuestListings = (bool)getPlatformSetting($db, 'user_allowGuestListings', true);
-    $maxGuestListings = (int)getPlatformSetting($db, 'listing_maxGuestListings', 2);
+    $maxGuestListings = 1;
     $maxRegisteredListings = (int)getPlatformSetting($db, 'listing_maxRegisteredListings', 10);
     $requireListingEmailValidation = (bool)getPlatformSetting($db, 'listing_requireEmailValidation', true);
+    $guestListingValidityDays = max(1, (int)getPlatformSetting($db, 'listing_expiryDays', 30));
     
     // Validate required fields
     $required = ['title', 'make_id', 'model_id', 'year', 'price', 'location_id', 'fuel_type', 'transmission', 'condition_type'];
@@ -2877,6 +3233,8 @@ function submitListing($db) {
     try {
         // Ensure schema columns outside transaction because ALTER TABLE causes implicit commits.
         ensureListingEmailVerificationColumns($db);
+        ensureGuestListingLifecycleColumns($db);
+        expireGuestListings($db);
 
         $db->beginTransaction();
         
@@ -2890,11 +3248,11 @@ function submitListing($db) {
             }
 
             if ($maxGuestListings > 0) {
-                $limitStmt = $db->prepare("SELECT COUNT(*) FROM car_listings WHERE is_guest = 1 AND LOWER(guest_seller_email) = LOWER(?) AND status != 'deleted'");
+                $limitStmt = $db->prepare("\n                    SELECT COUNT(*)\n                    FROM car_listings\n                    WHERE is_guest = 1\n                      AND LOWER(guest_seller_email) = LOWER(?)\n                ");
                 $limitStmt->execute([$listingValidationEmail]);
                 $currentGuestListings = (int)$limitStmt->fetchColumn();
                 if ($currentGuestListings >= $maxGuestListings) {
-                    sendError("Guest listing limit reached ({$maxGuestListings}). Please register for more listings.", 403);
+                    sendError('Guest listing lifetime limit reached for this email. Please register to continue.', 403);
                 }
             }
         } else {
@@ -2913,6 +3271,7 @@ function submitListing($db) {
         $listingEmailToken = null;
         $listingEmailExpiry = null;
         $listingEmailVerified = $requireListingEmailValidation ? 0 : 1;
+        $guestListingExpiresAt = $isGuest ? date('Y-m-d H:i:s', strtotime('+' . $guestListingValidityDays . ' days')) : null;
 
         $status = 'pending_approval';
         $approvalStatus = 'pending';
@@ -2967,6 +3326,7 @@ function submitListing($db) {
         $columns[] = 'listing_email_verification_token';
         $columns[] = 'listing_email_verification_sent_to';
         $columns[] = 'listing_email_verification_expires';
+        $columns[] = 'guest_listing_expires_at';
         
         if ($hasDealerId) {
             $columns[] = 'dealer_id';
@@ -3012,7 +3372,8 @@ function submitListing($db) {
             $listingEmailVerified,
             $listingEmailToken,
             $listingValidationEmail,
-            $listingEmailExpiry
+            $listingEmailExpiry,
+            $guestListingExpiresAt
         ];
         
         if ($hasDealerId) {
@@ -3021,6 +3382,18 @@ function submitListing($db) {
         
         $stmt->execute($values);
         $listingId = $db->lastInsertId();
+
+        $guestManageCode = null;
+        $guestManageCodeExpiresAt = null;
+        if ($isGuest) {
+            try {
+                $manageCodePayload = issueGuestListingManageCode($db, (int)$listingId);
+                $guestManageCode = $manageCodePayload['code'];
+                $guestManageCodeExpiresAt = $manageCodePayload['expires_at'];
+            } catch (Exception $e) {
+                error_log('Guest manage code provisioning warning: ' . $e->getMessage());
+            }
+        }
         
         $db->commit();
 
@@ -3036,6 +3409,26 @@ function submitListing($db) {
             $baseUrl = $isProduction ? 'https://promanaged-it.com/motorlink/' : ($protocol . '://' . $serverHost . '/');
             $listingVerificationLink = $baseUrl . 'verify-listing-email.html?token=' . urlencode($listingEmailToken);
         }
+
+        $guestManageLink = null;
+        $guestManageCodeSent = false;
+        if ($isGuest && !empty($listingValidationEmail) && !empty($guestManageCode)) {
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost';
+            $isProduction = (strpos($serverHost, 'promanaged-it.com') !== false);
+            $baseUrl = $isProduction ? 'https://promanaged-it.com/motorlink/' : ($protocol . '://' . $serverHost . '/');
+            $guestManageLink = $baseUrl . 'guest-manage.html?email=' . urlencode($listingValidationEmail);
+
+            $guestManageCodeSent = sendGuestListingManageCodeEmail(
+                $db,
+                $listingValidationEmail,
+                (string)($input['seller_name'] ?? 'Guest Seller'),
+                (string)$referenceNumber,
+                (int)$listingId,
+                (string)$guestManageCode,
+                (string)$guestManageCodeExpiresAt
+            );
+        }
         
         sendSuccess([
             'message' => $requireListingEmailValidation
@@ -3043,9 +3436,13 @@ function submitListing($db) {
                 : ($isGuest ? 'Your listing has been submitted for review. You will receive an email once approved.' : 'Your listing has been submitted and will be reviewed shortly.'),
             'listing_id' => $listingId,
             'reference_number' => $referenceNumber,
+            'guest_listing_expires_at' => $guestListingExpiresAt,
             'email_verification_required' => $requireListingEmailValidation,
             'email_sent' => $listingEmailSent,
-            'verification_link' => $listingEmailSent ? null : $listingVerificationLink
+            'verification_link' => $listingEmailSent ? null : $listingVerificationLink,
+            'guest_manage_code_sent' => $guestManageCodeSent,
+            'guest_manage_code_expires_at' => $guestManageCodeExpiresAt,
+            'guest_manage_link' => $guestManageLink
         ]);
     } catch (Exception $e) {
         if ($db->inTransaction()) {
@@ -3067,9 +3464,11 @@ function verifyListingEmail($db) {
     }
 
     ensureListingEmailVerificationColumns($db);
+    ensureGuestListingLifecycleColumns($db);
+    expireGuestListings($db);
 
     try {
-        $stmt = $db->prepare("SELECT id, status, approval_status, listing_email_verified, listing_email_verification_expires FROM car_listings WHERE listing_email_verification_token = ? LIMIT 1");
+        $stmt = $db->prepare("\n            SELECT id, status, approval_status, listing_email_verified, listing_email_verification_expires, is_guest, guest_listing_expires_at\n            FROM car_listings\n            WHERE listing_email_verification_token = ?\n            LIMIT 1\n        ");
         $stmt->execute([$token]);
         $listing = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -3087,6 +3486,12 @@ function verifyListingEmail($db) {
 
         if (!empty($listing['listing_email_verification_expires']) && strtotime($listing['listing_email_verification_expires']) < time()) {
             sendError('This verification link has expired. Please submit your listing again.', 400);
+        }
+
+        if ((int)($listing['is_guest'] ?? 0) === 1 && !empty($listing['guest_listing_expires_at']) && strtotime($listing['guest_listing_expires_at']) <= time()) {
+            $expireStmt = $db->prepare("UPDATE car_listings SET status = 'expired', guest_listing_expired_at = COALESCE(guest_listing_expired_at, NOW()) WHERE id = ?");
+            $expireStmt->execute([(int)$listing['id']]);
+            sendError('This guest listing has expired. Please register and post a new listing.', 400);
         }
 
         $stmt = $db->prepare("UPDATE car_listings
@@ -3653,6 +4058,7 @@ function denyListing($db) {
     
     $input = json_decode(file_get_contents('php://input'), true);
     $listingId = $input['listing_id'] ?? null;
+
     $reason = $input['denial_reason'] ?? null;
     $user = getCurrentUser();
     
@@ -4765,6 +5171,72 @@ function sendListingVerificationEmail($db, $email, $fullName, $verificationToken
         return $mailSent;
     } catch (Exception $e) {
         error_log('sendListingVerificationEmail exception: ' . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Send guest listing management login code.
+ */
+function sendGuestListingManageCodeEmail($db, $email, $fullName, $referenceNumber, $listingId, $code, $expiresAt) {
+    try {
+        require_once(__DIR__ . '/includes/smtp-mailer.php');
+        $smtp = getSMTPSettings($db);
+
+        $smtpHost = $smtp['host'];
+        $smtpPort = $smtp['port'];
+        $smtpUsername = $smtp['username'];
+        $smtpPassword = $smtp['password'];
+        $fromEmail = $smtp['from_email'];
+        $fromName = $smtp['from_name'];
+
+        $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $isProduction = (strpos($serverHost, 'promanaged-it.com') !== false);
+        if ($isProduction) {
+            $baseUrl = 'https://promanaged-it.com/motorlink/';
+        } else {
+            $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $baseUrl = $protocol . '://' . $serverHost . '/';
+        }
+
+        $manageLink = $baseUrl . 'guest-manage.html?email=' . urlencode($email);
+        $safeName = htmlspecialchars($fullName ?: 'Guest Seller', ENT_QUOTES, 'UTF-8');
+        $safeRef = htmlspecialchars($referenceNumber ?: ('Listing #' . (int)$listingId), ENT_QUOTES, 'UTF-8');
+        $safeCode = htmlspecialchars($code, ENT_QUOTES, 'UTF-8');
+        $safeExpires = htmlspecialchars((string)$expiresAt, ENT_QUOTES, 'UTF-8');
+
+        $subject = 'MotorLink Malawi - Guest Listing Login Code';
+
+        $htmlMessage = "
+        <html>
+        <body style='font-family: Arial, sans-serif; color: #212121;'>
+            <h2>Your Guest Listing Login Code</h2>
+            <p>Hello <strong>{$safeName}</strong>,</p>
+            <p>Use this temporary code to manage your guest listing (<strong>{$safeRef}</strong>):</p>
+            <p style='font-size: 26px; letter-spacing: 6px; font-weight: 700; color: #00a843;'>{$safeCode}</p>
+            <p>This code expires on: <strong>{$safeExpires}</strong>.</p>
+            <p>You can only perform minimal actions: mark as sold or delete listing.</p>
+            <p><a href='{$manageLink}' style='display:inline-block;padding:12px 22px;background:#00c853;color:#fff;text-decoration:none;border-radius:6px;'>Open Guest Listing Manager</a></p>
+            <p>If you did not request this code, you can ignore this email.</p>
+        </body>
+        </html>";
+
+        $textMessage = "MotorLink Malawi - Guest Listing Login Code\n\n";
+        $textMessage .= "Hello {$fullName},\n\n";
+        $textMessage .= "Use this temporary code to manage your guest listing ({$referenceNumber}): {$code}\n";
+        $textMessage .= "Code expires on: {$expiresAt}\n\n";
+        $textMessage .= "Manage link: {$manageLink}\n";
+
+        $mailer = new SMTPMailer($smtpHost, $smtpPort, $smtpUsername, $smtpPassword, $fromEmail, $fromName);
+        $mailSent = $mailer->send($email, $subject, $htmlMessage, $textMessage);
+
+        if (!$mailSent) {
+            error_log("sendGuestListingManageCodeEmail failed for listing {$listingId} ({$email})");
+        }
+
+        return $mailSent;
+    } catch (Exception $e) {
+        error_log('sendGuestListingManageCodeEmail exception: ' . $e->getMessage());
         return false;
     }
 }
@@ -7614,10 +8086,14 @@ function getSiteSettings($db) {
  */
 function getListingRestrictions($db) {
     try {
+        ensureGuestListingLifecycleColumns($db);
+        expireGuestListings($db);
+
         $allowGuestListings = (bool)getPlatformSetting($db, 'user_allowGuestListings', true);
-        $maxGuestListings = (int)getPlatformSetting($db, 'listing_maxGuestListings', 2);
+        $maxGuestListings = 1;
         $maxRegisteredListings = (int)getPlatformSetting($db, 'listing_maxRegisteredListings', 10);
         $requireListingEmailValidation = (bool)getPlatformSetting($db, 'listing_requireEmailValidation', true);
+        $guestListingValidityDays = max(1, (int)getPlatformSetting($db, 'listing_expiryDays', 30));
 
         $isAuthenticated = isLoggedIn();
         $currentUser = getCurrentUser(false);
@@ -7638,11 +8114,25 @@ function getListingRestrictions($db) {
         $guestEmail = strtolower(trim($_GET['guest_email'] ?? ''));
         $currentGuestCount = null;
         $remainingGuestListings = null;
+        $guestLifetimeLimitReached = false;
+        $guestHasExpiredListing = false;
+        $guestLastExpiredAt = null;
+        $guestActiveListingExpiresAt = null;
 
         if (!empty($guestEmail) && filter_var($guestEmail, FILTER_VALIDATE_EMAIL)) {
-            $stmt = $db->prepare("SELECT COUNT(*) FROM car_listings WHERE is_guest = 1 AND LOWER(guest_seller_email) = LOWER(?) AND status != 'deleted'");
+            $stmt = $db->prepare("\n                SELECT COUNT(*)\n                FROM car_listings\n                WHERE is_guest = 1\n                  AND LOWER(guest_seller_email) = LOWER(?)\n            ");
             $stmt->execute([$guestEmail]);
             $currentGuestCount = (int)$stmt->fetchColumn();
+            $guestLifetimeLimitReached = $currentGuestCount >= $maxGuestListings;
+
+            $activeExpiryStmt = $db->prepare("\n                SELECT guest_listing_expires_at\n                FROM car_listings\n                WHERE is_guest = 1\n                  AND LOWER(guest_seller_email) = LOWER(?)\n                  AND status NOT IN ('deleted', 'rejected', 'expired')\n                ORDER BY COALESCE(guest_listing_expires_at, created_at) DESC\n                LIMIT 1\n            ");
+            $activeExpiryStmt->execute([$guestEmail]);
+            $guestActiveListingExpiresAt = $activeExpiryStmt->fetchColumn() ?: null;
+
+            $expiredStmt = $db->prepare("\n                SELECT guest_listing_expired_at\n                FROM car_listings\n                WHERE is_guest = 1\n                  AND LOWER(guest_seller_email) = LOWER(?)\n                  AND status = 'expired'\n                ORDER BY guest_listing_expired_at DESC\n                LIMIT 1\n            ");
+            $expiredStmt->execute([$guestEmail]);
+            $guestLastExpiredAt = $expiredStmt->fetchColumn() ?: null;
+            $guestHasExpiredListing = !empty($guestLastExpiredAt);
 
             if ($maxGuestListings > 0) {
                 $remainingGuestListings = max(0, $maxGuestListings - $currentGuestCount);
@@ -7653,13 +8143,18 @@ function getListingRestrictions($db) {
             'restrictions' => [
                 'allow_guest_listings' => $allowGuestListings,
                 'max_guest_listings' => $maxGuestListings,
+                'guest_listing_validity_days' => $guestListingValidityDays,
                 'max_registered_listings' => $maxRegisteredListings,
                 'require_listing_email_validation' => $requireListingEmailValidation,
                 'is_authenticated' => $isAuthenticated,
                 'current_registered_count' => $currentRegisteredCount,
                 'remaining_registered_listings' => $remainingRegisteredListings,
                 'current_guest_count' => $currentGuestCount,
-                'remaining_guest_listings' => $remainingGuestListings
+                'remaining_guest_listings' => $remainingGuestListings,
+                'guest_lifetime_limit_reached' => $guestLifetimeLimitReached,
+                'guest_has_expired_listing' => $guestHasExpiredListing,
+                'guest_last_expired_at' => $guestLastExpiredAt,
+                'guest_active_listing_expires_at' => $guestActiveListingExpiresAt
             ]
         ]);
     } catch (Exception $e) {

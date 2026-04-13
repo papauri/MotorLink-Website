@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest Listing Manager - MotorLink Malawi</title>
+    <link rel="stylesheet" href="css/common.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .guest-manager-wrap {
+            max-width: 760px;
+            margin: 32px auto;
+            padding: 0 16px;
+        }
+        .guest-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+            margin-bottom: 16px;
+        }
+        .guest-card h2 {
+            margin: 0 0 8px;
+            font-size: 1.3rem;
+        }
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        @media (max-width: 700px) {
+            .row {
+                grid-template-columns: 1fr;
+            }
+        }
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .field label {
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+        .field input {
+            height: 44px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            padding: 0 12px;
+            font-size: 1rem;
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .btn {
+            min-height: 44px;
+            border: none;
+            border-radius: 10px;
+            padding: 0 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-primary { background: #16a34a; color: #fff; }
+        .btn-warning { background: #ca8a04; color: #fff; }
+        .btn-danger { background: #dc2626; color: #fff; }
+        .btn-secondary { background: #4b5563; color: #fff; }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 0.8rem;
+            background: #eef2ff;
+            color: #1e3a8a;
+            font-weight: 600;
+        }
+        .message {
+            padding: 10px 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.92rem;
+        }
+        .message.ok { background: #ecfdf3; color: #166534; border: 1px solid #bbf7d0; }
+        .message.err { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    </style>
+</head>
+<body>
+    <div class="guest-manager-wrap">
+        <div class="guest-card">
+            <h2><i class="fas fa-user-clock"></i> Guest Listing Manager</h2>
+            <p>Only two actions are available for guest listings: mark as sold or delete listing.</p>
+            <div id="feedback"></div>
+        </div>
+
+        <div class="guest-card" id="loginCard">
+            <h2>Login with Temporary Code</h2>
+            <div class="field">
+                <label for="guestEmail">Guest Email</label>
+                <input type="email" id="guestEmail" placeholder="you@example.com">
+            </div>
+            <div class="field">
+                <label for="guestCode">Temporary Code</label>
+                <input type="text" id="guestCode" placeholder="6-digit code">
+            </div>
+            <div class="actions">
+                <button class="btn btn-primary" id="loginBtn">Login</button>
+                <button class="btn btn-secondary" id="requestCodeBtn">Request New Code</button>
+            </div>
+        </div>
+
+        <div class="guest-card" id="listingCard" style="display:none;">
+            <h2>Your Guest Listing</h2>
+            <p><strong>Title:</strong> <span id="listingTitle">-</span></p>
+            <p><strong>Reference:</strong> <span id="listingRef">-</span></p>
+            <p><strong>Status:</strong> <span class="status-badge" id="listingStatus">-</span></p>
+            <div class="actions">
+                <button class="btn btn-warning" id="markSoldBtn">Mark as Sold</button>
+                <button class="btn btn-danger" id="deleteBtn">Delete Listing</button>
+                <button class="btn btn-secondary" id="logoutBtn">Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const feedback = document.getElementById('feedback');
+        const loginCard = document.getElementById('loginCard');
+        const listingCard = document.getElementById('listingCard');
+
+        function showMessage(msg, type) {
+            feedback.innerHTML = '<div class="message ' + type + '">' + msg + '</div>';
+        }
+
+        function getEmailFromQuery() {
+            const url = new URL(window.location.href);
+            return url.searchParams.get('email') || '';
+        }
+
+        function setListing(listing) {
+            document.getElementById('listingTitle').textContent = listing.title || '-';
+            document.getElementById('listingRef').textContent = listing.reference_number || '-';
+            document.getElementById('listingStatus').textContent = listing.status || '-';
+            loginCard.style.display = 'none';
+            listingCard.style.display = 'block';
+        }
+
+        async function api(action, body, method = 'POST') {
+            const url = CONFIG.API_URL + '?action=' + encodeURIComponent(action);
+            const options = {
+                method,
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            };
+            if (body) options.body = JSON.stringify(body);
+            const res = await fetch(url, options);
+            return res.json();
+        }
+
+        async function restoreSession() {
+            try {
+                const res = await api('guest_listing_session', null, 'GET');
+                if (res.success && res.authenticated && res.listing) {
+                    setListing(res.listing);
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const email = document.getElementById('guestEmail').value.trim();
+            const code = document.getElementById('guestCode').value.trim();
+            if (!email || !code) {
+                showMessage('Email and code are required.', 'err');
+                return;
+            }
+            const res = await api('guest_listing_login', { email, code });
+            if (!res.success) {
+                showMessage(res.message || 'Login failed.', 'err');
+                return;
+            }
+            showMessage('Login successful.', 'ok');
+            setListing(res.listing);
+        });
+
+        document.getElementById('requestCodeBtn').addEventListener('click', async () => {
+            const email = document.getElementById('guestEmail').value.trim();
+            if (!email) {
+                showMessage('Enter your guest email first.', 'err');
+                return;
+            }
+            const res = await api('guest_listing_request_code', { email });
+            if (!res.success) {
+                showMessage(res.message || 'Failed to request code.', 'err');
+                return;
+            }
+
+            if (res.debug_guest_manage_code) {
+                document.getElementById('guestCode').value = String(res.debug_guest_manage_code);
+                showMessage(`Code generated. For localhost testing use: ${res.debug_guest_manage_code}`, 'ok');
+                return;
+            }
+
+            showMessage(res.message || 'If listing exists, code has been sent.', 'ok');
+        });
+
+        document.getElementById('markSoldBtn').addEventListener('click', async () => {
+            const res = await api('guest_listing_manage', { action: 'sold' });
+            if (!res.success) {
+                showMessage(res.message || 'Failed to mark sold.', 'err');
+                return;
+            }
+            showMessage('Listing marked as sold.', 'ok');
+            restoreSession();
+        });
+
+        document.getElementById('deleteBtn').addEventListener('click', async () => {
+            if (!confirm('Delete this listing permanently?')) return;
+            const res = await api('guest_listing_manage', { action: 'delete' });
+            if (!res.success) {
+                showMessage(res.message || 'Failed to delete listing.', 'err');
+                return;
+            }
+            showMessage('Listing deleted.', 'ok');
+            listingCard.style.display = 'none';
+            loginCard.style.display = 'block';
+            document.getElementById('guestCode').value = '';
+        });
+
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            await api('guest_listing_logout', {});
+            showMessage('Logged out.', 'ok');
+            listingCard.style.display = 'none';
+            loginCard.style.display = 'block';
+            document.getElementById('guestCode').value = '';
+        });
+
+        document.getElementById('guestEmail').value = getEmailFromQuery();
+        restoreSession();
+    </script>
+</body>
+</html>

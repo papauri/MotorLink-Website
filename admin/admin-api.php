@@ -761,12 +761,31 @@ function handleDashboardStats($db) {
     requireAdmin();
     
     try {
+        try {
+            $db->exec("ALTER TABLE car_listings ADD COLUMN guest_listing_expires_at DATETIME DEFAULT NULL");
+        } catch (Exception $e) {
+            // Column already exists, ignore.
+        }
+
+        try {
+            $db->exec("ALTER TABLE car_listings ADD COLUMN guest_listing_expired_at DATETIME DEFAULT NULL");
+        } catch (Exception $e) {
+            // Column already exists, ignore.
+        }
+
+        try {
+            $db->exec("\n                UPDATE car_listings\n                SET\n                    status = 'expired',\n                    guest_listing_expired_at = COALESCE(guest_listing_expired_at, NOW())\n                WHERE is_guest = 1\n                  AND guest_listing_expires_at IS NOT NULL\n                  AND guest_listing_expires_at <= NOW()\n                  AND status IN ('active', 'pending_approval', 'pending_email_verification')\n            ");
+        } catch (Exception $e) {
+            // Non-blocking.
+        }
+
         $stats = [];
         
         // Get basic counts
         $stats['total_cars'] = (int)$db->query("SELECT COUNT(*) FROM car_listings WHERE status != 'deleted'")->fetchColumn();
         $stats['active_cars'] = (int)$db->query("SELECT COUNT(*) FROM car_listings WHERE status = 'active' AND approval_status = 'approved'")->fetchColumn();
         $stats['pending_cars'] = (int)$db->query("SELECT COUNT(*) FROM car_listings WHERE status = 'pending_approval'")->fetchColumn();
+        $stats['pending_guest_listings'] = (int)$db->query("SELECT COUNT(*) FROM car_listings WHERE status = 'pending_approval' AND is_guest = 1")->fetchColumn();
         
         $stats['total_users'] = (int)$db->query("SELECT COUNT(*) FROM users WHERE user_type != 'admin'")->fetchColumn();
         $stats['active_users'] = (int)$db->query("SELECT COUNT(*) FROM users WHERE user_type != 'admin' AND status = 'active'")->fetchColumn();
@@ -853,6 +872,24 @@ function handleGetCars($db) {
             // Column already exists, ignore
         }
 
+        try {
+            $db->exec("ALTER TABLE car_listings ADD COLUMN guest_listing_expires_at DATETIME DEFAULT NULL");
+        } catch (Exception $e) {
+            // Column already exists, ignore
+        }
+
+        try {
+            $db->exec("ALTER TABLE car_listings ADD COLUMN guest_listing_expired_at DATETIME DEFAULT NULL");
+        } catch (Exception $e) {
+            // Column already exists, ignore
+        }
+
+        try {
+            $db->exec("\n                UPDATE car_listings\n                SET\n                    status = 'expired',\n                    guest_listing_expired_at = COALESCE(guest_listing_expired_at, NOW())\n                WHERE is_guest = 1\n                  AND guest_listing_expires_at IS NOT NULL\n                  AND guest_listing_expires_at <= NOW()\n                  AND status IN ('active', 'pending_approval', 'pending_email_verification')\n            ");
+        } catch (Exception $e) {
+            // Non-blocking.
+        }
+
         $where = ["1=1"];
         $params = [];
 
@@ -889,6 +926,12 @@ function handleGetCars($db) {
             $params[] = $searchTerm;
         }
 
+        if (isset($_GET['is_guest']) && $_GET['is_guest'] !== '') {
+            $isGuest = (int)$_GET['is_guest'] === 1 ? 1 : 0;
+            $where[] = "COALESCE(cl.is_guest, 0) = ?";
+            $params[] = $isGuest;
+        }
+
         $whereClause = implode(' AND ', $where);
 
         $sql = "SELECT
@@ -900,6 +943,13 @@ function handleGetCars($db) {
             u.email as owner_email,
             u.phone as owner_phone,
             u.user_type,
+            COALESCE(cl.is_guest, 0) as is_guest,
+            cl.guest_seller_name,
+            cl.guest_seller_email,
+            cl.guest_seller_phone,
+            cl.guest_listing_expires_at,
+            cl.guest_listing_expired_at,
+            COALESCE(cl.listing_email_verified, 0) as listing_email_verified,
             (SELECT filename FROM car_listing_images WHERE listing_id = cl.id AND is_primary = 1 LIMIT 1) as primary_image
         FROM car_listings cl
         LEFT JOIN car_makes cm ON cl.make_id = cm.id
@@ -939,6 +989,20 @@ function handleApproveCar($db) {
     }
     
     try {
+        $listingMetaStmt = $db->prepare("SELECT COALESCE(is_guest, 0) AS is_guest, COALESCE(listing_email_verified, 0) AS listing_email_verified FROM car_listings WHERE id = ? LIMIT 1");
+        $listingMetaStmt->execute([$id]);
+        $listingMeta = $listingMetaStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$listingMeta) {
+            echo json_encode(['success' => false, 'message' => 'Car listing not found']);
+            exit();
+        }
+
+        if ($action === 'approve' && (int)$listingMeta['is_guest'] === 1 && (int)$listingMeta['listing_email_verified'] !== 1) {
+            echo json_encode(['success' => false, 'message' => 'Guest listing must complete email verification before approval']);
+            exit();
+        }
+
         $newStatus = ($action === 'approve') ? 'active' : 'rejected';
         $approvalStatus = ($action === 'approve') ? 'approved' : 'denied';
         $adminId = $_SESSION['admin_id'];
@@ -1036,12 +1100,16 @@ function getPendingApprovals($db) {
             SELECT 'car' as type, id, title as name, created_at, 
                    (SELECT full_name FROM users WHERE id = user_id) as owner_name
             FROM car_listings 
-            WHERE status = 'pending_approval'
+                WHERE status = 'pending_approval' AND COALESCE(is_guest, 0) = 0
             ORDER BY created_at DESC
             LIMIT 10
         ");
         $pendingCars = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $pending = array_merge($pending, $pendingCars);
+
+        $stmt = $db->query("\n            SELECT\n                CASE\n                    WHEN status = 'pending_email_verification' THEN 'guest_listing_email_verification'\n                    ELSE 'guest_listing'\n                END as type,\n                id,\n                title as name,\n                created_at,\n                COALESCE(guest_seller_name, guest_seller_email, 'Guest Seller') as owner_name\n            FROM car_listings\n            WHERE COALESCE(is_guest, 0) = 1\n              AND status IN ('pending_approval', 'pending_email_verification')\n            ORDER BY created_at DESC\n            LIMIT 10\n        ");
+        $pendingGuestCars = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $pending = array_merge($pending, $pendingGuestCars);
         
         // Pending users
         $stmt = $db->query("
