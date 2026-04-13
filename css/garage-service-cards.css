@@ -614,9 +614,11 @@
   }
 
   .garage-service-name {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
+    line-height: 1.2;
+    color: #111827;
   }
   
   /* Compact location meta */
@@ -662,43 +664,71 @@
     gap: 4px;
   }
   
-  /* Compact status indicator */
+  /* Status indicator - left-aligned badge */
   .garage-status-indicator {
-    padding: 4px 8px;
-    font-size: 0.65rem;
-    margin-bottom: 5px;
+    padding: 3px 10px;
+    font-size: 0.62rem;
+    margin-bottom: 4px;
+    align-self: flex-start;
   }
   
-  /* Compact info rows */
+  /* Improved info rows - stacked label+value for better readability */
   .garage-info-row {
-    padding: 5px 7px;
-    min-height: 31px;
-    background: #fafafa;
-    border: 1px solid #f0f0f0;
-    border-radius: 4px;
-    gap: 5px;
+    padding: 6px 8px;
+    min-height: 38px;
+    background: #f9fafb;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    gap: 8px;
+    align-items: center;
   }
   
   .garage-info-row .icon {
-    width: 16px;
-    height: 16px;
-    min-width: 16px;
-    font-size: 0.7rem;
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    font-size: 0.75rem;
+    color: #00c853;
+    align-self: center;
+  }
+
+  .garage-info-row .content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    align-items: flex-start;
   }
   
   .garage-info-row .label {
-    font-size: 0.6rem;
-    display: none; /* Hide labels on mobile to save space */
+    font-size: 0.58rem;
+    display: block;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 600;
+    line-height: 1;
   }
   
   .garage-info-row .value {
-    font-size: 0.7rem;
+    font-size: 0.76rem;
+    font-weight: 500;
+    color: #1f2937;
     line-height: 1.3;
   }
   
   .garage-info-row.emergency {
-    background: #fff3cd;
-    border-color: #ffc107;
+    background: #fff8f0;
+    border-color: #fbbf24;
+  }
+
+  .garage-info-row.emergency .icon {
+    color: #ef4444;
+  }
+
+  .garage-info-row.clickable .icon {
+    color: #10b981;
   }
 
   /* Main garages grid on mobile */
@@ -819,22 +849,29 @@
   }
   
   .garage-card-body {
-    padding: 5px 8px;
+    padding: 0;
     gap: 4px;
   }
   
   .garage-info-row {
-    padding: 4px 6px;
+    padding: 5px 7px;
+    min-height: 34px;
+    gap: 7px;
   }
   
   .garage-info-row .icon {
-    width: 14px;
-    height: 14px;
-    font-size: 0.65rem;
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    font-size: 0.7rem;
   }
-  
+
+  .garage-info-row .label {
+    font-size: 0.55rem;
+  }
+
   .garage-info-row .value {
-    font-size: 0.65rem;
+    font-size: 0.72rem;
   }
   
   .garage-card-actions {
