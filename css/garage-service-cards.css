@@ -667,21 +667,21 @@
   /* Compact body */
   .garage-card-body {
     padding: 0;
-    gap: 4px;
+    gap: 3px;
   }
   
   /* Status indicator - left-aligned badge */
   .garage-status-indicator {
-    padding: 3px 10px;
-    font-size: 0.62rem;
-    margin-bottom: 4px;
+    padding: 2px 8px;
+    font-size: 0.6rem;
+    margin-bottom: 2px;
     align-self: flex-start;
   }
   
   /* Improved info rows - stacked label+value for better readability */
   .garage-info-row {
-    padding: 6px 8px;
-    min-height: 38px;
+    padding: 5px 7px;
+    min-height: 32px;
     background: #f9fafb;
     border: 1px solid #e9ecef;
     border-radius: 6px;
@@ -856,12 +856,12 @@
   
   .garage-card-body {
     padding: 0;
-    gap: 4px;
+    gap: 2px;
   }
   
   .garage-info-row {
-    padding: 5px 7px;
-    min-height: 34px;
+    padding: 4px 6px;
+    min-height: 28px;
     gap: 7px;
   }
   
