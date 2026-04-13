@@ -732,9 +732,12 @@ body > div:not(.footer):not(.header) {
 .mobile-menu-toggle i {
     font-size: 18px;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    z-index: 1;
-    filter: drop-shadow(0 0 3px rgba(0, 255, 136, 0.4));
+    position: static;
+    filter: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
 }
 
 .mobile-menu-toggle.active i {

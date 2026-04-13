@@ -250,25 +250,182 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Responsive */
+        /* Box-sizing baseline */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        /* Listings table — horizontal scroll on mobile */
+        #userListings {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .listings-table {
+            min-width: 480px;
+        }
+
+        /* Responsive — 768px */
         @media (max-width: 768px) {
             .profile-container {
                 padding: 100px 15px 20px;
+                max-width: 100%;
+                overflow-x: hidden;
             }
 
             .profile-header {
                 flex-direction: column;
                 text-align: center;
-                padding: 30px 20px;
+                padding: 28px 16px;
+                gap: 16px;
             }
 
-            .tab-content {
-                padding: 20px;
+            .profile-info h1 {
+                font-size: 1.5rem;
+            }
+
+            .profile-avatar {
+                width: 90px;
+                height: 90px;
+                font-size: 2.2rem;
+                margin: 0 auto;
             }
 
             .profile-tabs {
                 flex-wrap: nowrap;
                 overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                border-radius: 10px;
+            }
+
+            .profile-tab {
+                padding: 14px 16px;
+                font-size: 0.85rem;
+            }
+
+            .tab-content {
+                padding: 20px;
+                border-radius: 12px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 14px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
+            }
+
+            .stat-card {
+                padding: 16px;
+            }
+
+            .stat-card .number {
+                font-size: 2rem;
+            }
+
+            .form-section h3 {
+                font-size: 1.2rem;
+            }
+        }
+
+        /* Responsive — 480px */
+        @media (max-width: 480px) {
+            .profile-container {
+                padding: 88px 12px 20px;
+            }
+
+            .profile-header {
+                padding: 20px 14px;
+                gap: 12px;
+                border-radius: 12px;
+            }
+
+            .profile-avatar {
+                width: 72px;
+                height: 72px;
+                font-size: 1.8rem;
+            }
+
+            .profile-info h1 {
+                font-size: 1.25rem;
+            }
+
+            .profile-info p {
+                font-size: 0.85rem;
+            }
+
+            .profile-tabs {
+                border-radius: 8px;
+                margin-bottom: 16px;
+            }
+
+            .profile-tab {
+                padding: 12px 13px;
+                font-size: 0.78rem;
+            }
+
+            .profile-tab i {
+                display: none;
+            }
+
+            .tab-content {
+                padding: 14px;
+                border-radius: 10px;
+                box-shadow: 0 1px 8px rgba(0,0,0,0.08);
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+                margin-bottom: 20px;
+            }
+
+            .stat-card {
+                padding: 14px 10px;
+                border-radius: 10px;
+            }
+
+            .stat-card .number {
+                font-size: 1.7rem;
+            }
+
+            .stat-card .label {
+                font-size: 0.78rem;
+                margin-top: 4px;
+            }
+
+            .form-section {
+                margin-bottom: 22px;
+            }
+
+            .form-section h3 {
+                font-size: 1.1rem;
+            }
+
+            .form-group input,
+            .form-group select,
+            .form-group textarea {
+                padding: 10px;
+                font-size: 14px;
+            }
+
+            .btn-update {
+                width: 100%;
+                padding: 12px 20px;
+                text-align: center;
+                justify-content: center;
+            }
+
+            .listings-table th,
+            .listings-table td {
+                padding: 8px 6px;
+                font-size: 12px;
+            }
+
+            .status-badge {
+                padding: 3px 8px;
+                font-size: 11px;
             }
         }
     </style>

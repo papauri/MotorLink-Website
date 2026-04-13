@@ -1773,6 +1773,8 @@
         position: relative !important;
         z-index: 10000 !important;
         box-shadow: 0 2px 8px rgba(0, 200, 83, 0.1) !important;
+        overflow: visible !important;
+        padding: 0 !important;
     }
 
     .mobile-menu-toggle:hover {
@@ -1788,16 +1790,16 @@
     }
 
     .mobile-menu-toggle i {
-        font-size: 20px !important;
-        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        position: relative !important;
-        z-index: 1 !important;
-        display: flex !important;
+        font-size: 18px !important;
+        display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        width: 100% !important;
-        height: 100% !important;
         line-height: 1 !important;
+        filter: none !important;
+        position: static !important;
+        width: auto !important;
+        height: auto !important;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
     /* Animate hamburger to X - Fast & Smooth */

@@ -19,14 +19,18 @@ $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? null;
 // Determine the origin to use for CORS header
 $originToUse = null;
 
+// Determine the server's own host for same-origin checks
+$_serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+$_serverHostOnly = explode(':', $_serverHost)[0];
+
 // Priority 1: Use the Origin header from the request (most reliable)
 if ($requestOrigin) {
     $parsedOrigin = parse_url($requestOrigin);
     if ($parsedOrigin) {
         $originHost = $parsedOrigin['host'] ?? '';
-        // Allow localhost and 127.0.0.1 for local development
-        if (in_array($originHost, ['localhost', '127.0.0.1'])) {
-            $originToUse = $requestOrigin; // Use exact origin from request
+        // Allow localhost, 127.0.0.1, and the server's own domain (same-origin on any deployment)
+        if (in_array($originHost, ['localhost', '127.0.0.1']) || $originHost === $_serverHostOnly) {
+            $originToUse = $requestOrigin;
         }
     }
 }
@@ -38,32 +42,23 @@ if (!$originToUse && !empty($_SERVER['HTTP_REFERER'])) {
         $scheme = $parsedUrl['scheme'] ?? 'http';
         $host = $parsedUrl['host'] ?? '';
         $port = !empty($parsedUrl['port']) ? ':' . $parsedUrl['port'] : '';
-        if (in_array($host, ['localhost', '127.0.0.1'])) {
+        if (in_array($host, ['localhost', '127.0.0.1']) || $host === $_serverHostOnly) {
             $originToUse = $scheme . '://' . $host . $port;
         }
     }
 }
 
-// Priority 3: Construct from current request (fallback for same-origin requests)
+// Priority 3: Construct from current request (same-origin fallback — always valid)
 if (!$originToUse) {
-    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost';
-    $hostParts = explode(':', $host);
-    $hostOnly = $hostParts[0];
-    if (in_array($hostOnly, ['localhost', '127.0.0.1'])) {
-        $originToUse = $scheme . '://' . $host;
-    }
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? null) == 443)
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+        ? 'https' : 'http';
+    $originToUse = $scheme . '://' . ($_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost');
 }
 
 // Set CORS headers - MUST be specific origin, never '*' when credentials are enabled
-if ($originToUse) {
-    header("Access-Control-Allow-Origin: $originToUse");
-} else {
-    // Last resort: log error and use a default (shouldn't happen in normal operation)
-    error_log("Admin API CORS: Could not determine origin. Request origin: " . ($requestOrigin ?? 'none') . ", Referer: " . ($_SERVER['HTTP_REFERER'] ?? 'none'));
-    // Default to localhost:8000 for local development
-    header("Access-Control-Allow-Origin: http://127.0.0.1:8000");
-}
+header("Access-Control-Allow-Origin: $originToUse");
 
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, Cookie');
