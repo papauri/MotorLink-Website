@@ -621,30 +621,48 @@
     color: #111827;
   }
   
-  /* Compact location meta */
+  /* Location meta - single row, no wrapping */
   .garage-location-meta {
-    margin-top: 4px;
-    gap: 8px;
-    font-size: 0.7rem;
+    margin-top: 3px;
+    gap: 0;
+    font-size: 0.68rem;
+    flex-wrap: nowrap;
+    overflow: hidden;
+    align-items: center;
   }
   
   .garage-location-meta > span {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 1;
+    min-width: 0;
+    /* Dot separator between items */
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Add a dot between meta items */
+  .garage-location-meta > span + span::before {
+    content: '·';
+    margin: 0 5px;
+    color: #d1d5db;
+    flex-shrink: 0;
   }
   
   .garage-location-meta > span i {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
+    margin-right: 3px;
+    flex-shrink: 0;
   }
   
   .garage-meta-item {
     font-size: 0.65rem;
-    padding: 2px 6px;
-    background: #f8f9fa;
-    border: 1px solid #e5e7eb;
-  }
-  
-  .garage-meta-item i {
-    font-size: 0.65rem;
+    padding: 2px 5px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    color: #16a34a;
   }
   
   /* Corner ribbon badges - smaller on mobile */
