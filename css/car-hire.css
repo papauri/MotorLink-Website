@@ -877,10 +877,9 @@
   .company-meta {
     gap: var(--space-md);
   }
-  
-  /* Hide non-essential meta items on mobile to reduce clutter */
-  .meta-item:nth-child(n+2) {
-    display: none !important;
+
+  .company-meta .meta-item {
+    display: flex !important;
   }
 
   .quick-contact-box {
@@ -1749,9 +1748,9 @@
 }
 
 .feature-box {
-    background: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 195, 75, 0.28);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(0, 255, 110, 0.35);
     border-radius: 10px;
     padding: 14px;
     display: flex;
@@ -1761,7 +1760,7 @@
 }
 
 .feature-box:hover {
-    background: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 210, 80, 0.42);
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
 }
@@ -2703,8 +2702,12 @@
         flex-shrink: 0;
     }
 
-    .company-meta .meta-item:nth-child(n+3) {
+    .company-meta .meta-item:not([style*="display: none"]) {
       display: flex !important;
+    }
+
+    .company-meta .meta-item[style*="display: none"] {
+      display: none !important;
     }
     
     .quick-contact-box {
@@ -2746,9 +2749,9 @@
     }
 
     .key-features .feature-box {
-        background: rgba(255, 255, 255, 0.2) !important;
+      background: rgba(0, 195, 75, 0.28) !important;
         backdrop-filter: blur(12px) !important;
-        border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
+      border: 1.5px solid rgba(0, 255, 110, 0.35) !important;
         border-radius: 12px !important;
         padding: 12px 8px !important;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
@@ -2761,7 +2764,7 @@
     }
 
     .key-features .feature-box:hover {
-        background: rgba(255, 255, 255, 0.28) !important;
+      background: rgba(0, 210, 80, 0.42) !important;
         transform: translateY(-2px) !important;
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15) !important;
     }
@@ -2954,8 +2957,12 @@
       border-radius: 8px;
     }
 
-    .company-meta .meta-item:nth-child(n+2) {
+    .company-meta .meta-item:not([style*="display: none"]) {
       display: flex !important;
+    }
+
+    .company-meta .meta-item[style*="display: none"] {
+      display: none !important;
     }
 
     /* Extra compact key-features on very small screens */
@@ -2970,7 +2977,7 @@
     .key-features .feature-box {
         padding: 10px 8px !important;
         gap: 8px !important;
-        background: rgba(255, 255, 255, 0.18) !important;
+      background: rgba(0, 195, 75, 0.28) !important;
         border-radius: 10px !important;
         flex-direction: column !important;
         align-items: center !important;
@@ -2979,7 +2986,7 @@
     }
 
     .key-features .feature-box:active {
-        background: rgba(255, 255, 255, 0.25) !important;
+      background: rgba(0, 210, 80, 0.42) !important;
     }
 
     .key-features .feature-box i {
@@ -3859,8 +3866,12 @@
         margin-bottom: 8px !important;
     }
 
-    section.company-header .company-meta .meta-item:nth-child(n+2) {
-        display: none !important;
+    section.company-header .company-meta .meta-item:not([style*="display: none"]) {
+      display: flex !important;
+    }
+
+    section.company-header .company-meta .meta-item[style*="display: none"] {
+      display: none !important;
     }
 
     section.company-header .quick-contact-box {
