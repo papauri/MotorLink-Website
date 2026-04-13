@@ -3309,9 +3309,10 @@ function submitListing($db) {
     $maxRegisteredListings = (int)getPlatformSetting($db, 'listing_maxRegisteredListings', 10);
     $requireListingEmailValidation = (bool)getPlatformSetting($db, 'listing_requireEmailValidation', true);
     $guestListingValidityDays = max(1, (int)getPlatformSetting($db, 'listing_expiryDays', 30));
+    $featuredBonusVisibilityDays = max(0, (int)getPlatformSetting($db, 'listing_featuredBonusDays', 15));
     $paymentsEnabled = (bool)getPlatformSetting($db, 'listing_paymentsEnabled', false);
     $freeListingPrice = max(0, (float)getPlatformSetting($db, 'listing_freeListingPrice', 0));
-    $featuredListingPrice = max(0, (float)getPlatformSetting($db, 'listing_featuredPrice', 15000));
+    $featuredListingPrice = max(0, (float)getPlatformSetting($db, 'listing_featuredPrice', 0));
     $paymentMethodsRaw = (string)getPlatformSetting($db, 'listing_paymentMethods', 'mobile_money,bank_transfer');
     $allowedPaymentMethods = array_values(array_filter(array_map('trim', explode(',', $paymentMethodsRaw))));
     if (empty($allowedPaymentMethods)) {
@@ -3360,8 +3361,10 @@ function submitListing($db) {
         // Ensure schema columns outside transaction because ALTER TABLE causes implicit commits.
         ensureListingEmailVerificationColumns($db);
         ensureGuestListingLifecycleColumns($db);
-        ensureListingPaymentColumns($db);
-        ensurePaymentsTable($db);
+        if ($paymentsEnabled) {
+            ensureListingPaymentColumns($db);
+            ensurePaymentsTable($db);
+        }
         expireGuestListings($db);
 
         $db->beginTransaction();
@@ -3399,7 +3402,11 @@ function submitListing($db) {
         $listingEmailToken = null;
         $listingEmailExpiry = null;
         $listingEmailVerified = $requireListingEmailValidation ? 0 : 1;
-        $guestListingExpiresAt = $isGuest ? date('Y-m-d H:i:s', strtotime('+' . $guestListingValidityDays . ' days')) : null;
+        $effectiveGuestVisibilityDays = $guestListingValidityDays;
+        if ($listingType === 'featured') {
+            $effectiveGuestVisibilityDays += $featuredBonusVisibilityDays;
+        }
+        $guestListingExpiresAt = $isGuest ? date('Y-m-d H:i:s', strtotime('+' . $effectiveGuestVisibilityDays . ' days')) : null;
 
         $status = 'pending_approval';
         $approvalStatus = 'pending';
@@ -3463,13 +3470,32 @@ function submitListing($db) {
         $columns[] = 'listing_email_verification_sent_to';
         $columns[] = 'listing_email_verification_expires';
         $columns[] = 'guest_listing_expires_at';
-        $columns[] = 'payment_required';
-        $columns[] = 'payment_amount';
-        $columns[] = 'payment_method';
-        $columns[] = 'payment_reference';
-        $columns[] = 'payment_proof_path';
-        $columns[] = 'payment_status';
-        $columns[] = 'payment_submitted_at';
+
+        $hasPaymentRequiredCol = tableColumnExists($db, 'car_listings', 'payment_required');
+        $hasPaymentAmountCol = tableColumnExists($db, 'car_listings', 'payment_amount');
+        $hasPaymentMethodCol = tableColumnExists($db, 'car_listings', 'payment_method');
+        $hasPaymentReferenceCol = tableColumnExists($db, 'car_listings', 'payment_reference');
+        $hasPaymentProofPathCol = tableColumnExists($db, 'car_listings', 'payment_proof_path');
+        $hasPaymentStatusCol = tableColumnExists($db, 'car_listings', 'payment_status');
+        $hasPaymentSubmittedAtCol = tableColumnExists($db, 'car_listings', 'payment_submitted_at');
+        $canPersistPaymentFields = $hasPaymentRequiredCol && $hasPaymentAmountCol && $hasPaymentMethodCol && $hasPaymentReferenceCol && $hasPaymentProofPathCol && $hasPaymentStatusCol && $hasPaymentSubmittedAtCol;
+
+        if ($paymentRequired && !$canPersistPaymentFields) {
+            throw new Exception('Paid listings are temporarily unavailable. Please contact support.');
+        }
+
+        if ($hasPaymentRequiredCol) $columns[] = 'payment_required';
+        if ($hasPaymentAmountCol) $columns[] = 'payment_amount';
+        if ($hasPaymentMethodCol) $columns[] = 'payment_method';
+        if ($hasPaymentReferenceCol) $columns[] = 'payment_reference';
+        if ($hasPaymentProofPathCol) $columns[] = 'payment_proof_path';
+        if ($hasPaymentStatusCol) $columns[] = 'payment_status';
+        if ($hasPaymentSubmittedAtCol) $columns[] = 'payment_submitted_at';
+
+        $hasIsFeaturedColumn = tableColumnExists($db, 'car_listings', 'is_featured');
+        if ($hasIsFeaturedColumn) {
+            $columns[] = 'is_featured';
+        }
         
         if ($hasDealerId) {
             $columns[] = 'dealer_id';
@@ -3516,15 +3542,17 @@ function submitListing($db) {
             $listingEmailToken,
             $listingValidationEmail,
             $listingEmailExpiry,
-            $guestListingExpiresAt,
-            $paymentRequired ? 1 : 0,
-            $paymentRequired ? $payableAmount : 0,
-            $paymentRequired ? $paymentMethod : null,
-            $paymentRequired ? $paymentReference : null,
-            $paymentProofPath,
-            $paymentStatus,
-            $paymentSubmittedAt
+            $guestListingExpiresAt
         ];
+
+        if ($hasPaymentRequiredCol) $values[] = $paymentRequired ? 1 : 0;
+        if ($hasPaymentAmountCol) $values[] = $paymentRequired ? $payableAmount : 0;
+        if ($hasPaymentMethodCol) $values[] = $paymentRequired ? $paymentMethod : null;
+        if ($hasPaymentReferenceCol) $values[] = $paymentRequired ? $paymentReference : null;
+        if ($hasPaymentProofPathCol) $values[] = $paymentProofPath;
+        if ($hasPaymentStatusCol) $values[] = $paymentStatus;
+        if ($hasPaymentSubmittedAtCol) $values[] = $paymentSubmittedAt;
+        if ($hasIsFeaturedColumn) $values[] = ($listingType === 'featured') ? 1 : 0;
         
         if ($hasDealerId) {
             $values[] = null; // dealer_id is null for now
@@ -3533,7 +3561,7 @@ function submitListing($db) {
         $stmt->execute($values);
         $listingId = $db->lastInsertId();
 
-        if ($paymentRequired) {
+        if ($paymentRequired && $canPersistPaymentFields) {
             $payStmt = $db->prepare("INSERT INTO payments (listing_id, user_id, user_name, user_email, service_type, amount, payment_method, reference, proof_path, status, created_at) VALUES (?, ?, ?, ?, 'listing_submission', ?, ?, ?, ?, 'pending', NOW())");
             $payStmt->execute([
                 (int)$listingId,
@@ -8261,9 +8289,10 @@ function getListingRestrictions($db) {
         $maxRegisteredListings = (int)getPlatformSetting($db, 'listing_maxRegisteredListings', 10);
         $requireListingEmailValidation = (bool)getPlatformSetting($db, 'listing_requireEmailValidation', true);
         $guestListingValidityDays = max(1, (int)getPlatformSetting($db, 'listing_expiryDays', 30));
+        $featuredBonusVisibilityDays = max(0, (int)getPlatformSetting($db, 'listing_featuredBonusDays', 15));
         $paymentsEnabled = (bool)getPlatformSetting($db, 'listing_paymentsEnabled', false);
         $freeListingPrice = max(0, (float)getPlatformSetting($db, 'listing_freeListingPrice', 0));
-        $featuredListingPrice = max(0, (float)getPlatformSetting($db, 'listing_featuredPrice', 15000));
+        $featuredListingPrice = max(0, (float)getPlatformSetting($db, 'listing_featuredPrice', 0));
         $paymentMethodsRaw = (string)getPlatformSetting($db, 'listing_paymentMethods', 'mobile_money,bank_transfer');
         $paymentMethods = array_values(array_filter(array_map('trim', explode(',', $paymentMethodsRaw))));
         if (empty($paymentMethods)) {
@@ -8321,6 +8350,7 @@ function getListingRestrictions($db) {
                 'allow_guest_listings' => $allowGuestListings,
                 'max_guest_listings' => $maxGuestListings,
                 'guest_listing_validity_days' => $guestListingValidityDays,
+                'featured_bonus_visibility_days' => $featuredBonusVisibilityDays,
                 'max_registered_listings' => $maxRegisteredListings,
                 'payments_enabled' => $paymentsEnabled,
                 'free_listing_price' => $freeListingPrice,

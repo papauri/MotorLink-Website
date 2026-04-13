@@ -966,6 +966,10 @@
     min-width: 140px;
 }
 
+#sellCarForm.on-final-step #nextBtn {
+    display: none !important;
+}
+
 #prevBtn {
     display: none;
 }

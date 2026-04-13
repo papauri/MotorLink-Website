@@ -26,7 +26,8 @@ class SellManager {
             max_registered_listings: 10,
             payments_enabled: false,
             free_listing_price: 0,
-            featured_listing_price: 15000,
+            featured_listing_price: 0,
+            featured_bonus_visibility_days: 15,
             payment_methods: ['mobile_money', 'bank_transfer'],
             payment_instructions: '',
             payment_reference_prefix: 'ML',
@@ -134,6 +135,7 @@ class SellManager {
         const featuredMeta = document.getElementById('featuredListingMeta');
         const freeFeatureValidity = document.getElementById('freeFeatureValidity');
         const freeFeaturePolicy = document.getElementById('freeFeaturePolicy');
+        const featuredFeatureVisibility = document.getElementById('featuredFeatureVisibility');
         const freePriceEl = document.getElementById('freeListingPrice');
         const featuredPriceEl = document.getElementById('featuredListingPrice');
         const listingTypeInput = document.getElementById('listingTypeInput');
@@ -144,6 +146,8 @@ class SellManager {
         const dayLabel = validityDays === 1 ? 'day' : 'days';
         const maxGuestListings = Number(this.listingRestrictions.max_guest_listings || 1);
         const listingLabel = maxGuestListings === 1 ? 'listing' : 'listings';
+        const featuredBonusDays = Math.max(0, Number(this.listingRestrictions.featured_bonus_visibility_days || 15));
+        const featuredVisibilityDays = validityDays + featuredBonusDays;
         const paymentEnabled = !!this.listingRestrictions.payments_enabled;
         const freePrice = Number(this.listingRestrictions.free_listing_price || 0);
         const featuredPrice = Number(this.listingRestrictions.featured_listing_price || 0);
@@ -156,7 +160,7 @@ class SellManager {
         if (featuredPriceEl) {
             featuredPriceEl.textContent = paymentEnabled && featuredPrice > 0
                 ? `MWK ${Math.round(featuredPrice).toLocaleString()}`
-                : 'MWK 15,000';
+                : 'FREE';
         }
 
         // Default state for authenticated users
@@ -169,6 +173,9 @@ class SellManager {
         }
         if (freeFeaturePolicy) {
             freeFeaturePolicy.innerHTML = '<i class="fas fa-check"></i> Basic listing features';
+        }
+        if (featuredFeatureVisibility) {
+            featuredFeatureVisibility.innerHTML = `<i class="fas fa-star"></i> ${featuredVisibilityDays} ${featuredVisibilityDays === 1 ? 'day' : 'days'} visibility`;
         }
 
         freeCard.classList.remove('disabled-option');
@@ -2068,6 +2075,11 @@ removePhoto(index) {
             step.classList.remove('active');
         });
 
+        const form = document.getElementById('sellCarForm');
+        if (form) {
+            form.classList.toggle('on-final-step', this.currentStep === this.totalSteps);
+        }
+
         // Show current step
         const currentStepElement = document.querySelector(`.form-step[data-step="${this.currentStep}"]`);
         if (currentStepElement) {
@@ -2274,7 +2286,7 @@ removePhoto(index) {
         };
         const typePrices = {
             'free': 'FREE',
-            'featured': 'MWK 15,000'
+            'featured': 'FREE'
         };
 
         if (this.listingRestrictions.payments_enabled) {

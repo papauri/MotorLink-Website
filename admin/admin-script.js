@@ -5383,6 +5383,7 @@ async function saveListingSettings() {
         expiryDays: parseInt(document.getElementById('listing-expiry-days').value),
         maxImages: parseInt(document.getElementById('max-images-per-listing').value),
         featuredPrice: parseFloat(document.getElementById('featured-listing-price').value),
+        featuredBonusDays: parseInt(document.getElementById('featured-bonus-days').value || '15'),
         paymentsEnabled: document.getElementById('enable-paid-listings').checked,
         freeListingPrice: parseFloat(document.getElementById('free-listing-price').value || '0'),
         paymentMethods: document.getElementById('payment-methods').value,
@@ -5401,6 +5402,7 @@ async function saveListingSettings() {
 
         if (response.success) {
             admin.showAlert('success', response.message);
+            updateFeaturedLaunchModeBadge();
             debugLog('Saved listing settings:', settings);
         } else {
             admin.showAlert('error', response.message || 'Failed to save settings');
@@ -5688,6 +5690,23 @@ function exportUsers() {
     admin.showAlert('info', 'Export functionality coming soon');
 }
 
+function updateFeaturedLaunchModeBadge() {
+    const priceInput = document.getElementById('featured-listing-price');
+    const badge = document.getElementById('featuredLaunchModeBadge');
+    if (!priceInput || !badge) return;
+
+    const featuredPrice = Number(priceInput.value || 0);
+    if (featuredPrice <= 0) {
+        badge.innerHTML = '<i class="fas fa-bolt"></i> Featured is currently free';
+        badge.style.background = '#ecfdf3';
+        badge.style.color = '#166534';
+    } else {
+        badge.innerHTML = `<i class="fas fa-tag"></i> Featured is paid: MWK ${Math.round(featuredPrice).toLocaleString()}`;
+        badge.style.background = '#eff6ff';
+        badge.style.color = '#1d4ed8';
+    }
+}
+
 // ===== LOAD SETTINGS =====
 
 async function loadSettings() {
@@ -5710,6 +5729,7 @@ async function loadSettings() {
             if (settings['listing_expiryDays']) document.getElementById('listing-expiry-days').value = settings['listing_expiryDays'];
             if (settings['listing_maxImages']) document.getElementById('max-images-per-listing').value = settings['listing_maxImages'];
             if (settings['listing_featuredPrice']) document.getElementById('featured-listing-price').value = settings['listing_featuredPrice'];
+            if (settings['listing_featuredBonusDays'] !== undefined) document.getElementById('featured-bonus-days').value = settings['listing_featuredBonusDays'];
             if (settings['listing_paymentsEnabled'] !== undefined) document.getElementById('enable-paid-listings').checked = settings['listing_paymentsEnabled'];
             if (settings['listing_freeListingPrice'] !== undefined) document.getElementById('free-listing-price').value = settings['listing_freeListingPrice'];
             if (settings['listing_paymentMethods'] !== undefined) document.getElementById('payment-methods').value = settings['listing_paymentMethods'];
@@ -5718,6 +5738,7 @@ async function loadSettings() {
             if (settings['listing_maxRegisteredListings'] !== undefined) document.getElementById('max-listings-registered').value = settings['listing_maxRegisteredListings'];
             if (settings['listing_maxGuestListings'] !== undefined) document.getElementById('max-listings-guest').value = settings['listing_maxGuestListings'];
             if (settings['listing_requireEmailValidation'] !== undefined) document.getElementById('require-listing-email-validation').checked = settings['listing_requireEmailValidation'];
+            updateFeaturedLaunchModeBadge();
 
             // User Settings
             if (settings['user_requireEmailVerification'] !== undefined) document.getElementById('require-email-verification').checked = settings['user_requireEmailVerification'];
@@ -6522,4 +6543,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // Make admin dashboard instance globally accessible
 window.adminDashboard = new AdminDashboard();
 const admin = window.adminDashboard;
+
+const featuredListingPriceInput = document.getElementById('featured-listing-price');
+if (featuredListingPriceInput && !featuredListingPriceInput.hasAttribute('data-launch-badge-bound')) {
+    featuredListingPriceInput.setAttribute('data-launch-badge-bound', 'true');
+    featuredListingPriceInput.addEventListener('input', updateFeaturedLaunchModeBadge);
+    featuredListingPriceInput.addEventListener('change', updateFeaturedLaunchModeBadge);
+    updateFeaturedLaunchModeBadge();
+}
 debugLog('Admin dashboard initialized');
