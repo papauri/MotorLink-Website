@@ -64,6 +64,16 @@ const getAdminAPIUrl = () => {
 
 const ADMIN_API_BASE = getAdminAPIUrl();
 
+function adminHandleImageFallback(imgEl, iconClass) {
+    if (!imgEl) return;
+    imgEl.onerror = null;
+    const container = imgEl.closest('.car-image-thumb');
+    if (!container) return;
+
+    const safeClass = String(iconClass || 'text-muted').replace(/[^a-zA-Z0-9_\- ]/g, '').trim();
+    container.innerHTML = `<i class="fas fa-car ${safeClass}"></i>`;
+}
+
 // Debug logger - only logs when DEBUG mode is enabled
 const debugLog = (...args) => {
     if (typeof CONFIG !== 'undefined' && CONFIG.DEBUG) {
@@ -1400,8 +1410,8 @@ displayGuestListingsTable(cars) {
                 <td>
                     <div class="car-image-thumb" style="position:relative;display:inline-block;">
                         ${listingImage ?
-                            `<img src="${this.getSafeUploadUrl(listingImage)}" alt="${this.escapeHtml(car.title || 'Listing image')}"
-                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car text-muted\'></i>';" style="max-width:72px;max-height:54px;border-radius:6px;">${imageTypeBadge}` :
+                                `<img src="${this.getSafeUploadUrl(listingImage)}" alt="${this.escapeHtml(car.title || 'Listing image')}"
+                                    onerror="adminHandleImageFallback(this, 'text-muted')" style="max-width:72px;max-height:54px;border-radius:6px;">${imageTypeBadge}` :
                             `<i class="fas fa-car text-muted"></i>`
                         }
                     </div>
@@ -1464,8 +1474,8 @@ displayGuestListingsTable(cars) {
                 <td>
                     <div class="car-image-thumb">
                         ${listingImage ?
-                            `<img src="${this.getSafeUploadUrl(listingImage)}" alt="${this.escapeHtml(car.title)}"
-                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car text-warning\'></i>';" style="max-width:72px;max-height:54px;border-radius:6px;">` :
+                                `<img src="${this.getSafeUploadUrl(listingImage)}" alt="${this.escapeHtml(car.title)}"
+                                    onerror="adminHandleImageFallback(this, 'text-warning')" style="max-width:72px;max-height:54px;border-radius:6px;">` :
                             `<i class="fas fa-car text-warning"></i>`
                         }
                     </div>
@@ -1557,8 +1567,8 @@ displayGuestListingsTable(cars) {
                 <td>
                     <div class="car-image-thumb">
                         ${(car.featured_image || car.primary_image || car.fallback_image) ? 
-                            `<img src="${this.getSafeUploadUrl(car.featured_image || car.primary_image || car.fallback_image)}" alt="${this.escapeHtml(car.title)}" 
-                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car text-danger\'></i>';" style="max-width:60px;max-height:45px;border-radius:4px;">
+                                `<img src="${this.getSafeUploadUrl(car.featured_image || car.primary_image || car.fallback_image)}" alt="${this.escapeHtml(car.title)}" 
+                                    onerror="adminHandleImageFallback(this, 'text-danger')" style="max-width:60px;max-height:45px;border-radius:4px;">
                             ` :
                             `<i class="fas fa-car text-danger"></i>`
                         }
@@ -4185,8 +4195,8 @@ async filterMakesModels() {
                 <td class="car-image-cell">
                     <div class="car-image-thumb">
                         ${listingImage ? 
-                            `<img src="${this.getSafeUploadUrl(listingImage)}" alt="${this.escapeHtml(car.title)}" 
-                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car car-image-placeholder\'></i>';" style="max-width:84px;max-height:60px;border-radius:6px;">` :
+                                `<img src="${this.getSafeUploadUrl(listingImage)}" alt="${this.escapeHtml(car.title)}" 
+                                    onerror="adminHandleImageFallback(this, 'car-image-placeholder')" style="max-width:84px;max-height:60px;border-radius:6px;">` :
                             `<i class="fas fa-car car-image-placeholder"></i>`
                         }
                     </div>
@@ -4272,8 +4282,8 @@ async filterMakesModels() {
                 <td class="car-image-cell">
                     <div class="car-image-thumb">
                         ${(car.featured_image || car.primary_image || car.fallback_image) ?
-                            `<img src="${this.getSafeUploadUrl(car.featured_image || car.primary_image || car.fallback_image)}" alt="${this.escapeHtml(car.title)}"
-                                  onerror="this.onerror=null;this.closest('.car-image-thumb').innerHTML='<i class=\'fas fa-car car-image-placeholder\'></i>';" style="max-width:60px;max-height:45px;border-radius:4px;">` :
+                                `<img src="${this.getSafeUploadUrl(car.featured_image || car.primary_image || car.fallback_image)}" alt="${this.escapeHtml(car.title)}"
+                                    onerror="adminHandleImageFallback(this, 'car-image-placeholder')" style="max-width:60px;max-height:45px;border-radius:4px;">` :
                             `<i class="fas fa-car car-image-placeholder"></i>`
                         }
                     </div>
@@ -5307,7 +5317,7 @@ async filterMakesModels() {
                 .split('/')
                 .map(part => encodeURIComponent(part))
                 .join('/');
-            return `../uploads/${relativePath}`;
+            return `image-proxy.php?path=${relativePath}`;
         }
 
         if (normalized.includes('/uploads/')) {
@@ -5315,14 +5325,14 @@ async filterMakesModels() {
                 .split('/')
                 .map(part => encodeURIComponent(part))
                 .join('/');
-            return `../uploads/${relativePath}`;
+            return `image-proxy.php?path=${relativePath}`;
         }
 
         const relativePath = normalized
             .split('/')
             .map(part => encodeURIComponent(part))
             .join('/');
-        return `../uploads/${relativePath}`;
+        return `image-proxy.php?path=${relativePath}`;
     }
 
     showAlert(type, message) {

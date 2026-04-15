@@ -2549,27 +2549,40 @@ body {
     
     /* Admin Header - Mobile */
     .admin-header {
-        position: sticky;
+        position: fixed !important;
         top: 0;
-        z-index: 999;
+        left: 0;
+        right: 0;
+        z-index: 11000;
         height: 56px;
         min-height: 56px;
-        padding: 0 12px 0 56px; /* 56px left = space for .admin-sidebar-toggle FAB */
+        padding: 0 16px 0 60px; /* 60px left = space for hamburger toggle */
         background: #fff;
         border-bottom: 2px solid #e8f5e9;
         box-shadow: 0 2px 8px rgba(0, 200, 83, 0.1);
+        flex-wrap: nowrap !important;
     }
 
     .header-left h1,
     .admin-header #pageTitle {
-        font-size: 15px;
-        font-weight: 700;
-        color: #1a1a1a;
+        font-size: 17px;
+        font-weight: 800;
+        color: #111;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: calc(100vw - 160px); /* prevent overlap with avatar */
+        max-width: calc(100vw - 140px); /* prevent overlap with avatar */
         line-height: 56px;
+        letter-spacing: -0.01em;
+    }
+
+    .header-right {
+        gap: 8px !important;
+        flex-shrink: 0;
+    }
+
+    .header-stats {
+        display: none !important;
     }
 
     /* Compact user pill on mobile */
@@ -3037,6 +3050,180 @@ body {
         border: 1px solid #e5e7eb;
         background: #f8fafc;
     }
+
+    /* Denser hierarchy for account/payment/service tables */
+    #usersTable tr,
+    #adminsTable tr,
+    #garagesTable tr,
+    #dealersTable tr,
+    #carHireTable tr,
+    #pendingGaragesTable tr,
+    #pendingDealersTable tr,
+    #pendingCarHireTable tr,
+    #paymentsTable tr,
+    #freeListingsPaymentsTable tr,
+    #activityLogsTable tr {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 10px;
+        align-items: start;
+    }
+
+    #usersTable td,
+    #adminsTable td,
+    #garagesTable td,
+    #dealersTable td,
+    #carHireTable td,
+    #pendingGaragesTable td,
+    #pendingDealersTable td,
+    #pendingCarHireTable td,
+    #paymentsTable td,
+    #freeListingsPaymentsTable td,
+    #activityLogsTable td {
+        grid-column: 1 / -1;
+    }
+
+    /* Identity line (name/business/title) */
+    #usersTable td:nth-child(3),
+    #adminsTable td:nth-child(2),
+    #garagesTable td:nth-child(2),
+    #dealersTable td:nth-child(2),
+    #carHireTable td:nth-child(2),
+    #pendingGaragesTable td:nth-child(2),
+    #pendingDealersTable td:nth-child(2),
+    #pendingCarHireTable td:nth-child(2),
+    #freeListingsPaymentsTable td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 1;
+        font-weight: 700;
+        color: #0f172a;
+        border-bottom: 0;
+        padding-top: 4px;
+    }
+
+    /* ID / status chip at top-right */
+    #usersTable td:nth-child(1),
+    #adminsTable td:nth-child(1),
+    #garagesTable td:nth-child(1),
+    #dealersTable td:nth-child(1),
+    #carHireTable td:nth-child(1),
+    #pendingGaragesTable td:nth-child(1),
+    #pendingDealersTable td:nth-child(1),
+    #pendingCarHireTable td:nth-child(1),
+    #paymentsTable td:nth-child(1),
+    #freeListingsPaymentsTable td:nth-child(1) {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+        border-bottom: 0;
+        padding-top: 4px;
+        color: #065f46;
+        background: #e8f5e9;
+        border: 1px solid #cdebd7;
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 0.74rem;
+        font-weight: 700;
+        min-height: auto;
+    }
+
+    /* Users table avatar + name compact hero */
+    #usersTable tr {
+        grid-template-columns: 62px minmax(0, 1fr) auto;
+    }
+
+    #usersTable td:nth-child(2) {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        border-bottom: 0;
+        padding: 2px 0 0;
+    }
+
+    #usersTable td:nth-child(3) {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    #usersTable td:nth-child(1) {
+        grid-column: 3;
+        grid-row: 1;
+    }
+
+    #usersTable td:nth-child(2)::before,
+    #usersTable td:nth-child(3)::before,
+    #adminsTable td:nth-child(2)::before,
+    #garagesTable td:nth-child(2)::before,
+    #dealersTable td:nth-child(2)::before,
+    #carHireTable td:nth-child(2)::before,
+    #pendingGaragesTable td:nth-child(2)::before,
+    #pendingDealersTable td:nth-child(2)::before,
+    #pendingCarHireTable td:nth-child(2)::before,
+    #freeListingsPaymentsTable td:nth-child(2)::before {
+        display: none;
+    }
+
+    #usersTable td:nth-child(2) img,
+    #usersTable td:nth-child(2) .user-avatar,
+    #usersTable td:nth-child(2) .avatar {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        object-fit: cover;
+    }
+
+    /* Payments emphasis: amount + status on top row */
+    #paymentsTable td:nth-child(4) {
+        grid-column: 1;
+        grid-row: 1;
+        font-weight: 800;
+        color: #0f766e;
+        font-size: 1rem;
+        border-bottom: 0;
+        padding-top: 4px;
+    }
+
+    #paymentsTable td:nth-child(7) {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+        border-bottom: 0;
+        padding-top: 4px;
+    }
+
+    #paymentsTable td:nth-child(4)::before,
+    #paymentsTable td:nth-child(7)::before {
+        display: none;
+    }
+
+    /* Logs: action first, time chip on right */
+    #activityLogsTable td:nth-child(3) {
+        grid-column: 1;
+        grid-row: 1;
+        font-weight: 700;
+        color: #1f2937;
+        border-bottom: 0;
+        padding-top: 4px;
+    }
+
+    #activityLogsTable td:nth-child(1) {
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
+        border-bottom: 0;
+        padding-top: 4px;
+        font-size: 0.74rem;
+        color: #334155;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        border-radius: 999px;
+        padding: 3px 8px;
+        min-height: auto;
+    }
+
+    #activityLogsTable td:nth-child(3)::before,
+    #activityLogsTable td:nth-child(1)::before {
+        display: none;
+    }
     
     /* Action Buttons in Tables */
     .action-btn {
@@ -3231,8 +3418,9 @@ body {
 /* Extra Small Mobile Devices */
 @media (max-width: 480px) {
     .admin-header #pageTitle {
-        font-size: 0.95rem;
-        max-width: calc(100vw - 130px);
+        font-size: 1rem;
+        font-weight: 800;
+        max-width: calc(100vw - 110px);
     }
     
     .login-form {
@@ -3381,9 +3569,9 @@ body {
     .admin-sidebar-toggle {
         display: flex !important;
         position: fixed !important;
-        top: 12px !important;
-        right: 12px !important;
-        left: auto !important;
+        top: 10px !important;
+        left: 12px !important;
+        right: auto !important;
         z-index: 13000 !important;
         width: 44px !important;
         height: 44px !important;
@@ -3408,21 +3596,43 @@ body {
         box-sizing: border-box !important;
     }
     .admin-header {
-        padding: 0 12px !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 11000 !important;
+        padding: 0 12px 0 56px !important;
         min-height: 56px !important;
+        height: 56px !important;
         font-size: 1rem !important;
-        flex-wrap: wrap !important;
+        flex-wrap: nowrap !important;
+        background: #fff !important;
+        border-bottom: 2px solid #e8f5e9 !important;
+        box-shadow: 0 2px 8px rgba(0, 200, 83, 0.1) !important;
     }
     .header-left {
         gap: 8px !important;
+        flex: 1;
+        min-width: 0;
     }
-    .header-left h1 {
-        font-size: 1.1rem !important;
+    .header-left h1,
+    .header-left h1#pageTitle {
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
+        color: #111 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        letter-spacing: -0.01em !important;
     }
     .header-right {
         gap: 8px !important;
+        flex-shrink: 0 !important;
     }
     .header-stats {
+        display: none !important;
+    }
+    .user-menu span#headerAdminName {
         display: none !important;
     }
     .sidebar-header {
