@@ -18,6 +18,7 @@
     min-height: calc(100vh - 70px);
     margin-top: 70px;
     background: #f5f5f5;
+    overflow-x: hidden;
 }
 
 /* Sidebar */
@@ -88,6 +89,7 @@
 /* Main Content */
 .dashboard-main {
     flex: 1;
+    min-width: 0;
     margin-left: 260px;
     padding: 30px;
     max-width: 1400px;
@@ -479,8 +481,14 @@
 
 .inventory-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 24px;
+}
+
+@media (min-width: 1200px) {
+    .inventory-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 380px));
+    }
 }
 
 .car-card {
@@ -923,6 +931,66 @@
         grid-template-columns: 1fr;
     }
 
+    /* Horizontal card layout - image left 36%, details right 64% */
+    .car-card {
+        display: flex;
+        flex-direction: row;
+        border: 1.5px solid #d0dbe8;
+        min-height: auto;
+    }
+
+    .car-card .car-image {
+        width: 36%;
+        min-width: 88px;
+        height: auto;
+        min-height: 152px;
+        flex-shrink: 0;
+    }
+
+    .car-card .car-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .car-card .car-placeholder {
+        height: 100%;
+        min-height: 152px;
+    }
+
+    .car-card .car-details {
+        flex: 1;
+        width: 64%;
+        padding: 10px 12px;
+        overflow: hidden;
+    }
+
+    .car-card .car-details h3 {
+        font-size: 14px;
+        margin-bottom: 3px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .car-card .car-year-make {
+        font-size: 11px;
+        margin-bottom: 5px;
+    }
+
+    .car-card .car-price {
+        font-size: 15px;
+        margin-bottom: 5px;
+    }
+
+    .car-card .car-meta {
+        font-size: 11px;
+        margin-bottom: 6px;
+        padding-top: 4px;
+        flex-wrap: wrap;
+        gap: 3px;
+    }
+
     .inventory-filters {
         flex-direction: column;
     }
@@ -950,7 +1018,16 @@
     }
 
     .card-actions {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .card-actions .btn {
+        flex: 0 1 auto;
+        padding: 4px 7px;
+        font-size: 0.68rem;
+        min-height: auto !important;
     }
 
     .notification {

@@ -233,7 +233,7 @@ function renderCompanyHeader(company) {
                 </div>
             ` : ''}
 
-            <div class="key-features">
+            <div class="car-hire-stats">
                 ${totalVehicles > 0 ? `
                     <div class="feature-box">
                         <i class="fas fa-car"></i>
@@ -430,14 +430,9 @@ function renderContactCard(company) {
         // Regular Services
         if (services.length > 0) {
             servicesHTML += services.map(service => `
-                <div class="service-item fancy">
-                    <div class="service-icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="service-content">
-                        <span class="service-name">${escapeHtml(service)}</span>
-                        <span class="service-badge">Available</span>
-                    </div>
+                <div class="service-item">
+                    <i class="fas fa-check"></i>
+                    <span class="service-name">${escapeHtml(service)}</span>
                 </div>
             `).join('');
         }
@@ -445,14 +440,9 @@ function renderContactCard(company) {
         // Special Services
         if (specialServices.length > 0) {
             servicesHTML += specialServices.map(service => `
-                <div class="service-item fancy special">
-                    <div class="service-icon premium">
-                        <i class="fas fa-star"></i>
-                    </div>
-                    <div class="service-content">
-                        <span class="service-name">${escapeHtml(service)}</span>
-                        <span class="service-badge premium">Premium</span>
-                    </div>
+                <div class="service-item special">
+                    <i class="fas fa-star"></i>
+                    <span class="service-name">${escapeHtml(service)}</span>
                 </div>
             `).join('');
         }
@@ -471,27 +461,67 @@ function renderContactCard(company) {
     }
 
     card.innerHTML = `
-        <h3><i class="fas fa-phone-alt"></i> Contact Us</h3>
+        <h3><i class="fas fa-phone-alt"></i> Contact Information</h3>
 
-        <!-- Quick Action Buttons -->
-        <div class="contact-actions">
+        <!-- Contact Details (matches showroom.html structure) -->
+        <div class="contact-info-list">
+            ${company.phone ? `
+                <div class="contact-info-item">
+                    <i class="fas fa-phone-alt"></i>
+                    <div>
+                        <strong>Phone</strong>
+                        <p><a href="tel:${escapeHtml(company.phone)}">${escapeHtml(company.phone)}</a></p>
+                    </div>
+                </div>
+            ` : ''}
+            ${company.email ? `
+                <div class="contact-info-item">
+                    <i class="fas fa-envelope"></i>
+                    <div>
+                        <strong>Email</strong>
+                        <p><a href="mailto:${escapeHtml(company.email)}">${escapeHtml(company.email)}</a></p>
+                    </div>
+                </div>
+            ` : ''}
+            ${company.whatsapp ? `
+                <div class="contact-info-item">
+                    <i class="fab fa-whatsapp" style="color:#25d366;"></i>
+                    <div>
+                        <strong>WhatsApp</strong>
+                        <p><a href="https://wa.me/${company.whatsapp.replace(/[^0-9]/g, '')}" target="_blank">${escapeHtml(company.whatsapp)}</a></p>
+                    </div>
+                </div>
+            ` : ''}
+            ${company.website ? `
+                <div class="contact-info-item">
+                    <i class="fas fa-globe"></i>
+                    <div>
+                        <strong>Website</strong>
+                        <p><a href="${escapeHtml(company.website)}" target="_blank" rel="noopener">Visit Website</a></p>
+                    </div>
+                </div>
+            ` : ''}
+        </div>
+
+        <!-- Quick Action Buttons (matches showroom dealer-quick-actions) -->
+        <div class="dealer-quick-actions contact-actions">
+            ${company.phone ? `
+                <a href="tel:${escapeHtml(company.phone)}" class="quick-action-btn">
+                    <i class="fas fa-phone"></i> Call
+                </a>
+            ` : ''}
             ${company.whatsapp ? `
                 <a href="https://wa.me/${company.whatsapp.replace(/[^0-9]/g, '')}" class="quick-action-btn whatsapp" target="_blank">
                     <i class="fab fa-whatsapp"></i> WhatsApp
                 </a>
             ` : ''}
             ${company.email ? `
-                <a href="mailto:${company.email}" class="quick-action-btn">
+                <a href="mailto:${escapeHtml(company.email)}" class="quick-action-btn">
                     <i class="fas fa-envelope"></i> Email
                 </a>
             ` : ''}
-            ${company.phone ? `
-                <a href="tel:${company.phone}" class="quick-action-btn phone">
-                    <i class="fas fa-phone"></i> Call Now
-                </a>
-            ` : ''}
             ${company.website ? `
-                <a href="${company.website}" class="quick-action-btn website" target="_blank" rel="noopener">
+                <a href="${escapeHtml(company.website)}" class="quick-action-btn website" target="_blank" rel="noopener">
                     <i class="fas fa-globe"></i> Website
                 </a>
             ` : ''}
@@ -500,28 +530,28 @@ function renderContactCard(company) {
         ${hasSocialMedia ? `
             <div class="dealer-social-section">
                 <h4><i class="fas fa-share-alt"></i> Connect With Us</h4>
-                <div class="social-links">
+                <div class="social-icons-clean">
                     ${company.facebook_url ? `
-                        <a href="${company.facebook_url}" target="_blank" rel="noopener noreferrer"
-                           class="social-link facebook" title="Facebook">
+                        <a href="${escapeHtml(company.facebook_url)}" target="_blank" rel="noopener noreferrer"
+                           class="facebook" title="Facebook">
                             <i class="fab fa-facebook-f"></i>
                         </a>
                     ` : ''}
                     ${company.instagram_url ? `
-                        <a href="${company.instagram_url}" target="_blank" rel="noopener noreferrer"
-                           class="social-link instagram" title="Instagram">
+                        <a href="${escapeHtml(company.instagram_url)}" target="_blank" rel="noopener noreferrer"
+                           class="instagram" title="Instagram">
                             <i class="fab fa-instagram"></i>
                         </a>
                     ` : ''}
                     ${company.twitter_url ? `
-                        <a href="${company.twitter_url}" target="_blank" rel="noopener noreferrer"
-                           class="social-link twitter" title="Twitter/X">
+                        <a href="${escapeHtml(company.twitter_url)}" target="_blank" rel="noopener noreferrer"
+                           class="twitter" title="Twitter/X">
                             <i class="fab fa-twitter"></i>
                         </a>
                     ` : ''}
                     ${company.linkedin_url ? `
-                        <a href="${company.linkedin_url}" target="_blank" rel="noopener noreferrer"
-                           class="social-link linkedin" title="LinkedIn">
+                        <a href="${escapeHtml(company.linkedin_url)}" target="_blank" rel="noopener noreferrer"
+                           class="linkedin" title="LinkedIn">
                             <i class="fab fa-linkedin-in"></i>
                         </a>
                     ` : ''}

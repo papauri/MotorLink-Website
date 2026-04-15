@@ -1740,8 +1740,8 @@
     text-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Key Features */
-.key-features {
+/* Car Hire Stats (key stats bar) */
+.car-hire-stats {
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
@@ -2740,8 +2740,8 @@
         line-height: 1.6;
     }
     
-    /* Enhance key features styling on mobile to match showroom-stats - FIX OVERFLOW */
-    .key-features {
+    /* Car hire stats mobile - FIX OVERFLOW */
+    .car-hire-stats {
         display: flex !important;
         flex-wrap: wrap !important;
         justify-content: center !important;
@@ -2753,7 +2753,7 @@
         box-sizing: border-box;
     }
 
-    .key-features .feature-box {
+    .car-hire-stats .feature-box {
       background: rgba(0, 195, 75, 0.28) !important;
         backdrop-filter: blur(12px) !important;
       border: 1.5px solid rgba(0, 255, 110, 0.35) !important;
@@ -2768,42 +2768,105 @@
         min-width: 0;
     }
 
-    .key-features .feature-box:hover {
+    .car-hire-stats .feature-box:hover {
       background: rgba(0, 210, 80, 0.42) !important;
         transform: translateY(-2px) !important;
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15) !important;
     }
 
-    .key-features .feature-box i {
+    .car-hire-stats .feature-box i {
         font-size: 1.4rem !important;
         margin-bottom: 4px !important;
     }
 
-    .key-features .feature-box strong {
+    .car-hire-stats .feature-box strong {
         font-size: 0.8rem !important;
         font-weight: 700 !important;
     }
 
-    .key-features .feature-box small {
+    .car-hire-stats .feature-box small {
         font-size: 0.7rem !important;
         opacity: 0.9 !important;
     }
 
-    .key-features .feature-box:nth-child(n+3) {
+    .car-hire-stats .feature-box:nth-child(n+3) {
         display: none !important;
     }
     
     .fleet-grid {
         grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    /* Horizontal card layout on mobile: image left, info right */
+    .fleet-card {
+        flex-direction: row;
+        min-height: auto;
+        border: 1.5px solid #d0dbe8;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .fleet-image {
+        width: 36%;
+        min-width: 90px;
+        height: auto;
+        min-height: 155px;
+        flex-shrink: 0;
+    }
+
+    .fleet-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Keep available / unavailable badge readable */
+    .available-badge,
+    .unavailable-badge,
+    .maintenance-badge,
+    .not-available-badge {
+        font-size: 0.6rem;
+        padding: 3px 7px;
+        border-radius: 10px;
+    }
+
+    .reg-badge {
+        font-size: 0.6rem;
+        padding: 3px 7px;
+    }
+
+    .fleet-info {
+        flex: 1;
+        width: 64%;
+        padding: 10px;
+        overflow: hidden;
+    }
+
+    .fleet-title {
+        font-size: 0.88rem;
+        -webkit-line-clamp: 1;
+        min-height: auto;
+        margin-bottom: 5px;
     }
     
-    /* Make fleet specs horizontal 2-column grid on mobile to fit more items */
+    /* Compact fleet specs in 2 columns */
     .fleet-specs {
         grid-template-columns: repeat(2, 1fr);
-      gap: 4px;
+        gap: 3px;
         overflow-x: visible;
-      padding-bottom: 3px;
-      min-height: 56px;
+        padding-bottom: 3px;
+        min-height: auto;
+    }
+    
+    /* Hide features section to keep card compact on mobile */
+    .fleet-features {
+        display: none !important;
+    }
+
+    .fleet-pricing {
+        padding: 6px 8px;
+        min-height: auto;
+        margin-top: 6px;
     }
     
     .spec-item {
@@ -2970,8 +3033,8 @@
       display: none !important;
     }
 
-    /* Extra compact key-features on very small screens */
-    .key-features {
+    /* Extra compact car-hire-stats on very small screens */
+    .car-hire-stats {
         gap: 8px;
         max-width: 100%;
         display: flex !important;
@@ -2980,7 +3043,7 @@
         margin-top: 12px !important;
     }
 
-    .key-features .feature-box {
+    .car-hire-stats .feature-box {
         padding: 10px 8px !important;
         gap: 8px !important;
       background: rgba(0, 195, 75, 0.28) !important;
@@ -2991,21 +3054,21 @@
         transition: all 0.3s ease !important;
     }
 
-    .key-features .feature-box:active {
+    .car-hire-stats .feature-box:active {
       background: rgba(0, 210, 80, 0.42) !important;
     }
 
-    .key-features .feature-box i {
+    .car-hire-stats .feature-box i {
         font-size: 1.3rem !important;
         margin-bottom: 2px !important;
     }
 
-    .key-features .feature-box strong {
+    .car-hire-stats .feature-box strong {
         font-size: 0.8rem !important;
         margin-bottom: 2px !important;
     }
 
-    .key-features .feature-box small {
+    .car-hire-stats .feature-box small {
         font-size: 0.65rem !important;
         opacity: 0.9 !important;
     }

@@ -1189,20 +1189,53 @@ class AICarChat {
                     btn.classList.add('ai-chat-feedback-btn-muted');
                 }
             });
-            
+
             // Show thank you message
             const thankYou = document.createElement('span');
             thankYou.className = 'ai-chat-feedback-thanks';
-            thankYou.textContent = 'Thank you for your feedback!';
+            thankYou.textContent = feedback === 'helpful'
+                ? '✓ Thanks! I\'ll remember this.'
+                : '✓ Got it — I\'ll do better.';
             feedbackContainer.appendChild(thankYou);
-            
-            // Remove thank you after 3 seconds
-            setTimeout(() => {
-                thankYou.remove();
-            }, 3000);
+            setTimeout(() => thankYou.remove(), 3500);
         }
-        
-        // Send feedback to server (optional - for analytics)
+
+        // Extract AI response text from this message element
+        const bubble = messageElement.querySelector('.ai-chat-message-bubble');
+        const aiResponseText = bubble ? (bubble.innerText || bubble.textContent || '').trim() : '';
+
+        // Find the most recent user message that preceded this AI message
+        // Walk conversationHistory backwards from the matching assistant entry
+        let userMessageText = '';
+        let foundAI = false;
+        for (let i = this.conversationHistory.length - 1; i >= 0; i--) {
+            const entry = this.conversationHistory[i];
+            if (!foundAI && entry.role === 'assistant') {
+                // Match by approximate content (first 80 chars)
+                const entrySnip = (entry.content || '').substring(0, 80).toLowerCase();
+                const bubbleSnip = aiResponseText.substring(0, 80).toLowerCase();
+                if (entrySnip === bubbleSnip || i === this.conversationHistory.length - 1) {
+                    foundAI = true;
+                    continue;
+                }
+            }
+            if (foundAI && entry.role === 'user') {
+                userMessageText = (entry.content || '').trim();
+                break;
+            }
+        }
+
+        // Fallback: use the last user message
+        if (!userMessageText) {
+            for (let i = this.conversationHistory.length - 1; i >= 0; i--) {
+                if (this.conversationHistory[i].role === 'user') {
+                    userMessageText = (this.conversationHistory[i].content || '').trim();
+                    break;
+                }
+            }
+        }
+
+        // Send to backend for learning — fire-and-forget
         try {
             await fetch(`${CONFIG.API_URL}?action=ai_chat_feedback`, {
                 method: 'POST',
@@ -1212,21 +1245,19 @@ class AICarChat {
                 },
                 credentials: 'include',
                 body: JSON.stringify({
-                    feedback: feedback,
-                    message_id: messageId
+                    feedback,
+                    user_message: userMessageText,
+                    ai_response:  aiResponseText
                 })
             });
-        } catch (error) {
-            // Silently fail - feedback is optional
-            console.log('Feedback logging failed:', error);
-        }
+        } catch (_) { /* Silently fail — feedback must never block the user */ }
     }
-    
+
     async loadUsageIndicator() {
         if (!this.currentUser) {
             return;
         }
-        
+
         try {
             const response = await fetch(`${CONFIG.API_URL}?action=get_ai_chat_usage_remaining`, {
                 headers: {

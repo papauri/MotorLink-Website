@@ -416,6 +416,11 @@ class PageTransitionManager {
             }
             
             const href = link.getAttribute('href');
+
+            // Skip pure same-page hash navigation (e.g. sidebar links: href="#fleet")
+            if (!href || href.startsWith('#')) {
+                return;
+            }
             
             // Only intercept internal links
             if (href && 
@@ -439,6 +444,11 @@ class PageTransitionManager {
 
     handleNavigation(href) {
         if (this.isTransitioning) return;
+
+        // Never animate same-page hash navigation
+        if (href && href.startsWith('#')) {
+            return;
+        }
         
         this.isTransitioning = true;
         this.showPageLoader('Loading page...');

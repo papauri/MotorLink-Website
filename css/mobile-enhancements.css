@@ -3538,6 +3538,14 @@
         padding: 0 !important;
     }
 
+    /* Brand colors for footer social icons (override generic green above) */
+    .footer .social-links a.soc-facebook  { background: linear-gradient(135deg, #1877f2 0%, #0d5dbf 100%) !important; }
+    .footer .social-links a.soc-twitter   { background: linear-gradient(135deg, #1DA1F2 0%, #0c85d0 100%) !important; }
+    .footer .social-links a.soc-instagram { background: linear-gradient(135deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important; }
+    .footer .social-links a.soc-linkedin  { background: linear-gradient(135deg, #0077b5 0%, #005885 100%) !important; }
+    .footer .social-links a.soc-whatsapp  { background: linear-gradient(135deg, #25d366 0%, #128c7e 100%) !important; }
+    .footer .social-links a.soc-youtube   { background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%) !important; }
+
     .footer-bottom {
         margin-top: 24px !important;
         padding-top: 16px !important;

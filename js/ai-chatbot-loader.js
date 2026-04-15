@@ -122,8 +122,9 @@
                 </div>
             </div>
             <button class="ai-chat-minimized" id="aiChatMinimized">
-                <i class="fas fa-comments"></i>
-                <span>MotorLink AI</span>
+                <span class="ai-min-icon"><i class="fas fa-robot"></i></span>
+                <span class="ai-min-label">MotorLink AI</span>
+                <span class="ai-min-live"></span>
             </button>
             <button class="ai-chat-dismiss" id="aiChatDismiss" title="Hide AI Assistant for this session">
                 <i class="fas fa-times"></i>

@@ -1422,6 +1422,11 @@ try {
             $usage = getUserAIChatUsageRemaining($db, $user['id']);
             sendSuccess(['usage' => $usage]);
             break;
+        case 'ai_chat_feedback':
+            require_once __DIR__ . '/api-common.php';
+            require_once __DIR__ . '/ai-car-chat-api.php';
+            handleAIFeedback($db);
+            break;
         case 'ai_car_chat':
             // Enable error output buffering to catch fatal errors
             ob_start();

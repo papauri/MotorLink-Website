@@ -4620,7 +4620,7 @@ async function loadAIChatbot() {
                     <div class="ai-chat-title">
                         <h3>MotorLink AI Assistant</h3>
                         <p>Your personal assistant</p>
-                        <div class="ai-usage-indicator" id="aiUsageIndicator" style="font-size: 11px; margin-top: 6px; padding: 4px 8px; background: #f5f5f5; border-radius: 12px; display: inline-block;">
+                        <div class="ai-usage-indicator" id="aiUsageIndicator">
                             <span id="aiUsageText">Loading usage...</span>
                         </div>
                     </div>

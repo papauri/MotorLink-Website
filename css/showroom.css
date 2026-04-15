@@ -1306,17 +1306,18 @@
 
 /* Showroom Stats */
 .showroom-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
-    max-width: none;
+    justify-content: center;
+    align-items: stretch;
     margin: 16px auto 0;
     padding: 0;
 }
 
 @media (min-width: 480px) {
     .showroom-stats {
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        flex-wrap: wrap;
     }
 }
 
@@ -1331,6 +1332,8 @@
     gap: 12px;
     text-align: left;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex: 0 1 200px;
+    min-width: 150px;
 }
 
 /* Hero stat cards — distinctly green to match car-hire feature-box */
@@ -2342,45 +2345,41 @@
         margin: 0;
     }
 
-    /* Style showroom-stats to match car-hire feature-box design */
+    /* Style showroom-stats to match car-hire-stats design */
     .showroom-stats {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: center !important;
         gap: 10px !important;
         margin: 16px auto 0 !important;
         width: 100%;
         max-width: 100%;
-        margin-left: auto;
-        margin-right: auto;
         padding: 0 !important;
         box-sizing: border-box;
     }
 
     .showroom-stats .stat-item {
         background: rgba(0, 195, 75, 0.28) !important;
-        border: 1px solid rgba(0, 255, 110, 0.35) !important;
-        border-radius: 10px !important;
-        padding: 10px 8px !important;
-        display: flex !important;
-        align-items: center !important;
-        gap: 8px !important;
+        border: 1.5px solid rgba(0, 255, 110, 0.35) !important;
+        border-radius: 12px !important;
+        padding: 12px 8px !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        width: 100%;
+        flex: 0 1 calc(50% - 5px);
+        min-width: 0;
         max-width: 100%;
         box-sizing: border-box;
         overflow: hidden;
-        min-width: 0;
-        box-shadow: none !important;
     }
 
     .showroom-stats .stat-item:hover {
         background: rgba(0, 210, 80, 0.42) !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15) !important;
     }
 
     .showroom-stats .stat-item i {
-        font-size: 1.3rem !important;
+        font-size: 1.4rem !important;
         margin: 0 !important;
         flex-shrink: 0 !important;
     }
@@ -2442,9 +2441,14 @@
     }
 
     .showroom-stats {
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        display: flex !important;
+        flex-wrap: wrap !important;
         gap: 8px !important;
+        justify-content: center !important;
+    }
+
+    .showroom-stats .stat-item {
+        flex: 0 1 calc(50% - 4px);
     }
 }
 

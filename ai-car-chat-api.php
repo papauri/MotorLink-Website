@@ -213,6 +213,94 @@ function scheduleContinuousLearningForQuery($db, $message) {
  * Provides AI-powered assistance for car-related questions only
  * REQUIRES AUTHENTICATION - users must be logged in to use this feature
  */
+
+/**
+ * Ensure ai_chat_feedback table exists and upsert a feedback record.
+ */
+function handleAIFeedback($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendError('POST method required', 405);
+    }
+
+    // Require auth (getCurrentUser defined in api-common.php, already included by caller)
+    if (!function_exists('getCurrentUser')) {
+        sendError('Server configuration error', 500);
+    }
+    $user = getCurrentUser(true);
+    if (!$user) {
+        sendError('Authentication required', 401);
+    }
+
+    $raw  = file_get_contents('php://input');
+    $data = json_decode($raw, true);
+
+    $feedback    = isset($data['feedback'])     ? trim((string)$data['feedback'])     : '';
+    $userMsg     = isset($data['user_message']) ? trim((string)$data['user_message']) : '';
+    $aiResponse  = isset($data['ai_response'])  ? trim((string)$data['ai_response'])  : '';
+
+    if (!in_array($feedback, ['helpful', 'not-helpful'], true)) {
+        sendError('Invalid feedback value', 400);
+    }
+
+    // Create table on first use (idempotent)
+    try {
+        $db->exec("CREATE TABLE IF NOT EXISTS `ai_chat_feedback` (
+            `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `user_id`      INT UNSIGNED NOT NULL,
+            `feedback`     ENUM('helpful','not-helpful') NOT NULL,
+            `user_message` TEXT         NOT NULL,
+            `ai_response`  MEDIUMTEXT   NOT NULL,
+            `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            INDEX `idx_feedback_type` (`feedback`),
+            INDEX `idx_created`       (`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Exception $e) {
+        error_log('ai_chat_feedback table create error: ' . $e->getMessage());
+        // Non-fatal — still attempt insert below
+    }
+
+    if ($userMsg === '' || $aiResponse === '') {
+        // No context to store; still acknowledge so UI doesn't error
+        sendSuccess(['stored' => false]);
+    }
+
+    try {
+        $stmt = $db->prepare(
+            "INSERT INTO ai_chat_feedback (user_id, feedback, user_message, ai_response)
+             VALUES (?, ?, ?, ?)"
+        );
+        $stmt->execute([$user['id'], $feedback, $userMsg, $aiResponse]);
+        sendSuccess(['stored' => true]);
+    } catch (Exception $e) {
+        error_log('ai_chat_feedback insert error: ' . $e->getMessage());
+        sendSuccess(['stored' => false]);  // Silent — feedback must never block UX
+    }
+}
+
+/**
+ * Load the most-used positive (helpful) Q&A pairs to inject as few-shot examples.
+ * Returns up to $limit rows, preferring recently-rated and frequently-occurring queries.
+ */
+function loadPositiveFeedbackExamples($db, $limit = 4) {
+    try {
+        $stmt = $db->prepare(
+            "SELECT user_message, ai_response
+             FROM ai_chat_feedback
+             WHERE feedback = 'helpful'
+               AND LENGTH(user_message) BETWEEN 10 AND 300
+               AND LENGTH(ai_response)  BETWEEN 30 AND 2000
+             ORDER BY created_at DESC
+             LIMIT ?"
+        );
+        $stmt->execute([(int)$limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Exception $e) {
+        // Table may not exist yet — silently return empty
+        return [];
+    }
+}
+
 function handleAICarChat($db) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendError('POST method required', 405);
@@ -841,6 +929,17 @@ REMEMBER (MANDATORY WORKFLOW):
 7. I focus on cars and MotorLink services - I'll politely redirect other topics
 8. I'm always learning and improving to serve you better
 9. Your satisfaction is my priority! 😊";
+
+        // —— Inject proven high-quality Q&A pairs from user feedback ——
+        $feedbackExamples = loadPositiveFeedbackExamples($db, 4);
+        if ($feedbackExamples) {
+            $examplesText = "\n\nLEARNED EXAMPLES (from users who found these responses helpful — study the style and accuracy):\n";
+            foreach ($feedbackExamples as $i => $ex) {
+                $n = $i + 1;
+                $examplesText .= "\nExample {$n}:\n  User asked: " . $ex['user_message'] . "\n  Good response style: " . substr($ex['ai_response'], 0, 320) . (strlen($ex['ai_response']) > 320 ? '...' : '') . "\n";
+            }
+            $systemPrompt .= $examplesText;
+        }
 
         // Build messages array for OpenAI API
         $messages = [
