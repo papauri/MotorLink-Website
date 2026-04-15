@@ -2560,3 +2560,168 @@
         margin-bottom: 0 !important;
     }
 }
+
+/* ============================================================
+   MOBILE/TABLET CAR-CARDS — Match car-hire fleet-card layout
+   Horizontal: image left, info right (mirrors .fleet-card)
+   All detail sections remain visible, just compacted
+   ============================================================ */
+
+/* Shared horizontal card base for tablet + mobile */
+@media (max-width: 1024px) {
+    .car-card {
+        flex-direction: row !important;
+        align-items: stretch;
+        min-height: auto;
+    }
+
+    .car-image img {
+        object-fit: contain !important;
+        object-position: center !important;
+        padding: 6px;
+    }
+
+    /* Car reference: keep as tiny monospace chip */
+    .car-reference {
+        font-size: 0.65rem !important;
+        margin: 3px 0 !important;
+        color: #999 !important;
+        font-family: 'Courier New', monospace;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Specs grid: 2 columns compact */
+    .car-details-enhanced {
+        margin-bottom: 4px !important;
+    }
+
+    .car-details-enhanced .detail-group {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 2px 6px !important;
+    }
+
+    .detail-item {
+        font-size: 0.72rem !important;
+        gap: 3px !important;
+    }
+
+    .detail-item i {
+        font-size: 0.65rem !important;
+        width: 11px !important;
+    }
+
+    .detail-item span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Features: compact pill row */
+    .car-features {
+        margin-bottom: 2px !important;
+        gap: 3px !important;
+        flex-wrap: wrap;
+    }
+
+    .feature-tag {
+        font-size: 0.62rem !important;
+        padding: 2px 6px !important;
+    }
+
+    /* Meta (views/time): small footer row */
+    .car-meta {
+        margin-top: 4px !important;
+    }
+
+    .car-meta .stat-item {
+        font-size: 0.62rem !important;
+        padding: 2px 4px !important;
+    }
+
+    /* Badges stay small */
+    .car-badge {
+        font-size: 0.5rem !important;
+        padding: 2px 5px !important;
+        top: 8px !important;
+    }
+
+    .car-badge.featured { top: 26px !important; }
+    .image-count { font-size: 0.58rem !important; padding: 2px 4px !important; }
+}
+
+/* Tablet: 2-column grid */
+@media (max-width: 1024px) and (min-width: 769px) {
+    .cars-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 14px;
+    }
+
+    .car-image {
+        width: 38% !important;
+        min-width: 130px !important;
+        height: auto !important;
+        min-height: 195px !important;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%) !important;
+    }
+
+    .car-content {
+        flex: 1 !important;
+        padding: 10px !important;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .car-title {
+        font-size: 0.9rem !important;
+        -webkit-line-clamp: 2 !important;
+        line-clamp: 2 !important;
+        margin-bottom: 4px !important;
+    }
+
+    .car-price-section { margin-bottom: 4px !important; }
+    .car-price { font-size: 1rem !important; margin-bottom: 2px !important; }
+    .car-negotiable { font-size: 0.72rem !important; }
+}
+
+/* Mobile: single-column grid */
+@media (max-width: 768px) {
+    .cars-grid {
+        grid-template-columns: 1fr !important;
+        gap: 10px;
+    }
+
+    .car-image {
+        width: 40% !important;
+        min-width: 112px !important;
+        height: auto !important;
+        min-height: 175px !important;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%) !important;
+    }
+
+    .car-content {
+        flex: 1 !important;
+        padding: 9px !important;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .car-title {
+        font-size: 0.85rem !important;
+        -webkit-line-clamp: 2 !important;
+        line-clamp: 2 !important;
+        margin-bottom: 3px !important;
+    }
+
+    .car-price-section { margin-bottom: 3px !important; }
+    .car-price { font-size: 0.9rem !important; margin-bottom: 1px !important; }
+    .car-negotiable { font-size: 0.68rem !important; }
+}

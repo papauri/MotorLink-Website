@@ -102,14 +102,13 @@ class AICarChat {
     }
 
     bindEvents() {
-        const chatHeader  = document.getElementById('aiChatHeader');
-        const minimizeBtn = document.getElementById('aiChatMinimizeBtn');
-        const closeBtn    = document.getElementById('aiChatCloseBtn');
+        const chatHeader    = document.getElementById('aiChatHeader');
+        const minimizeBtn   = document.getElementById('aiChatMinimizeBtn');
         const chatMinimized = document.getElementById('aiChatMinimized');
-        const chatInput   = document.getElementById('aiChatInput');
-        const chatSendBtn = document.getElementById('aiChatSendBtn');
+        const chatInput     = document.getElementById('aiChatInput');
+        const chatSendBtn   = document.getElementById('aiChatSendBtn');
 
-        // Header click → toggle (skip when drag moved the widget or a button was clicked)
+        // Header click → toggle open/minimise (skip when drag moved the widget or a header button was clicked)
         if (chatHeader) {
             chatHeader.addEventListener('click', (e) => {
                 if (this._lastDragWasMove) return;
@@ -118,6 +117,7 @@ class AICarChat {
             });
         }
 
+        // Chevron-down button → minimise
         if (minimizeBtn) {
             minimizeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -125,28 +125,13 @@ class AICarChat {
             });
         }
 
-        if (closeBtn) {
-            closeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.dismissChat();
-            });
-        }
-
+        // FAB bubble → open chat
         if (chatMinimized) {
             chatMinimized.addEventListener('click', (e) => {
+                if (this._fabDragWasMove) return;
                 e.stopPropagation();
                 e.preventDefault();
                 this.openChat();
-            });
-        }
-
-        // Dismiss button on minimized bubble
-        const dismissBtn = document.getElementById('aiChatDismiss');
-        if (dismissBtn) {
-            dismissBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                this.dismissChat();
             });
         }
 
@@ -177,17 +162,23 @@ class AICarChat {
     initDrag() {
         const widget = document.getElementById('aiCarChatWidget');
         const header = document.getElementById('aiChatHeader');
+        const fabBtn = document.getElementById('aiChatMinimized');
         if (!widget || !header) return;
 
-        let dragging = false;
-        let hasMoved = false;
+        let dragging  = false;
+        let hasMoved  = false;
+        let fromFab   = false;
         let startX, startY, startLeft, startTop;
 
-        const begin = (e) => {
+        const begin = (e, isFab) => {
             if (e.button !== undefined && e.button !== 0) return;
-            if (e.target.closest('.ai-chat-header-actions')) return;
+            if (!isFab && e.target.closest('.ai-chat-header-actions')) return;
+            // FAB drag only on mobile/tablet (≤1024px)
+            if (isFab && window.innerWidth > 1024) return;
+
             dragging = true;
             hasMoved = false;
+            fromFab  = isFab;
 
             const rect = widget.getBoundingClientRect();
             startLeft = rect.left;
@@ -195,13 +186,12 @@ class AICarChat {
             startX    = e.clientX;
             startY    = e.clientY;
 
-            // Switch from bottom/right anchoring to top/left so transform is predictable
             widget.style.bottom = 'auto';
             widget.style.right  = 'auto';
             widget.style.left   = startLeft + 'px';
             widget.style.top    = startTop  + 'px';
             widget.classList.add('dragging');
-            header.setPointerCapture(e.pointerId);
+            e.currentTarget.setPointerCapture(e.pointerId);
         };
 
         const move = (e) => {
@@ -227,19 +217,47 @@ class AICarChat {
             widget.classList.remove('dragging');
 
             if (hasMoved) {
-                sessionStorage.setItem('ai_chat_pos', JSON.stringify({
+                const key = fromFab ? 'ai_fab_pos' : 'ai_chat_pos';
+                sessionStorage.setItem(key, JSON.stringify({
                     left: parseInt(widget.style.left),
                     top:  parseInt(widget.style.top)
                 }));
-                this._lastDragWasMove = true;
-                setTimeout(() => { this._lastDragWasMove = false; }, 100);
+                if (fromFab) {
+                    this._fabDragWasMove = true;
+                    setTimeout(() => { this._fabDragWasMove = false; }, 150);
+                } else {
+                    this._lastDragWasMove = true;
+                    setTimeout(() => { this._lastDragWasMove = false; }, 100);
+                }
             }
+            fromFab = false;
         };
 
-        header.addEventListener('pointerdown', begin);
-        header.addEventListener('pointermove', move);
-        header.addEventListener('pointerup',   end);
+        // Header drag (all screen sizes)
+        header.addEventListener('pointerdown',   (e) => begin(e, false));
+        header.addEventListener('pointermove',   move);
+        header.addEventListener('pointerup',     end);
         header.addEventListener('pointercancel', end);
+
+        // FAB drag (mobile/tablet only — guarded inside begin)
+        if (fabBtn) {
+            fabBtn.addEventListener('pointerdown',   (e) => begin(e, true));
+            fabBtn.addEventListener('pointermove',   move);
+            fabBtn.addEventListener('pointerup',     end);
+            fabBtn.addEventListener('pointercancel', end);
+        }
+
+        // Restore saved header-drag position on reload
+        const savedPos = sessionStorage.getItem('ai_chat_pos');
+        if (savedPos) {
+            try {
+                const pos = JSON.parse(savedPos);
+                widget.style.left   = pos.left + 'px';
+                widget.style.top    = pos.top  + 'px';
+                widget.style.bottom = 'auto';
+                widget.style.right  = 'auto';
+            } catch (_) {}
+        }
     }
 
     toggleChat() {
@@ -251,11 +269,17 @@ class AICarChat {
     }
 
     openChat() {
-        const chatBody    = document.getElementById('aiChatBody');
-        const widget      = document.getElementById('aiCarChatWidget');
+        const chatBody     = document.getElementById('aiChatBody');
+        const widget       = document.getElementById('aiCarChatWidget');
         const minimizedBtn = document.getElementById('aiChatMinimized');
 
         if (chatBody && widget) {
+            // Always open at CSS default position (bottom-left)
+            widget.style.left   = '';
+            widget.style.top    = '';
+            widget.style.bottom = '';
+            widget.style.right  = '';
+
             chatBody.style.display = 'flex';
             widget.classList.remove('minimized');
             if (minimizedBtn) minimizedBtn.style.display = 'none';

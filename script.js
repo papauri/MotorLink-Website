@@ -3052,26 +3052,24 @@ class ShowroomManager {
             if (carsGrid) carsGrid.innerHTML = '';
             if (emptyState) emptyState.style.display = 'none';
 
-            
-            // First, get dealer details
-            const dealerDataResult = await this.fetchJsonWithRetry(`${CONFIG.API_URL}?action=dealers`, {
-                ...(CONFIG.USE_CREDENTIALS && {credentials: 'include'})
-            });
+            // Fetch dealer info and listings in parallel — targeted by ID, not all dealers
+            const credentials = CONFIG.USE_CREDENTIALS ? {credentials: 'include'} : {};
+            const [dealerResult, carsData] = await Promise.all([
+                this.fetchJsonWithRetry(
+                    `${CONFIG.API_URL}?action=dealer_showroom&dealer_id=${this.dealerId}`,
+                    credentials
+                ),
+                this.fetchJsonWithRetry(
+                    `${CONFIG.API_URL}?action=listings&dealer_id=${this.dealerId}`,
+                    credentials
+                )
+            ]);
 
-            if (!dealerDataResult.success) {
-                throw new Error('Failed to load dealer information');
+            if (!dealerResult.success || !dealerResult.dealer) {
+                throw new Error(dealerResult.message || 'Dealer not found');
             }
 
-            // Find the specific dealer
-            this.dealerData = dealerDataResult.dealers.find(dealer => dealer.id == this.dealerId);
-            if (!this.dealerData) {
-                throw new Error('Dealer not found');
-            }
-
-            // Now get cars for this specific dealer
-            const carsData = await this.fetchJsonWithRetry(`${CONFIG.API_URL}?action=listings&dealer_id=${this.dealerId}`, {
-                ...(CONFIG.USE_CREDENTIALS && {credentials: 'include'})
-            });
+            this.dealerData = dealerResult.dealer;
 
             if (carsData.success) {
                 this.allCars = carsData.listings || [];
@@ -3080,7 +3078,6 @@ class ShowroomManager {
                 this.displayCars(this.allCars);
                 this.updatePageTitle(this.dealerData.business_name);
                 this.updateShowroomStats(this.allCars);
-                
             } else {
                 throw new Error(carsData.message || 'Failed to load cars');
             }
@@ -4626,11 +4623,8 @@ async function loadAIChatbot() {
                     </div>
                 </div>
                 <div class="ai-chat-header-actions">
-                    <button class="ai-chat-header-btn" id="aiChatMinimizeBtn" title="Minimize">
-                        <i class="fas fa-minus"></i>
-                    </button>
-                    <button class="ai-chat-header-btn ai-chat-header-close" id="aiChatCloseBtn" title="Close AI Chat">
-                        <i class="fas fa-times"></i>
+                    <button class="ai-chat-header-btn ai-chat-header-minimise" id="aiChatMinimizeBtn" title="Minimise" aria-label="Minimise chat">
+                        <i class="fas fa-chevron-down"></i>
                     </button>
                 </div>
             </div>
@@ -4669,12 +4663,8 @@ async function loadAIChatbot() {
                     </div>
                 </div>
             </div>
-            <button class="ai-chat-minimized" id="aiChatMinimized">
+            <button class="ai-chat-minimized" id="aiChatMinimized" aria-label="Open AI chat">
                 <i class="fas fa-comments"></i>
-                <span>MotorLink AI</span>
-            </button>
-            <button class="ai-chat-dismiss" id="aiChatDismiss" title="Hide AI Assistant for this session">
-                <i class="fas fa-times"></i>
             </button>
         </div>
     `;

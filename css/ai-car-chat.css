@@ -106,6 +106,17 @@
     cursor: grabbing !important;
 }
 
+/* FAB grab cursor on mobile/tablet (desktop keeps default pointer) */
+@media (max-width: 1024px) {
+    .ai-car-chat-widget.minimized .ai-chat-minimized {
+        cursor: grab;
+        touch-action: none; /* let pointer events handle touch */
+    }
+    .ai-car-chat-widget.minimized.dragging .ai-chat-minimized {
+        cursor: grabbing !important;
+    }
+}
+
 .ai-car-chat-widget.minimized {
     height: auto;
     max-height: none; /* No height limit when minimised — just the bubble */
@@ -1809,19 +1820,20 @@
 /* Keep rendering stable and crisp by avoiding aggressive compositor hints. */
 
 /* ============================================================================
-   FINAL WIDGET LAYOUT OVERRIDES (single source of truth across devices)
+   FINAL WIDGET LAYOUT OVERRIDES — single source of truth across all devices
+   Design: Clean circle FAB with robot icon. No close/dismiss. One chevron-down.
    ============================================================================ */
 
-/* Stable container sizing so ai-chat-body always fits within widget */
+/* ── Container ────────────────────────────────────────────────────────────── */
 .ai-car-chat-widget {
     width: min(420px, calc(100vw - 24px)) !important;
     height: clamp(460px, 72vh, 680px);
     max-height: calc(100vh - 24px) !important;
-    left: 12px !important;
+    left: 16px !important;
     right: auto !important;
-    bottom: 12px !important;
+    bottom: 16px !important;
     top: auto;
-    border-radius: 18px !important;
+    border-radius: 20px !important;
     overflow: hidden !important;
 }
 
@@ -1832,12 +1844,11 @@
     border-radius: 50% !important;
     background: transparent !important;
     box-shadow: none !important;
+    overflow: visible !important;
 }
 
-.ai-car-chat-widget:not(.minimized) .ai-chat-header {
-    flex: 0 0 auto;
-}
-
+/* ── Flex layout so body always fills remaining height ───────────────────── */
+.ai-car-chat-widget:not(.minimized) .ai-chat-header { flex: 0 0 auto; }
 .ai-car-chat-widget:not(.minimized) .ai-chat-body {
     display: flex;
     flex-direction: column;
@@ -1847,102 +1858,103 @@
     max-height: none !important;
     overflow: hidden;
 }
+.ai-car-chat-widget:not(.minimized) .ai-chat-messages { flex: 1 1 auto; min-height: 0; }
+.ai-car-chat-widget:not(.minimized) .ai-chat-input-container { flex: 0 0 auto; }
 
-.ai-car-chat-widget:not(.minimized) .ai-chat-messages {
-    flex: 1 1 auto;
-    min-height: 0;
-}
-
-.ai-car-chat-widget:not(.minimized) .ai-chat-input-container {
-    flex: 0 0 auto;
-}
-
-/* Icon-only minimized launcher */
+/* ── FAB — bare chat icon, no circle/background ────────────────────────── */
 .ai-chat-minimized {
-    width: 56px !important;
-    height: 56px !important;
-    min-width: 56px !important;
-    min-height: 56px !important;
-    padding: 0 !important;
-    border-radius: 50% !important;
+    all: unset;
     display: none;
     align-items: center;
     justify-content: center;
-    gap: 0 !important;
-    box-shadow: 0 8px 24px rgba(0, 200, 83, 0.42), 0 0 0 4px rgba(0, 200, 83, 0.12) !important;
+
+    width: auto !important;
+    height: auto !important;
+    border-radius: 0 !important;
+    cursor: pointer;
+
+    background: transparent !important;
+    color: var(--ai-primary, #00c853) !important;
+    font-size: 36px !important;
+
+    box-shadow: none !important;
+    filter: drop-shadow(0 2px 6px rgba(0,200,83,0.35));
+
+    transition: transform 0.18s ease, filter 0.18s ease;
 }
 
 .ai-car-chat-widget.minimized .ai-chat-minimized {
-    display: inline-flex !important;
+    display: flex !important;
 }
 
+.ai-chat-minimized:hover {
+    transform: scale(1.12) !important;
+    filter: drop-shadow(0 4px 12px rgba(0,200,83,0.55)) !important;
+}
+
+.ai-chat-minimized:active {
+    transform: scale(0.92) !important;
+}
+
+/* Hide all inner markup — the button now contains just the <i> icon */
+.ai-chat-minimized .ai-min-icon,
 .ai-chat-minimized .ai-min-label,
 .ai-chat-minimized .ai-min-live {
     display: none !important;
 }
 
-.ai-chat-minimized .ai-min-icon {
-    width: auto !important;
-    height: auto !important;
-    background: transparent !important;
-}
-
-.ai-chat-minimized .ai-min-icon i {
-    font-size: 22px !important;
+/* Direct <i> inside the button */
+.ai-chat-minimized > i {
+    font-size: 36px !important;
     line-height: 1;
+    pointer-events: none;
 }
 
-/* Cleaner header controls */
+/* Dismiss is removed from markup — ensure hidden if it still exists in DOM */
+.ai-chat-dismiss { display: none !important; }
+
+/* ── Header — chevron-down only, no close ───────────────────────────────── */
 .ai-chat-header-actions {
-    gap: 8px !important;
+    gap: 6px !important;
 }
 
 .ai-chat-header-btn {
-    width: 34px !important;
-    height: 34px !important;
-    border-radius: 10px !important;
-    border: 1px solid rgba(255, 255, 255, 0.28) !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    border: none !important;
     background: rgba(255, 255, 255, 0.18) !important;
     color: #fff !important;
-    font-size: 12px !important;
-    backdrop-filter: blur(2px);
+    font-size: 14px !important;
+    backdrop-filter: blur(4px);
+    transition: background 0.18s, transform 0.15s;
 }
 
 .ai-chat-header-btn:hover {
-    background: rgba(255, 255, 255, 0.28) !important;
-    transform: translateY(-1px) scale(1.03) !important;
+    background: rgba(255, 255, 255, 0.30) !important;
+    transform: scale(1.08) !important;
 }
 
-.ai-chat-header-btn.ai-chat-header-close {
-    background: rgba(239, 68, 68, 0.18) !important;
-    border-color: rgba(255, 142, 142, 0.5) !important;
-}
+/* Any lingering close button — hidden */
+.ai-chat-header-btn.ai-chat-header-close { display: none !important; }
 
-.ai-chat-header-btn.ai-chat-header-close:hover {
-    background: rgba(239, 68, 68, 0.35) !important;
-}
-
-.ai-chat-dismiss {
-    width: 28px !important;
-    height: 28px !important;
-    top: -10px !important;
-    right: -10px !important;
-    border: 2px solid #fff !important;
-    border-radius: 50% !important;
-    background: #ef4444 !important;
-}
-
-/* Tablet */
+/* ── Tablet ──────────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) and (min-width: 769px) {
     .ai-car-chat-widget {
         width: min(400px, calc(100vw - 28px)) !important;
         height: clamp(430px, 74vh, 620px);
-        left: 14px !important;
-        bottom: 14px !important;
+        left: 16px !important;
+        bottom: 16px !important;
     }
+
+    .ai-chat-minimized {
+        font-size: 32px !important;
+    }
+
+    .ai-chat-minimized > i { font-size: 32px !important; }
 }
 
-/* Mobile */
+/* ── Mobile ──────────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     .ai-car-chat-widget {
         width: calc(100vw - 16px) !important;
@@ -1951,34 +1963,27 @@
         left: 8px !important;
         right: 8px !important;
         bottom: 8px !important;
-        border-radius: 14px !important;
+        border-radius: 16px !important;
     }
 
     .ai-car-chat-widget.minimized {
         right: auto !important;
     }
 
-    .ai-chat-header {
-        padding: 14px 14px !important;
+    .ai-chat-minimized {
+        font-size: 30px !important;
     }
 
-    .ai-chat-title h3 {
-        font-size: 15px !important;
-    }
+    .ai-chat-minimized > i { font-size: 30px !important; }
 
-    .ai-chat-title p {
-        font-size: 12px !important;
-    }
-
-    .ai-chat-messages {
-        padding: 14px 12px !important;
-    }
-
+    .ai-chat-header { padding: 14px !important; }
+    .ai-chat-title h3 { font-size: 15px !important; }
+    .ai-chat-title p  { font-size: 12px !important; }
+    .ai-chat-messages { padding: 14px 12px !important; }
     .ai-chat-input-container {
         padding: 10px !important;
         padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
     }
-
     .ai-chat-send-btn {
         width: 44px !important;
         height: 44px !important;
@@ -1986,6 +1991,7 @@
     }
 }
 
+/* ── Small mobile ────────────────────────────────────────────────────────── */
 @media (max-width: 480px) {
     .ai-car-chat-widget {
         width: calc(100vw - 12px) !important;
@@ -1997,14 +2003,10 @@
     }
 
     .ai-chat-minimized {
-        width: 52px !important;
-        height: 52px !important;
-        min-width: 52px !important;
-        min-height: 52px !important;
+        font-size: 28px !important;
     }
 
-    .ai-chat-minimized .ai-min-icon i {
-        font-size: 20px !important;
-    }
+    .ai-chat-minimized > i { font-size: 28px !important; }
 }
+
 
