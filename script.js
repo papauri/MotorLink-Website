@@ -2407,6 +2407,25 @@ class DealersManager {
         if (clearFiltersBtn) clearFiltersBtn.addEventListener('click', () => this.clearFilters());
         if (sortSelect) sortSelect.addEventListener('change', () => this.applyFilters());
         if (dealerSearch) dealerSearch.addEventListener('input', () => this.applyFilters());
+
+        // Mobile hero search — syncs to desktop #dealerSearch
+        const mobileDealerSearch = document.getElementById('mobileDealerSearch');
+        const mobileDealerSearchBtn = document.getElementById('mobileDealerSearchBtn');
+        if (mobileDealerSearch && mobileDealerSearchBtn) {
+            const doMobileSearch = () => {
+                if (dealerSearch) dealerSearch.value = mobileDealerSearch.value.trim();
+                this.applyFilters();
+            };
+            mobileDealerSearchBtn.addEventListener('click', doMobileSearch);
+            mobileDealerSearch.addEventListener('keydown', e => {
+                if (e.key === 'Enter') { e.preventDefault(); doMobileSearch(); }
+            });
+            if (dealerSearch) {
+                dealerSearch.addEventListener('input', () => {
+                    if (!dealerSearch.value) mobileDealerSearch.value = '';
+                });
+            }
+        }
     }
 
     setupDelegatedEvents() {

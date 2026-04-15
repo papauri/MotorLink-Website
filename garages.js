@@ -137,6 +137,28 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEmergencyFeatures();
     setupNearbyButton();
     setupResultsBreakdownLinks();
+
+    // Mobile hero search bar — syncs with desktop #garageSearchInput
+    const mobileSearchInput = document.getElementById('mobileGarageSearch');
+    const mobileSearchBtn   = document.getElementById('mobileSearchBtn');
+    if (mobileSearchInput && mobileSearchBtn) {
+        const doMobileSearch = () => {
+            const mainInput = document.getElementById('garageSearchInput');
+            if (mainInput) mainInput.value = mobileSearchInput.value.trim();
+            loadGarages();
+        };
+        mobileSearchBtn.addEventListener('click', doMobileSearch);
+        mobileSearchInput.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); doMobileSearch(); }
+        });
+        // Keep cleared when desktop search is cleared
+        const mainInput = document.getElementById('garageSearchInput');
+        if (mainInput) {
+            mainInput.addEventListener('input', () => {
+                if (!mainInput.value) mobileSearchInput.value = '';
+            });
+        }
+    }
     
     // Automatically request user location on page load for distance calculation
     requestUserLocationForDistances();

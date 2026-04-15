@@ -49,6 +49,21 @@ document.addEventListener('DOMContentLoaded', function() {
     loadLocations();
     loadCompanies();
     getUserLocation();
+
+    // Mobile hero search — syncs with #carHireSearch and triggers applyFilters
+    const mobileCarHireSearch = document.getElementById('mobileCarHireSearch');
+    const mobileCarHireSearchBtn = document.getElementById('mobileCarHireSearchBtn');
+    if (mobileCarHireSearch && mobileCarHireSearchBtn) {
+        const doSearch = () => {
+            const si = document.getElementById('carHireSearch');
+            if (si) si.value = mobileCarHireSearch.value.trim();
+            applyFilters();
+        };
+        mobileCarHireSearchBtn.addEventListener('click', doSearch);
+        mobileCarHireSearch.addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
+        });
+    }
 });
 
 // Load overall car hire statistics
@@ -318,6 +333,7 @@ function renderCompanies(data) {
 }
 
 function applyFilters() {
+    const searchTerm = (document.getElementById('carHireSearch')?.value || '').toLowerCase().trim();
     const location = document.getElementById('locationFilter').value;
     const sort = document.getElementById('sortFilter').value;
     const vehicleType = document.getElementById('vehicleTypeFilter')?.value;
@@ -326,6 +342,16 @@ function applyFilters() {
     const fuelType = document.getElementById('fuelTypeFilter')?.value;
 
     let filtered = [...companies];
+
+    // Text search (name, description, location)
+    if (searchTerm) {
+        filtered = filtered.filter(c => {
+            const name = (c.business_name || c.company_name || '').toLowerCase();
+            const desc = (c.description || '').toLowerCase();
+            const loc  = (c.location_name || c.location || '').toLowerCase();
+            return name.includes(searchTerm) || desc.includes(searchTerm) || loc.includes(searchTerm);
+        });
+    }
 
     // Location filter
     if (location) {

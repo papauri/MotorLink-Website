@@ -76,3 +76,66 @@
   margin-left: auto;
   margin-right: auto;
 }
+
+/* ============================================================================
+   MOBILE & TABLET GRID — correct positioning + prevent double padding
+   ============================================================================ */
+
+/* Cancel the extra horizontal padding mobile-redesign.css adds to .main-content
+   so the container's own 16px is the only horizontal gutter on all breakpoints */
+@media (max-width: 1024px) {
+  .dealers-page-wrapper .main-content {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+}
+
+/* Also neutralise the generic `section` padding rule from mobile-redesign.css */
+@media (max-width: 768px) {
+  .dealers-page-wrapper .main-content {
+    padding-top: 16px !important;
+    padding-bottom: 16px !important;
+  }
+
+  /* Hide desktop sticky filter bar — mobile tray handles filtering here */
+  .dealers-page-wrapper .dealers-filters {
+    display: none !important;
+  }
+
+  /* Single-column grid on mobile */
+  .dealers-page-wrapper .dealers-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Results header breathing room */
+  .dealers-page-wrapper .results-header {
+    margin-top: 8px;
+    margin-bottom: 16px;
+  }
+}
+
+/* Tablet: 2-column grid, filter bar visible */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .dealers-page-wrapper .dealers-page-container {
+    padding: 0 20px;
+  }
+
+  .dealers-page-wrapper .dealers-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
+  }
+
+  /* Filter bar: 3-col grid on tablet (5 groups wraps nicely) */
+  .dealers-page-wrapper .dealers-filters {
+    grid-template-columns: repeat(3, 1fr) !important;
+    position: sticky;
+    top: 72px;
+  }
+
+  /* Results header breathing room */
+  .dealers-page-wrapper .results-header {
+    margin-top: 12px;
+    margin-bottom: 20px;
+  }
+}

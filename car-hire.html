@@ -138,6 +138,17 @@
                 <div class="hero-stat-label">Featured Partners</div>
             </div>
         </div>
+
+        <!-- Mobile/Tablet hero search -->
+        <div class="mobile-hero-search">
+            <div class="mobile-search-wrapper">
+                <input type="text" id="mobileCarHireSearch" class="mobile-search-input"
+                       placeholder="Search companies, vehicle types, locations..." autocomplete="off">
+                <button type="button" id="mobileCarHireSearchBtn" class="mobile-search-btn" aria-label="Search car hire">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -174,41 +185,69 @@
 <section class="filter-section">
     <div class="container">
         <div class="filter-bar enhanced">
-            <select id="locationFilter" class="filter-select">
-                <option value="">All Locations</option>
-                <!-- Populated dynamically from locations table -->
-            </select>
-            <select id="vehicleTypeFilter" class="filter-select">
-                <option value="">All Vehicle Types</option>
-                <!-- Populated dynamically from car_hire_companies.vehicle_types -->
-            </select>
-            <select id="transmissionFilter" class="filter-select">
-                <option value="">All Transmissions</option>
-                <option value="automatic">Automatic</option>
-                <option value="manual">Manual</option>
-            </select>
-            <select id="seatsFilter" class="filter-select">
-                <option value="">All Seats</option>
-                <option value="2-4">2-4 Seats</option>
-                <option value="5-6">5-6 Seats</option>
-                <option value="7+">7+ Seats</option>
-            </select>
-            <select id="fuelTypeFilter" class="filter-select">
-                <option value="">All Fuel Types</option>
-                <option value="petrol">Petrol</option>
-                <option value="diesel">Diesel</option>
-                <option value="hybrid">Hybrid</option>
-                <option value="electric">Electric</option>
-            </select>
-            <select id="sortFilter" class="filter-select">
-                <option value="featured">Featured First</option>
-                <option value="vehicles">Most Vehicles</option>
-                <option value="price">Lowest Rates</option>
-                <option value="name">Alphabetical</option>
-            </select>
-            <button class="btn-filter" onclick="applyFilters()">
-                <i class="fas fa-filter"></i> Apply Filters
-            </button>
+            <div class="filter-group">
+                <label class="filter-label"><i class="fas fa-search"></i> Search</label>
+                <input type="text" id="carHireSearch" class="filter-select search-input"
+                       placeholder="Search companies..." autocomplete="off">
+            </div>
+            <div class="filter-group">
+                <label class="filter-label"><i class="fas fa-map-marker-alt"></i> Location</label>
+                <select id="locationFilter" class="filter-select">
+                    <option value="">All Locations</option>
+                    <!-- Populated dynamically from locations table -->
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label"><i class="fas fa-car"></i> Vehicle Type</label>
+                <select id="vehicleTypeFilter" class="filter-select">
+                    <option value="">All Vehicle Types</option>
+                    <!-- Populated dynamically from car_hire_companies.vehicle_types -->
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label"><i class="fas fa-cog"></i> Transmission</label>
+                <select id="transmissionFilter" class="filter-select">
+                    <option value="">All Transmissions</option>
+                    <option value="automatic">Automatic</option>
+                    <option value="manual">Manual</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label"><i class="fas fa-users"></i> Seats</label>
+                <select id="seatsFilter" class="filter-select">
+                    <option value="">All Seats</option>
+                    <option value="2-4">2–4 Seats</option>
+                    <option value="5-6">5–6 Seats</option>
+                    <option value="7+">7+ Seats</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label"><i class="fas fa-gas-pump"></i> Fuel Type</label>
+                <select id="fuelTypeFilter" class="filter-select">
+                    <option value="">All Fuel Types</option>
+                    <option value="petrol">Petrol</option>
+                    <option value="diesel">Diesel</option>
+                    <option value="hybrid">Hybrid</option>
+                    <option value="electric">Electric</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label"><i class="fas fa-sort"></i> Sort By</label>
+                <select id="sortFilter" class="filter-select">
+                    <option value="featured">Featured First</option>
+                    <option value="vehicles">Most Vehicles</option>
+                    <option value="price">Lowest Rates</option>
+                    <option value="name">Alphabetical</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button type="button" class="btn btn-outline-primary btn-outline" onclick="clearFilters()">
+                    <i class="fas fa-redo"></i> Clear
+                </button>
+                <button class="btn btn-primary btn-filter" onclick="applyFilters()">
+                    <i class="fas fa-filter"></i> Apply
+                </button>
+            </div>
         </div>
         <div id="resultsCount" class="results-count"></div>
     </div>
