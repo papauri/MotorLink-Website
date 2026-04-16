@@ -85,6 +85,27 @@ class CarHireDashboard {
             }
         }
 
+        // Hire category
+        const hireCatEl = document.getElementById('companyHireCategory');
+        if (hireCatEl && this.companyInfo.hire_category) {
+            hireCatEl.value = this.companyInfo.hire_category;
+        }
+
+        // Event types checkboxes
+        if (this.companyInfo.event_types) {
+            try {
+                const types = typeof this.companyInfo.event_types === 'string'
+                    ? JSON.parse(this.companyInfo.event_types)
+                    : this.companyInfo.event_types;
+                document.querySelectorAll('input[name="event_types[]"]').forEach(cb => {
+                    cb.checked = types.includes(cb.value);
+                });
+            } catch (e) {}
+        }
+
+        // Show/hide event types based on hire_category
+        this.toggleEventTypesVisibility();
+
         // Character counter for description
         const descTextarea = document.getElementById('companyDescription');
         const charCount = document.getElementById('descCharCount');
@@ -107,6 +128,15 @@ class CarHireDashboard {
         if (this.companyInfo.logo_url) {
             const preview = document.getElementById('logoPreview');
             preview.innerHTML = `<img src="${this.companyInfo.logo_url}" alt="Logo">`;
+        }
+    }
+
+    toggleEventTypesVisibility() {
+        const hireCat = document.getElementById('companyHireCategory');
+        const eventGroup = document.getElementById('eventTypesGroup');
+        if (hireCat && eventGroup) {
+            const val = hireCat.value;
+            eventGroup.style.display = (val === 'events' || val === 'all') ? '' : 'none';
         }
     }
 
@@ -193,6 +223,9 @@ class CarHireDashboard {
                     <div class="car-meta">
                         <span class="status-badge status-${status}">${statusLabel}</span>
                         <span class="car-seats"><i class="fas fa-users"></i> ${vehicle.seats || 5} seats</span>
+                        ${vehicle.vehicle_category && vehicle.vehicle_category !== 'car' ? `<span class="category-badge cat-${vehicle.vehicle_category}"><i class="fas fa-${vehicle.vehicle_category === 'van' ? 'van-shuttle' : 'truck'}"></i> ${vehicle.vehicle_category.charAt(0).toUpperCase() + vehicle.vehicle_category.slice(1)}</span>` : ''}
+                        ${vehicle.cargo_capacity ? `<span class="cargo-info"><i class="fas fa-box"></i> ${vehicle.cargo_capacity}</span>` : ''}
+                        ${vehicle.event_suitable == 1 ? `<span class="event-suitable-badge"><i class="fas fa-calendar-check"></i> Events</span>` : ''}
                     </div>
                     <div class="card-actions">
                         <button class="btn btn-small btn-primary" onclick="carHireDashboard.editVehicle(${vehicle.id})" title="Edit vehicle details">
@@ -323,6 +356,26 @@ class CarHireDashboard {
             companyForm.addEventListener('submit', (e) => this.handleCompanySubmit(e));
         }
 
+        // Hire category change — show/hide event types
+        const hireCatSelect = document.getElementById('companyHireCategory');
+        if (hireCatSelect) {
+            hireCatSelect.addEventListener('change', () => this.toggleEventTypesVisibility());
+        }
+
+        // Vehicle category change — show/hide cargo capacity
+        const vehicleCatSelect = document.getElementById('vehicleCategory');
+        if (vehicleCatSelect) {
+            vehicleCatSelect.addEventListener('change', () => {
+                const cargoGroup = document.getElementById('cargoCapacityGroup');
+                if (cargoGroup) {
+                    cargoGroup.style.display = (vehicleCatSelect.value === 'van' || vehicleCatSelect.value === 'truck') ? '' : 'none';
+                }
+            });
+            // Initial state
+            const cargoGroup = document.getElementById('cargoCapacityGroup');
+            if (cargoGroup) cargoGroup.style.display = 'none';
+        }
+
         // Add vehicle form
         const addVehicleForm = document.getElementById('addVehicleForm');
         if (addVehicleForm) {
@@ -393,6 +446,13 @@ class CarHireDashboard {
         const formData = new FormData(e.target);
         formData.append('action', 'update_car_hire_company');
 
+        // Collect event_types checkboxes into JSON
+        const eventCheckboxes = document.querySelectorAll('input[name="event_types[]"]:checked');
+        const eventTypes = Array.from(eventCheckboxes).map(cb => cb.value);
+        // Remove the individual checkbox entries FormData auto-collected
+        formData.delete('event_types[]');
+        formData.append('event_types', JSON.stringify(eventTypes));
+
         try {
             const response = await fetch(CONFIG.API_URL, {
                 method: 'POST',
@@ -418,6 +478,11 @@ class CarHireDashboard {
 
         const formData = new FormData(e.target);
         formData.append('action', 'add_car_hire_vehicle');
+
+        // Ensure event_suitable is always sent (checkbox sends nothing when unchecked)
+        if (!formData.has('event_suitable')) {
+            formData.append('event_suitable', '0');
+        }
 
         // Get vehicle images
         const imageFiles = document.getElementById('vehicleImages').files;
@@ -575,6 +640,26 @@ class CarHireDashboard {
             document.getElementById('editStatus').value = vehicle.status || 'available';
             document.getElementById('editColor').value = vehicle.color || '';
             
+            // Set vehicle category and cargo
+            const editVehicleCat = document.getElementById('editVehicleCategory');
+            if (editVehicleCat) {
+                editVehicleCat.value = vehicle.vehicle_category || 'car';
+            }
+            const editCargoCapacity = document.getElementById('editCargoCapacity');
+            if (editCargoCapacity) {
+                editCargoCapacity.value = vehicle.cargo_capacity || '';
+            }
+            const editEventSuitable = document.getElementById('editEventSuitable');
+            if (editEventSuitable) {
+                editEventSuitable.checked = vehicle.event_suitable == 1;
+            }
+            // Show/hide cargo capacity in edit modal
+            const editCargoGroup = document.getElementById('editCargoCapacityGroup');
+            if (editCargoGroup) {
+                const cat = vehicle.vehicle_category || 'car';
+                editCargoGroup.style.display = (cat === 'van' || cat === 'truck') ? '' : 'none';
+            }
+
             // Set fuel type and transmission if available
             if (vehicle.fuel_type) {
                 document.getElementById('editFuelType').value = vehicle.fuel_type.toLowerCase();
@@ -660,6 +745,11 @@ class CarHireDashboard {
         e.preventDefault();
         const formData = new FormData(e.target);
         formData.append('action', 'update_vehicle');
+
+        // Ensure event_suitable is always sent
+        if (!formData.has('event_suitable')) {
+            formData.append('event_suitable', '0');
+        }
 
         try {
             const response = await fetch(CONFIG.API_URL, {

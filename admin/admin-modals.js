@@ -356,6 +356,31 @@ function showAddCarHireModal() {
                             Verified Company
                         </label>
                     </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="add-carhire-category">Hire Category</label>
+                            <select id="add-carhire-category" name="hire_category" class="form-control">
+                                <option value="standard">Standard Car Hire</option>
+                                <option value="events">Events & Occasions</option>
+                                <option value="vans_trucks">Vans & Trucks</option>
+                                <option value="all">All Services</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="add-carhire-events-group">
+                        <label>Event Types Offered</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                            <label><input type="checkbox" class="add-event-type-cb" value="Wedding"> Wedding</label>
+                            <label><input type="checkbox" class="add-event-type-cb" value="Corporate Event"> Corporate</label>
+                            <label><input type="checkbox" class="add-event-type-cb" value="Funeral"> Funeral</label>
+                            <label><input type="checkbox" class="add-event-type-cb" value="Birthday Party"> Birthday</label>
+                            <label><input type="checkbox" class="add-event-type-cb" value="Prom Night"> Prom Night</label>
+                            <label><input type="checkbox" class="add-event-type-cb" value="Airport VIP Transfer"> Airport VIP</label>
+                            <label><input type="checkbox" class="add-event-type-cb" value="Graduation"> Graduation</label>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -391,7 +416,9 @@ async function submitAddCarHire() {
         daily_rate_to: document.getElementById('add-carhire-daily-to').value || null,
         weekly_rate_from: document.getElementById('add-carhire-weekly').value || null,
         monthly_rate_from: document.getElementById('add-carhire-monthly').value || null,
-        verified: document.getElementById('add-carhire-verified').checked ? 1 : 0
+        verified: document.getElementById('add-carhire-verified').checked ? 1 : 0,
+        hire_category: document.getElementById('add-carhire-category').value || 'standard',
+        event_types: Array.from(document.querySelectorAll('.add-event-type-cb:checked')).map(cb => cb.value)
     };
 
     try {

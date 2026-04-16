@@ -155,6 +155,17 @@ function renderCompanyHeader(company) {
     const isVerified = company.verified == 1;
     const isFeatured = company.featured == 1;
     const isCertified = company.certified == 1;
+    const hireCategory = company.hire_category || 'standard';
+
+    // Parse event types
+    let eventTypes = [];
+    if (company.event_types) {
+        try {
+            eventTypes = typeof company.event_types === 'string'
+                ? JSON.parse(company.event_types)
+                : company.event_types;
+        } catch (e) {}
+    }
 
     header.innerHTML = `
         <div class="company-header-content container">
@@ -165,6 +176,8 @@ function renderCompanyHeader(company) {
                         ${isVerified ? '<span class="verified-badge"><i class="fas fa-check-circle"></i> Verified</span>' : ''}
                         ${isFeatured ? '<span class="featured-badge"><i class="fas fa-star"></i> Featured</span>' : ''}
                         ${isCertified ? '<span class="certified-badge"><i class="fas fa-certificate"></i> Certified</span>' : ''}
+                        ${(hireCategory === 'events' || hireCategory === 'all') ? '<span class="events-badge"><i class="fas fa-calendar-check"></i> Events</span>' : ''}
+                        ${(hireCategory === 'vans_trucks' || hireCategory === 'all') ? '<span class="vantruck-badge"><i class="fas fa-truck"></i> Vans & Trucks</span>' : ''}
                     </h1>
                     <div class="company-meta">
                         ${company.address ? `
@@ -230,6 +243,15 @@ function renderCompanyHeader(company) {
             ${company.description ? `
                 <div class="company-description">
                     <p>${escapeHtml(company.description)}</p>
+                </div>
+            ` : ''}
+
+            ${eventTypes.length > 0 ? `
+                <div class="company-event-types-detail">
+                    <h4><i class="fas fa-calendar-check"></i> Events We Cover</h4>
+                    <div class="event-types-list">
+                        ${eventTypes.map(et => `<span class="event-type-tag">${escapeHtml(et)}</span>`).join('')}
+                    </div>
                 </div>
             ` : ''}
 
@@ -310,6 +332,8 @@ function renderFleet(data) {
                     <img src="${imageSrc}" alt="${escapeHtml(vehicle.vehicle_name)}" loading="lazy" onerror="this.onerror=null;this.src='${inlinePlaceholder}';">
                     ${statusBadge}
                     ${vehicle.registration_number ? `<div class="reg-badge">${escapeHtml(vehicle.registration_number)}</div>` : ''}
+                    ${vehicle.vehicle_category && vehicle.vehicle_category !== 'car' ? `<div class="category-badge cat-${vehicle.vehicle_category}"><i class="fas fa-${vehicle.vehicle_category === 'van' ? 'van-shuttle' : 'truck'}"></i> ${capitalize(vehicle.vehicle_category)}</div>` : ''}
+                    ${vehicle.event_suitable == 1 ? `<div class="event-suitable-flag"><i class="fas fa-calendar-check"></i> Event Ready</div>` : ''}
                 </div>
                 <div class="fleet-info">
                     <h3 class="fleet-title">${escapeHtml(vehicle.vehicle_name)}</h3>
@@ -360,6 +384,15 @@ function renderFleet(data) {
                             </div>
                         </div>
                         `}
+                        ${vehicle.cargo_capacity ? `
+                        <div class="spec-item">
+                            <i class="fas fa-box"></i>
+                            <div>
+                                <small>Capacity</small>
+                                <strong>${escapeHtml(vehicle.cargo_capacity)}</strong>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                     
                     ${features.length > 0 ? `

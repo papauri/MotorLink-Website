@@ -209,6 +209,40 @@
                         </select>
                     </div>
 
+                    <!-- Hire Category & Events -->
+                    <div class="form-section-header" style="margin-top: 30px;">
+                        <h3><i class="fas fa-th-large"></i> Hire Category & Events</h3>
+                        <p>Define the type of hire services your company offers</p>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="companyHireCategory">Hire Category</label>
+                            <select id="companyHireCategory" name="hire_category">
+                                <option value="standard">Standard Car Hire</option>
+                                <option value="events">Events & Occasions</option>
+                                <option value="vans_trucks">Vans & Trucks</option>
+                                <option value="all">All Services</option>
+                            </select>
+                            <small class="text-muted">Choose "All Services" if you offer everything</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="eventTypesGroup">
+                        <label>Event Types Offered</label>
+                        <div class="checkbox-grid" id="eventTypesCheckboxes">
+                            <label class="checkbox-label"><input type="checkbox" name="event_types[]" value="Wedding"> <span>Wedding</span></label>
+                            <label class="checkbox-label"><input type="checkbox" name="event_types[]" value="Corporate Event"> <span>Corporate Event</span></label>
+                            <label class="checkbox-label"><input type="checkbox" name="event_types[]" value="Funeral"> <span>Funeral</span></label>
+                            <label class="checkbox-label"><input type="checkbox" name="event_types[]" value="Birthday Party"> <span>Birthday Party</span></label>
+                            <label class="checkbox-label"><input type="checkbox" name="event_types[]" value="Prom Night"> <span>Prom Night</span></label>
+                            <label class="checkbox-label"><input type="checkbox" name="event_types[]" value="Airport VIP Transfer"> <span>Airport VIP Transfer</span></label>
+                            <label class="checkbox-label"><input type="checkbox" name="event_types[]" value="Graduation"> <span>Graduation</span></label>
+                            <label class="checkbox-label"><input type="checkbox" name="event_types[]" value="Church Event"> <span>Church Event</span></label>
+                        </div>
+                        <small class="text-muted">Select the types of events you cater for</small>
+                    </div>
+
                     <!-- Social Media Links -->
                     <div class="form-section-header" style="margin-top: 30px;">
                         <h3><i class="fab fa-share-alt"></i> Social Media Links</h3>
@@ -415,6 +449,30 @@
                         <input type="text" id="vehicleColor" name="color" placeholder="e.g., White, Black, Silver">
                     </div>
 
+                    <!-- Vehicle Category & Cargo -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="vehicleCategory">Vehicle Category</label>
+                            <select id="vehicleCategory" name="vehicle_category">
+                                <option value="car">Car</option>
+                                <option value="van">Van</option>
+                                <option value="truck">Truck</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="cargoCapacityGroup">
+                            <label for="cargoCapacity">Cargo Capacity</label>
+                            <input type="text" id="cargoCapacity" name="cargo_capacity" placeholder="e.g., 800kg, 3 tonnes">
+                            <small class="text-muted">Only for vans and trucks</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="eventSuitable" name="event_suitable" value="1">
+                            <span>Suitable for events (weddings, corporate, etc.)</span>
+                        </label>
+                    </div>
+
                     <div class="form-group">
                         <label for="vehicleStatus">Initial Status</label>
                         <select id="vehicleStatus" name="status" required>
@@ -574,6 +632,30 @@
                     <div class="form-group">
                         <label for="editColor">Exterior Color</label>
                         <input type="text" id="editColor" name="color" placeholder="e.g., White, Black, Silver">
+                    </div>
+
+                    <!-- Vehicle Category & Cargo (Edit) -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editVehicleCategory">Vehicle Category</label>
+                            <select id="editVehicleCategory" name="vehicle_category">
+                                <option value="car">Car</option>
+                                <option value="van">Van</option>
+                                <option value="truck">Truck</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="editCargoCapacityGroup">
+                            <label for="editCargoCapacity">Cargo Capacity</label>
+                            <input type="text" id="editCargoCapacity" name="cargo_capacity" placeholder="e.g., 800kg, 3 tonnes">
+                            <small class="text-muted">Only for vans and trucks</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editEventSuitable" name="event_suitable" value="1">
+                            <span>Suitable for events (weddings, corporate, etc.)</span>
+                        </label>
                     </div>
 
                     <div class="form-group">

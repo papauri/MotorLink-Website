@@ -679,6 +679,27 @@ function updateCarHire($pdo) {
             'status' => $_POST['status'] ?? 'active',
             'updated_at' => date('Y-m-d H:i:s')
         ];
+
+        // Handle hire_category
+        $hireCategory = $_POST['hire_category'] ?? '';
+        if ($hireCategory && in_array($hireCategory, ['standard', 'events', 'vans_trucks', 'all'])) {
+            $updateData['hire_category'] = $hireCategory;
+        }
+
+        // Handle event_types (JSON from form)
+        if (isset($_POST['event_types'])) {
+            $eventTypes = $_POST['event_types'];
+            if (is_string($eventTypes)) {
+                $decoded = json_decode($eventTypes, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $updateData['event_types'] = json_encode($decoded);
+                } else {
+                    $updateData['event_types'] = json_encode(array_map('trim', explode(',', $eventTypes)));
+                }
+            } elseif (is_array($eventTypes)) {
+                $updateData['event_types'] = json_encode($eventTypes);
+            }
+        }
         
         // Build the update query
         $setParts = [];

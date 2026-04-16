@@ -2531,7 +2531,10 @@ function getCarHireCompaniesWithFleet($db) {
                    MIN(f.daily_rate) as daily_rate_from,
                    MAX(f.daily_rate) as daily_rate_to,
                    MIN(f.weekly_rate) as weekly_rate_from,
-                   MAX(f.weekly_rate) as weekly_rate_to
+                   MAX(f.weekly_rate) as weekly_rate_to,
+                   SUM(CASE WHEN f.vehicle_category = 'van' THEN 1 ELSE 0 END) as van_count,
+                   SUM(CASE WHEN f.vehicle_category = 'truck' THEN 1 ELSE 0 END) as truck_count,
+                   SUM(CASE WHEN f.event_suitable = 1 THEN 1 ELSE 0 END) as event_vehicle_count
             FROM car_hire_companies c
             INNER JOIN locations loc ON c.location_id = loc.id
             LEFT JOIN car_hire_fleet f ON c.id = f.company_id AND f.is_active = 1
@@ -2545,7 +2548,8 @@ function getCarHireCompaniesWithFleet($db) {
         foreach ($companies as &$company) {
             $fleetStmt = $db->prepare("
                 SELECT id, transmission, fuel_type, seats, year, daily_rate,
-                       status, make_name, model_name
+                       status, make_name, model_name,
+                       vehicle_category, cargo_capacity, event_suitable
                 FROM car_hire_fleet
                 WHERE company_id = ? AND is_active = 1
                 ORDER BY daily_rate ASC
@@ -2661,6 +2665,22 @@ function getCarHireStats($db) {
             WHERE status = 'active' AND featured = 1
         ");
         $stats['featured_companies'] = (int)$stmt->fetchColumn();
+
+        // Count event hire companies
+        $stmt = $db->query("
+            SELECT COUNT(*)
+            FROM car_hire_companies
+            WHERE status = 'active' AND hire_category IN ('events','all')
+        ");
+        $stats['event_companies'] = (int)$stmt->fetchColumn();
+
+        // Count van/truck hire companies
+        $stmt = $db->query("
+            SELECT COUNT(*)
+            FROM car_hire_companies
+            WHERE status = 'active' AND hire_category IN ('vans_trucks','all')
+        ");
+        $stats['vantruck_companies'] = (int)$stmt->fetchColumn();
 
         sendSuccess(['stats' => $stats]);
     } catch (Exception $e) {
@@ -7511,6 +7531,25 @@ function updateCarHireCompany($db) {
             'address' => $address
         ];
 
+        // Handle hire_category and event_types
+        $hireCategory = trim($_POST['hire_category'] ?? '');
+        if ($hireCategory && in_array($hireCategory, ['standard', 'events', 'vans_trucks', 'all'])) {
+            $updateFields['hire_category'] = $hireCategory;
+        }
+
+        $eventTypes = $_POST['event_types'] ?? '';
+        if ($eventTypes) {
+            // Accept JSON string or comma-separated list
+            if (is_string($eventTypes)) {
+                $decoded = json_decode($eventTypes, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $updateFields['event_types'] = json_encode($decoded);
+                } else {
+                    $updateFields['event_types'] = json_encode(array_map('trim', explode(',', $eventTypes)));
+                }
+            }
+        }
+
         $setParts = [];
         $params = [];
         foreach ($updateFields as $field => $value) {
@@ -7620,6 +7659,14 @@ function addCarHireVehicle($db) {
         $transmission = trim($_POST['transmission'] ?? 'manual');
         $color = trim($_POST['color'] ?? '');
         $status = trim($_POST['status'] ?? 'available');
+        $vehicleCategory = trim($_POST['vehicle_category'] ?? 'car');
+        $cargoCapacity = trim($_POST['cargo_capacity'] ?? '');
+        $eventSuitable = intval($_POST['event_suitable'] ?? 0);
+
+        // Validate vehicle_category
+        if (!in_array($vehicleCategory, ['car', 'van', 'truck'])) {
+            $vehicleCategory = 'car';
+        }
 
         // Validate required fields
         if ($makeId <= 0 || $modelId <= 0 || $year < 1990 || $dailyRate <= 0) {
@@ -7650,8 +7697,9 @@ function addCarHireVehicle($db) {
                 company_id, company_name, company_phone, company_email, company_location_id,
                 make_id, model_id, make_name, model_name, year, vehicle_name,
                 registration_number, transmission, fuel_type, seats, exterior_color,
-                daily_rate, is_available, status, is_active, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 1, NOW())
+                daily_rate, is_available, status, vehicle_category, cargo_capacity, event_suitable,
+                is_active, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, 1, NOW())
         ");
 
         $stmt->execute([
@@ -7672,7 +7720,10 @@ function addCarHireVehicle($db) {
             max(1, $seats),
             $color,
             $dailyRate,
-            $status
+            $status,
+            $vehicleCategory,
+            $cargoCapacity ?: null,
+            $eventSuitable ? 1 : 0
         ]);
 
         $vehicleId = $db->lastInsertId();
@@ -8317,13 +8368,20 @@ function updateVehicle($db) {
         // Update fields from POST data - only fields that exist in car_hire_fleet table
         $allowedFields = [
             'transmission', 'fuel_type', 'seats', 'daily_rate', 'weekly_rate', 
-            'monthly_rate', 'features', 'status', 'registration_number', 'exterior_color'
+            'monthly_rate', 'features', 'status', 'registration_number', 'exterior_color',
+            'vehicle_category', 'cargo_capacity', 'event_suitable'
         ];
 
         foreach ($allowedFields as $field) {
             if (isset($_POST[$field])) {
                 $updateFields[] = "$field = ?";
-                $params[] = $_POST[$field];
+                if ($field === 'vehicle_category') {
+                    $params[] = in_array($_POST[$field], ['car', 'van', 'truck']) ? $_POST[$field] : 'car';
+                } elseif ($field === 'event_suitable') {
+                    $params[] = intval($_POST[$field]) ? 1 : 0;
+                } else {
+                    $params[] = $_POST[$field];
+                }
             }
         }
         

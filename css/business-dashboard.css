@@ -646,6 +646,50 @@
     color: #95a5a6;
 }
 
+/* Vehicle category / event badges in fleet */
+.category-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.category-badge.cat-van {
+    background: rgba(14, 165, 233, 0.12);
+    color: #0284c7;
+}
+.category-badge.cat-truck {
+    background: rgba(245, 158, 11, 0.12);
+    color: #b45309;
+}
+.cargo-info {
+    font-size: 0.75rem;
+    color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.event-suitable-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: rgba(168, 85, 247, 0.12);
+    color: #7c3aed;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Checkbox grid for event types in dashboard */
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+}
+
 .views {
     font-size: 13px;
     color: var(--text-muted);

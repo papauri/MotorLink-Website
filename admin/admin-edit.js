@@ -787,6 +787,28 @@ class EditOperations {
                                     <label for="carHireDescription">Description</label>
                                     <textarea id="carHireDescription" name="description" rows="4" class="form-control">${carHire.description || ''}</textarea>
                                 </div>
+                                <div class="form-group">
+                                    <label for="carHireCategory">Hire Category</label>
+                                    <select id="carHireCategory" name="hire_category" class="form-control">
+                                        <option value="standard" ${carHire.hire_category === 'standard' ? 'selected' : ''}>Standard</option>
+                                        <option value="events" ${carHire.hire_category === 'events' ? 'selected' : ''}>Events</option>
+                                        <option value="vans_trucks" ${carHire.hire_category === 'vans_trucks' ? 'selected' : ''}>Vans & Trucks</option>
+                                        <option value="all" ${carHire.hire_category === 'all' ? 'selected' : ''}>All Services</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width" id="editCarHireEventsGroup">
+                                    <label>Event Types</label>
+                                    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                                        ${['Wedding','Corporate Event','Funeral','Birthday Party','Prom Night','Airport VIP Transfer','Graduation'].map(et => {
+                                            let checked = '';
+                                            try {
+                                                const types = typeof carHire.event_types === 'string' ? JSON.parse(carHire.event_types) : (carHire.event_types || []);
+                                                checked = types.includes(et) ? 'checked' : '';
+                                            } catch(e) {}
+                                            return '<label><input type="checkbox" class="edit-event-type-cb" value="' + et + '" ' + checked + '> ' + et + '</label>';
+                                        }).join('')}
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Status Controls -->
@@ -827,6 +849,10 @@ class EditOperations {
             const formData = new FormData(event.target);
             formData.append('action', 'update_car_hire');
             formData.append('car_hire_id', this.currentEditingId);
+
+            // Collect event type checkboxes
+            const eventTypes = Array.from(document.querySelectorAll('.edit-event-type-cb:checked')).map(cb => cb.value);
+            formData.append('event_types', JSON.stringify(eventTypes));
 
             const response = await fetch(ADMIN_EDIT_API, {
                 method: 'POST',

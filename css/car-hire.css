@@ -410,6 +410,81 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
+/* Events Badge - Elegant Purple */
+.company-card .company-status-tag.events-tag {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Vans & Trucks Badge - Strong Teal */
+.company-card .company-status-tag.vantruck-tag {
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Event Types List */
+.company-event-types {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 4px;
+}
+.company-event-types > i {
+  color: #a855f7;
+  margin-top: 4px;
+  font-size: 0.85rem;
+}
+.event-types-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.event-type-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
+  color: #6d28d9;
+  border: 1px solid #ddd6fe;
+  white-space: nowrap;
+}
+.event-type-tag.more-events {
+  background: #f5f3ff;
+  color: #7c3aed;
+  font-weight: 600;
+}
+
+/* Cargo / Van-Truck Info */
+.company-cargo-info {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.cargo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.cargo-badge.van-badge {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  color: #0369a1;
+  border: 1px solid #7dd3fc;
+}
+.cargo-badge.truck-badge {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
 /* Body Section - Enhanced Visual Hierarchy */
 .company-card .company-card-body {
   display: flex;
@@ -1623,6 +1698,75 @@
     background: rgba(250, 204, 21, 0.35);
     color: white;
     border: 1px solid rgba(253, 224, 71, 0.6);
+}
+
+.company-header h1 .events-badge {
+    background: rgba(168, 85, 247, 0.35);
+    color: white;
+    border: 1px solid rgba(192, 132, 252, 0.6);
+}
+
+.company-header h1 .vantruck-badge {
+    background: rgba(20, 184, 166, 0.35);
+    color: white;
+    border: 1px solid rgba(45, 212, 191, 0.6);
+}
+
+/* Event types detail section */
+.company-event-types-detail {
+    margin: 16px 0;
+    padding: 12px 0;
+}
+.company-event-types-detail h4 {
+    color: rgba(255,255,255,0.9);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+.company-event-types-detail .event-types-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.company-event-types-detail .event-type-tag {
+    display: inline-block;
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    background: rgba(168, 85, 247, 0.25);
+    color: #e9d5ff;
+    border: 1px solid rgba(192, 132, 252, 0.4);
+}
+
+/* Fleet card category & event badges */
+.fleet-card .category-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: white;
+    z-index: 2;
+}
+.fleet-card .category-badge.cat-van {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7);
+}
+.fleet-card .category-badge.cat-truck {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+.fleet-card .event-suitable-flag {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    background: rgba(168, 85, 247, 0.85);
+    color: white;
+    z-index: 2;
 }
 
 .company-meta {

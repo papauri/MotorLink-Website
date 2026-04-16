@@ -4129,8 +4129,18 @@ function handleAddCarHire($db) {
             business_name, owner_name, email, phone, whatsapp, address, location_id,
             vehicle_types, services, daily_rate_from, weekly_rate_from, monthly_rate_from,
             currency, years_established, business_hours, website, description,
+            hire_category, event_types,
             verified, status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+
+        $hireCategory = $input['hire_category'] ?? 'standard';
+        if (!in_array($hireCategory, ['standard', 'events', 'vans_trucks', 'all'])) {
+            $hireCategory = 'standard';
+        }
+        $eventTypes = null;
+        if (isset($input['event_types']) && is_array($input['event_types'])) {
+            $eventTypes = json_encode($input['event_types']);
+        }
 
         $stmt = $db->prepare($sql);
         $stmt->execute([
@@ -4151,6 +4161,8 @@ function handleAddCarHire($db) {
             $input['business_hours'] ?? null,
             $input['website'] ?? null,
             $input['description'] ?? null,
+            $hireCategory,
+            $eventTypes,
             $input['verified'] ?? 0,
             $input['status'] ?? 'active'
         ]);

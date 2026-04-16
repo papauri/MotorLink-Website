@@ -50,6 +50,29 @@ document.addEventListener('DOMContentLoaded', function() {
     loadCompanies();
     getUserLocation();
 
+    // Show/hide event type filter based on category selection
+    const categoryFilter = document.getElementById('categoryFilter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', function() {
+            const eventGroup = document.getElementById('eventTypeFilterGroup');
+            if (eventGroup) {
+                eventGroup.style.display = this.value === 'events' ? '' : 'none';
+            }
+            // Reset event type when switching away from events
+            if (this.value !== 'events') {
+                const etf = document.getElementById('eventTypeFilter');
+                if (etf) etf.value = '';
+            }
+            applyFilters();
+        });
+    }
+
+    // Event type auto-filter
+    const eventTypeFilter = document.getElementById('eventTypeFilter');
+    if (eventTypeFilter) {
+        eventTypeFilter.addEventListener('change', () => applyFilters());
+    }
+
     // Mobile hero search — syncs with #carHireSearch and triggers applyFilters
     const mobileCarHireSearch = document.getElementById('mobileCarHireSearch');
     const mobileCarHireSearchBtn = document.getElementById('mobileCarHireSearchBtn');
@@ -221,6 +244,27 @@ function renderCompanies(data) {
         if (isCertified) badges.push('<span class="company-status-tag certified-tag"><i class="fas fa-certificate"></i> Certified</span>');
         if (isVerified) badges.push('<span class="company-status-tag verified-tag"><i class="fas fa-check-circle"></i> Verified</span>');
 
+        // Category badges
+        const hireCategory = company.hire_category || 'standard';
+        if (hireCategory === 'events' || hireCategory === 'all') {
+            badges.push('<span class="company-status-tag events-tag"><i class="fas fa-calendar-check"></i> Events</span>');
+        }
+        if (hireCategory === 'vans_trucks' || hireCategory === 'all') {
+            badges.push('<span class="company-status-tag vantruck-tag"><i class="fas fa-truck"></i> Vans & Trucks</span>');
+        }
+
+        // Parse event types
+        let eventTypes = [];
+        if (company.event_types) {
+            try {
+                eventTypes = typeof company.event_types === 'string'
+                    ? JSON.parse(company.event_types)
+                    : company.event_types;
+            } catch (e) {
+                eventTypes = [];
+            }
+        }
+
         // Calculate distance from user if location available
         let distanceInfo = '';
         if (userLocation && company.latitude && company.longitude) {
@@ -318,6 +362,25 @@ function renderCompanies(data) {
                             </div>
                         </div>
                     ` : ''}
+
+                    ${eventTypes.length > 0 ? `
+                        <div class="company-event-types">
+                            <i class="fas fa-calendar-check"></i>
+                            <div class="event-types-list">
+                                ${eventTypes.slice(0, 5).map(et =>
+                                    `<span class="event-type-tag">${escapeHtml(et)}</span>`
+                                ).join('')}
+                                ${eventTypes.length > 5 ? `<span class="event-type-tag more-events">+${eventTypes.length - 5}</span>` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${(company.van_count > 0 || company.truck_count > 0) ? `
+                        <div class="company-cargo-info">
+                            ${company.van_count > 0 ? `<span class="cargo-badge van-badge"><i class="fas fa-van-shuttle"></i> ${company.van_count} Van${company.van_count > 1 ? 's' : ''}</span>` : ''}
+                            ${company.truck_count > 0 ? `<span class="cargo-badge truck-badge"><i class="fas fa-truck"></i> ${company.truck_count} Truck${company.truck_count > 1 ? 's' : ''}</span>` : ''}
+                        </div>
+                    ` : ''}
                 </div>
 
                 <div class="company-card-actions">
@@ -340,8 +403,44 @@ function applyFilters() {
     const transmission = document.getElementById('transmissionFilter')?.value;
     const seats = document.getElementById('seatsFilter')?.value;
     const fuelType = document.getElementById('fuelTypeFilter')?.value;
+    const category = document.getElementById('categoryFilter')?.value;
+    const eventType = document.getElementById('eventTypeFilter')?.value;
 
     let filtered = [...companies];
+
+    // Category filter (standard / events / vans_trucks)
+    if (category) {
+        filtered = filtered.filter(c => {
+            const hc = c.hire_category || 'standard';
+            if (category === 'events') return hc === 'events' || hc === 'all';
+            if (category === 'vans_trucks') {
+                // Match companies with hire_category vans_trucks/all, OR companies with van/truck fleet
+                if (hc === 'vans_trucks' || hc === 'all') return true;
+                // Also include companies that happen to have van/truck fleet vehicles
+                if (c.fleet && Array.isArray(c.fleet)) {
+                    return c.fleet.some(v => v.vehicle_category === 'van' || v.vehicle_category === 'truck');
+                }
+                return false;
+            }
+            if (category === 'standard') return hc === 'standard' || hc === 'all';
+            return true;
+        });
+    }
+
+    // Event type filter (only visible when category=events)
+    if (eventType) {
+        filtered = filtered.filter(c => {
+            if (!c.event_types) return false;
+            try {
+                const types = typeof c.event_types === 'string'
+                    ? JSON.parse(c.event_types)
+                    : c.event_types;
+                return types.some(t => t.toLowerCase() === eventType.toLowerCase());
+            } catch (e) {
+                return false;
+            }
+        });
+    }
 
     // Text search (name, description, location)
     if (searchTerm) {
@@ -416,12 +515,24 @@ function applyFilters() {
     }
 
     // Sort results
-    if (sort === 'vehicles') {
+    if (sort === 'nearest' && userLocation) {
+        filtered.sort((a, b) => {
+            const distA = (a.latitude && a.longitude)
+                ? calculateDistance(userLocation.lat, userLocation.lng, parseFloat(a.latitude), parseFloat(a.longitude))
+                : 999999;
+            const distB = (b.latitude && b.longitude)
+                ? calculateDistance(userLocation.lat, userLocation.lng, parseFloat(b.latitude), parseFloat(b.longitude))
+                : 999999;
+            return distA - distB;
+        });
+    } else if (sort === 'vehicles') {
         filtered.sort((a, b) => (b.total_vehicles || 0) - (a.total_vehicles || 0));
     } else if (sort === 'price') {
         filtered.sort((a, b) => (a.daily_rate_from || 999999) - (b.daily_rate_from || 999999));
     } else if (sort === 'featured') {
         filtered.sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0));
+    } else if (sort === 'name') {
+        filtered.sort((a, b) => (a.business_name || '').localeCompare(b.business_name || ''));
     }
 
     renderCompanies(filtered);
