@@ -6,46 +6,35 @@
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Redirect already-authenticated users away from the login page
+    if (localStorage.getItem('motorlink_authenticated') === 'true') {
+        fetch(`${CONFIG.API_URL}?action=check_auth`, { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success && d.authenticated) {
+                    const params = new URLSearchParams(window.location.search);
+                    const redir = params.get('redirect');
+                    window.location.replace(
+                        (redir && !/^https?:|^\/\//i.test(redir)) ? redir : 'index.html'
+                    );
+                }
+            })
+            .catch(() => {}); // silently fail — user stays on login page
+    }
+
     const loginForm = document.getElementById('loginForm');
     const loginButton = document.getElementById('loginButton');
     const buttonText = document.getElementById('buttonText');
     const loginSpinner = document.getElementById('loginSpinner');
     const passwordToggle = document.getElementById('passwordToggle');
-    const forgotPassword = document.getElementById('forgotPassword');
-    
-    // Mobile menu handled by mobile-menu.js
-    // const mobileToggle = document.getElementById('mobileToggle');
-    // const mainNav = document.getElementById('mainNav');
-    
-    // if (mobileToggle && mainNav) {
-    //     mobileToggle.addEventListener('click', function() {
-    //         mainNav.classList.toggle('active');
-    //         const icon = this.querySelector('i');
-    //         icon.className = mainNav.classList.contains('active') ? 'fas fa-times' : 'fas fa-bars';
-    //     });
-    // }
-    
+
     // Password toggle functionality
     if (passwordToggle) {
         passwordToggle.addEventListener('click', togglePassword);
     }
     
-    // Forgot password functionality
-    if (forgotPassword) {
-        forgotPassword.addEventListener('click', function(e) {
-            e.preventDefault();
-            const email = prompt('Please enter your email address to reset your password:');
+    // Forgot password link navigates to forgot-password.html (handled by href)
 
-            if (email && isValidEmail(email)) {
-                // Show confirmation message with admin contact
-                alert(`Password reset requested for: ${email}\n\nFor immediate assistance, please contact:\n\nEmail: info@motorlink.mw\nPhone: +265 991 234 567\nWhatsApp: +265 991 234 567\n\nOur support team will help you reset your password within 24 hours.`);
-                showToast('Password reset request submitted. Check your email or contact support.', 'success');
-            } else if (email) {
-                showToast('Please enter a valid email address', 'error');
-            }
-        });
-    }
-    
     // Form submission
     if (loginForm) {
         loginForm.addEventListener('submit', async function(e) {
@@ -161,7 +150,7 @@ async function performLogin() {
         const data = await response.json();
         
         if (data.success) {
-            // Login successful - Store user data locally for session persistence
+            // Login successful — store user data for session persistence
             if (data.user) {
                 localStorage.setItem('motorlink_user', JSON.stringify(data.user));
                 localStorage.setItem('motorlink_authenticated', 'true');
@@ -170,31 +159,27 @@ async function performLogin() {
             const urlParams = new URLSearchParams(window.location.search);
             const redirect = urlParams.get('redirect');
 
-            // Only allow relative in-site redirects to avoid open redirect issues.
-            if (redirect && !redirect.startsWith('http://') && !redirect.startsWith('https://') && !redirect.startsWith('//')) {
+            // Only allow relative in-site redirects to prevent open-redirect attacks
+            if (redirect && !/^https?:|^\/\//i.test(redirect)) {
                 window.location.href = redirect;
             } else {
-                // Redirect to home page (dashboard) by default.
                 window.location.href = 'index.html';
             }
 
         } else {
-            // Login failed
+            // Surface the server's error message directly
             throw new Error(data.message || 'Login failed. Please check your credentials.');
         }
         
     } catch (error) {
-        
-        // More specific error messages
-        let userMessage = 'Login failed. Please try again.';
-        if (error.message.includes('network') || !navigator.onLine) {
+        // Use the API's error message; fall back to a network error message
+        let userMessage = (error && error.message) ? error.message : 'Login failed. Please try again.';
+        if (!navigator.onLine || error instanceof TypeError) {
             userMessage = 'Network error. Please check your internet connection.';
-        } else if (error.message.includes('credentials')) {
-            userMessage = 'Invalid email or password. Please try again.';
         }
-        
+
         showToast(userMessage, 'error');
-        
+
         // Reset button state
         loginButton.disabled = false;
         buttonText.textContent = 'Login to Account';

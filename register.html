@@ -407,36 +407,15 @@
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-container">
-                <a href="index.html" class="logo">
-                    <i class="fas fa-car"></i> MotorLink
-                </a>
-                
-                <nav class="nav" id="mainNav">
-                    <a href="index.html">Home</a>
-                    <a href="car-database.html">Know Your Car</a>
-                    <a href="garages.html">Garages</a>
-                    <a href="dealers.html">Dealers</a>
-                    <a href="car-hire.html">Car Hire</a>
-                    <a href="sell.html">Sell Car</a>
-                </nav>
-                
-                <div class="user-menu">
-                    <a href="login.html" class="btn btn-primary btn-sm">
-                        <i class="fas fa-sign-in-alt"></i> Login
-                    </a>
-                </div>
-                
-                <button class="tablet-user-menu-toggle" id="tabletUserMenuToggle" aria-label="Toggle account menu">
-                    <i class="fas fa-ellipsis-v"></i>
-                </button>
-                <button class="mobile-menu-toggle" id="mobileToggle">
-                    <i class="fas fa-bars"></i>
-                </button>
-            </div>
+    <!-- Auth Header (no navigation) -->
+    <header class="auth-header">
+        <div class="auth-header-inner">
+            <a href="index.html" class="auth-logo">
+                <i class="fas fa-car"></i> MotorLink
+            </a>
+            <a href="login.html" class="auth-header-link">
+                Already registered? <strong>Sign in</strong>
+            </a>
         </div>
     </header>
 
@@ -800,7 +779,6 @@
     </footer>
 
     <script src="config.js"></script>
-    <script src="js/mobile-menu.js"></script>
     <script src="js/footer-loader.js"></script>
     <script src="js/phone-formatter.js"></script>
     <script src="js/username-checker.js"></script>

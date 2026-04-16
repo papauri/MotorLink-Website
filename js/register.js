@@ -4,6 +4,18 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Redirect already-authenticated users away from the registration page
+    if (localStorage.getItem('motorlink_authenticated') === 'true') {
+        fetch(`${window.CONFIG?.API_URL}?action=check_auth`, { credentials: 'include' })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success && d.authenticated) {
+                    window.location.replace('index.html');
+                }
+            })
+            .catch(() => {});
+    }
+
     const form = document.getElementById('registerForm');
     const steps = document.querySelectorAll('.form-step');
     const stepDots = document.querySelectorAll('.step-dot');
@@ -23,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalSteps = 3;
     
     // Get API URL from config
-    const apiUrl = window.CONFIG?.API_URL || 'http://127.0.0.1:8000/proxy.php';
+    const apiUrl = window.CONFIG?.API_URL;
     const businessContactDefaults = {
         phone: '+265 991 234 567',
         email: 'support@motorlink.mw',

@@ -315,7 +315,7 @@ try {
 
     <script>
         // Get API URL from config
-        const API_URL = CONFIG.API_URL || 'http://127.0.0.1:8000/proxy.php';
+        const API_URL = CONFIG.API_URL;
         
         <?php if ($validToken): ?>
         const form = document.getElementById('resetPasswordForm');
