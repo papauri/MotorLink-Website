@@ -265,11 +265,17 @@ class CarHireDashboard {
         const available = this.fleet.filter(v => v.status === 'available').length;
         const rented = this.fleet.filter(v => v.status === 'rented').length;
         const maintenance = this.fleet.filter(v => v.status === 'maintenance').length;
+        const vans = this.fleet.filter(v => v.vehicle_category === 'van').length;
+        const trucks = this.fleet.filter(v => v.vehicle_category === 'truck').length;
 
         document.getElementById('totalVehicles').textContent = total;
         document.getElementById('availableVehicles').textContent = available;
         document.getElementById('rentedVehicles').textContent = rented;
         document.getElementById('maintenanceVehicles').textContent = maintenance;
+        const vanEl = document.getElementById('vanVehicles');
+        if (vanEl) vanEl.textContent = vans;
+        const truckEl = document.getElementById('truckVehicles');
+        if (truckEl) truckEl.textContent = trucks;
     }
 
     async loadRentals() {
@@ -398,6 +404,11 @@ class CarHireDashboard {
         const statusFilter = document.getElementById('statusFilter');
         if (statusFilter) {
             statusFilter.addEventListener('change', () => this.filterFleet());
+        }
+
+        const categoryFilter = document.getElementById('categoryFilter');
+        if (categoryFilter) {
+            categoryFilter.addEventListener('change', () => this.filterFleet());
         }
 
         const searchInput = document.getElementById('searchFleet');
@@ -593,12 +604,17 @@ class CarHireDashboard {
 
     filterFleet() {
         const statusFilter = document.getElementById('statusFilter').value;
+        const categoryFilter = document.getElementById('categoryFilter')?.value || '';
         const searchTerm = document.getElementById('searchFleet').value.toLowerCase().trim();
 
         let filtered = this.fleet;
 
         if (statusFilter) {
             filtered = filtered.filter(vehicle => (vehicle.status || 'available') === statusFilter);
+        }
+
+        if (categoryFilter) {
+            filtered = filtered.filter(vehicle => (vehicle.vehicle_category || 'car') === categoryFilter);
         }
 
         if (searchTerm) {

@@ -140,6 +140,24 @@
                             <div class="stat-label">In Maintenance</div>
                         </div>
                     </div>
+                    <div class="stat-card" style="border-top:3px solid #8b5cf6;">
+                        <div class="stat-icon" style="background:rgba(139,92,246,0.12);color:#8b5cf6;">
+                            <i class="fas fa-van-shuttle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="vanVehicles">0</div>
+                            <div class="stat-label">Vans</div>
+                        </div>
+                    </div>
+                    <div class="stat-card" style="border-top:3px solid #f97316;">
+                        <div class="stat-icon" style="background:rgba(249,115,22,0.12);color:#f97316;">
+                            <i class="fas fa-truck"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-value" id="truckVehicles">0</div>
+                            <div class="stat-label">Trucks</div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="recent-activity">
@@ -339,6 +357,12 @@
                         <option value="rented">Rented</option>
                         <option value="maintenance">Maintenance</option>
                         <option value="not_available">Not Available</option>
+                    </select>
+                    <select id="categoryFilter">
+                        <option value="">All Types</option>
+                        <option value="car">Cars</option>
+                        <option value="van">Vans</option>
+                        <option value="truck">Trucks</option>
                     </select>
                     <input type="text" id="searchFleet" placeholder="Search fleet...">
                 </div>

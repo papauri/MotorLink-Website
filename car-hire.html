@@ -219,6 +219,16 @@
                     <!-- Populated dynamically from locations table -->
                 </select>
             </div>
+            <div class="filter-group" id="distanceFilterGroup">
+                <label class="filter-label"><i class="fas fa-location-arrow"></i> Max Distance</label>
+                <select id="distanceFilter" class="filter-select" disabled title="Allow location access to use this filter">
+                    <option value="">Any Distance</option>
+                    <option value="10">Within 10 km</option>
+                    <option value="25">Within 25 km</option>
+                    <option value="50">Within 50 km</option>
+                    <option value="100">Within 100 km</option>
+                </select>
+            </div>
             <div class="filter-group">
                 <label class="filter-label"><i class="fas fa-car"></i> Vehicle Type</label>
                 <select id="vehicleTypeFilter" class="filter-select">

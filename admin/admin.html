@@ -937,6 +937,13 @@
                             <option value="pending_approval">Pending</option>
                             <option value="suspended">Suspended</option>
                         </select>
+                        <select id="carHireCategoryFilter" class="form-control" onchange="admin.loadCarHire()">
+                            <option value="">All Categories</option>
+                            <option value="standard">Standard</option>
+                            <option value="events">Events</option>
+                            <option value="vans_trucks">Vans &amp; Trucks</option>
+                            <option value="all">All Services</option>
+                        </select>
                         <select id="carHireLocationFilter" class="form-control" onchange="admin.loadCarHire()">
                             <option value="">All Locations</option>
                         </select>
@@ -954,10 +961,10 @@
                                     <th>Business Name</th>
                                     <th>Owner</th>
                                     <th>Location</th>
-                                    <th>Phone</th>
+                                    <th>Category</th>
+                                    <th>Fleet</th>
                                     <th>Daily Rate</th>
                                     <th>Status</th>
-                                    <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>

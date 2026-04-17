@@ -514,6 +514,17 @@ function applyFilters() {
         });
     }
 
+    // Distance radius filter (only active when user location is available)
+    const distanceFilterEl = document.getElementById('distanceFilter');
+    const distanceRadius = distanceFilterEl && !distanceFilterEl.disabled ? parseFloat(distanceFilterEl.value) : NaN;
+    if (!isNaN(distanceRadius) && userLocation) {
+        filtered = filtered.filter(c => {
+            if (!c.latitude || !c.longitude) return true; // keep ungeocoded companies
+            const dist = calculateDistance(userLocation.lat, userLocation.lng, parseFloat(c.latitude), parseFloat(c.longitude));
+            return dist <= distanceRadius;
+        });
+    }
+
     // Sort results
     if (sort === 'nearest' && userLocation) {
         filtered.sort((a, b) => {
@@ -600,6 +611,8 @@ function clearFilters() {
     if (seatsFilter) seatsFilter.value = '';
     const fuelTypeFilter = document.getElementById('fuelTypeFilter');
     if (fuelTypeFilter) fuelTypeFilter.value = '';
+    const distanceFilter = document.getElementById('distanceFilter');
+    if (distanceFilter) distanceFilter.value = '';
 
     renderCompanies(companies);
     updateResultsCount(companies.length);
@@ -667,6 +680,14 @@ function getUserLocation() {
                 lng: position.coords.longitude
             };
             console.log('User location obtained:', userLocation);
+            
+            // Enable distance filter now that we have a location
+            const distFilter = document.getElementById('distanceFilter');
+            if (distFilter) {
+                distFilter.disabled = false;
+                distFilter.title = 'Filter by distance from your location';
+                distFilter.addEventListener('change', () => applyFilters());
+            }
             
             // Re-render companies with distance information if already loaded
             if (companies.length > 0) {

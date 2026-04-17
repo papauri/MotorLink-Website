@@ -9,6 +9,8 @@
 let companyData = null;
 let fleet = [];
 let mapInitialized = false;
+let userLocation = null;
+let companyDistanceKm = null; // distance from user to this company
 
 async function fetchJsonWithRetry(url, options = {}, attempts = 2, timeoutMs = 10000) {
     let lastError = null;
@@ -54,7 +56,73 @@ document.addEventListener('DOMContentLoaded', function() {
 
     loadCompanyData(companyId);
     loadFleet(companyId);
+    getUserLocation(companyId);
 });
+
+// Haversine distance in km
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Get user location and update distance displays
+function getUserLocation(companyId) {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            userLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+            // If company data already loaded, update distance in header
+            if (companyData && companyData.latitude && companyData.longitude) {
+                companyDistanceKm = calculateDistance(
+                    userLocation.lat, userLocation.lng,
+                    parseFloat(companyData.latitude), parseFloat(companyData.longitude)
+                );
+                updateDistanceDisplay();
+            }
+            // Update any already-rendered fleet cards
+            updateFleetDistanceBadges();
+        },
+        function() { /* no-op if denied */ },
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+}
+
+// Inject/update the distance pill in the company header meta row
+function updateDistanceDisplay() {
+    if (!companyDistanceKm) return;
+    const existing = document.getElementById('companyDistancePill');
+    const distText = companyDistanceKm < 1
+        ? `${Math.round(companyDistanceKm * 1000)} m from you`
+        : `${companyDistanceKm.toFixed(1)} km from you`;
+    if (existing) {
+        existing.innerHTML = `<i class="fas fa-location-arrow"></i> ${distText}`;
+    } else {
+        const metaEl = document.querySelector('.company-meta');
+        if (metaEl) {
+            const span = document.createElement('span');
+            span.id = 'companyDistancePill';
+            span.className = 'meta-item company-distance-pill';
+            span.innerHTML = `<i class="fas fa-location-arrow"></i> ${distText}`;
+            metaEl.prepend(span);
+        }
+    }
+}
+
+// Add distance badges to van/truck fleet cards that are already rendered
+function updateFleetDistanceBadges() {
+    if (!companyDistanceKm) return;
+    const distText = companyDistanceKm < 1
+        ? `${Math.round(companyDistanceKm * 1000)} m away`
+        : `${companyDistanceKm.toFixed(1)} km away`;
+    document.querySelectorAll('.fleet-card .fleet-distance-badge').forEach(el => {
+        el.innerHTML = `<i class="fas fa-location-arrow"></i> ${distText}`;
+    });
+}
 
 function showCompanyLoadError(message) {
     const container = document.getElementById('companyHeader');
@@ -104,6 +172,14 @@ async function loadCompanyData(id) {
             // Re-trigger mobile description move after async render completes
             if (typeof moveDescriptionsOnMobile === 'function') {
                 setTimeout(moveDescriptionsOnMobile, 50);
+            }
+            // Compute distance if user location already available
+            if (userLocation && companyData.latitude && companyData.longitude) {
+                companyDistanceKm = calculateDistance(
+                    userLocation.lat, userLocation.lng,
+                    parseFloat(companyData.latitude), parseFloat(companyData.longitude)
+                );
+                updateDistanceDisplay();
             }
         } else {
             showCompanyLoadError(data.message || 'Company not found.');
@@ -326,6 +402,13 @@ function renderFleet(data) {
             statusBadge = '<div class="available-badge"><i class="fas fa-check-circle"></i> Available</div>';
         }
         
+        const isVanOrTruck = vehicle.vehicle_category === 'van' || vehicle.vehicle_category === 'truck';
+        const distText = companyDistanceKm != null
+            ? (companyDistanceKm < 1
+                ? `${Math.round(companyDistanceKm * 1000)} m away`
+                : `${companyDistanceKm.toFixed(1)} km away`)
+            : null;
+
         return `
             <div class="fleet-card ${!isAvailable ? 'unavailable' : ''}">
                 <div class="fleet-image">
@@ -337,6 +420,7 @@ function renderFleet(data) {
                 </div>
                 <div class="fleet-info">
                     <h3 class="fleet-title">${escapeHtml(vehicle.vehicle_name)}</h3>
+                    ${isVanOrTruck && distText ? `<div class="fleet-distance-badge"><i class="fas fa-location-arrow"></i> ${distText}</div>` : (isVanOrTruck ? `<div class="fleet-distance-badge" style="display:none;"></div>` : '')}
                     
                     <div class="fleet-specs">
                         <div class="spec-item">

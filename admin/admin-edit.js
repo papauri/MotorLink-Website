@@ -598,32 +598,92 @@ class EditOperations {
         try {
             this.showLoading('Loading car hire details...');
             
-            const response = await fetch(ADMIN_EDIT_API, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `action=get_car_hire&car_hire_id=${carHireId}`
-            });
-
-            const data = await response.json();
+            const [companyRes, fleetRes] = await Promise.all([
+                fetch(ADMIN_EDIT_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=get_car_hire&car_hire_id=${carHireId}`
+                }).then(r => r.json()),
+                fetch(ADMIN_EDIT_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=get_car_hire_fleet_admin&car_hire_id=${carHireId}`
+                }).then(r => r.json())
+            ]);
             
-            if (data.success) {
-                this.showCarHireDetailsModal(data.car_hire);
+            if (companyRes.success) {
+                this.showCarHireDetailsModal(companyRes.car_hire, fleetRes.success ? fleetRes : null);
             } else {
-                this.showError('Failed to load car hire details: ' + data.message);
+                this.showError('Failed to load car hire details: ' + companyRes.message);
             }
         } catch (error) {
             this.showError('Error loading car hire: ' + error.message);
         }
     }
 
-    showCarHireDetailsModal(carHire) {
+    showCarHireDetailsModal(carHire, fleetData) {
+        const categoryLabels = {
+            standard: { label: 'Standard', icon: '🚗' },
+            events: { label: 'Events / Weddings', icon: '🎉' },
+            vans_trucks: { label: 'Vans &amp; Trucks', icon: '🚚' },
+            all: { label: 'All Services', icon: '🔄' }
+        };
+        const cat = categoryLabels[carHire.hire_category] || { label: carHire.hire_category || 'Standard', icon: '🚗' };
+
+        let eventTypesHtml = '';
+        if (carHire.event_types) {
+            try {
+                const evts = typeof carHire.event_types === 'string' ? JSON.parse(carHire.event_types) : carHire.event_types;
+                if (Array.isArray(evts) && evts.length) {
+                    eventTypesHtml = evts.map(e => `<span class="tag">${this.escapeHtml(e)}</span>`).join(' ');
+                }
+            } catch(e) { /* ignore */ }
+        }
+
+        // Fleet section
+        let fleetSectionHtml = '';
+        if (fleetData && fleetData.fleet) {
+            const c = fleetData.counts || {};
+            const statusColors = { available: '#16a34a', rented: '#2563eb', maintenance: '#d97706', not_available: '#6b7280' };
+            const catIcons = { car: 'fa-car', van: 'fa-van-shuttle', truck: 'fa-truck' };
+            const fleetRows = fleetData.fleet.map(v => {
+                const catIcon = catIcons[v.vehicle_category] || 'fa-car';
+                const statusColor = statusColors[v.status] || '#6b7280';
+                const isTransporter = v.vehicle_category === 'van' || v.vehicle_category === 'truck';
+                return `
+                    <tr>
+                        <td>${this.escapeHtml(v.vehicle_name || 'N/A')}</td>
+                        <td><i class="fas ${catIcon}"></i> ${this.escapeHtml((v.vehicle_category || 'car').charAt(0).toUpperCase() + (v.vehicle_category || 'car').slice(1))}</td>
+                        <td><span style="color:${statusColor};font-weight:600;">${(v.status || 'N/A').replace('_', ' ')}</span></td>
+                        <td>${isTransporter && v.cargo_capacity ? `<i class="fas fa-box"></i> ${this.escapeHtml(v.cargo_capacity)}` : (v.seats ? `${v.seats} seats` : '—')}</td>
+                        <td>MWK ${this.formatNumber(v.daily_rate || 0)}/day</td>
+                    </tr>`;
+            }).join('');
+
+            fleetSectionHtml = `
+                <div class="detail-section full-width" style="margin-top:16px;">
+                    <h4><i class="fas fa-truck-ramp-box"></i> Fleet Overview</h4>
+                    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:12px;">
+                        <span class="tag" style="background:#e0f2fe;color:#0369a1;"><i class="fas fa-car"></i> ${c.car || 0} Cars</span>
+                        <span class="tag" style="background:#ede9fe;color:#7c3aed;"><i class="fas fa-van-shuttle"></i> ${c.van || 0} Vans</span>
+                        <span class="tag" style="background:#fff7ed;color:#c2410c;"><i class="fas fa-truck"></i> ${c.truck || 0} Trucks</span>
+                        <span class="tag" style="background:#f3f4f6;color:#374151;"><i class="fas fa-layer-group"></i> ${fleetData.fleet.length} Total</span>
+                    </div>
+                    ${fleetData.fleet.length > 0 ? `
+                    <div style="overflow-x:auto;">
+                        <table class="data-table" style="font-size:0.85rem;">
+                            <thead><tr><th>Vehicle</th><th>Category</th><th>Status</th><th>Capacity</th><th>Rate</th></tr></thead>
+                            <tbody>${fleetRows}</tbody>
+                        </table>
+                    </div>` : '<p class="text-muted">No fleet vehicles registered yet.</p>'}
+                </div>`;
+        }
+
         const modalHtml = `
             <div class="modal-overlay active" id="carHireDetailsModal">
-                <div class="modal-content" style="max-width: 800px;">
+                <div class="modal-content" style="max-width: 860px;">
                     <div class="modal-header">
-                        <h3>Car Hire Details - ${this.escapeHtml(carHire.business_name)}</h3>
+                        <h3>Car Hire Details — ${this.escapeHtml(carHire.business_name)}</h3>
                         <button class="modal-close">&times;</button>
                     </div>
                     <div class="modal-body">
@@ -636,23 +696,32 @@ class EditOperations {
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Owner:</span>
-                                    <span class="detail-value">${this.escapeHtml(carHire.owner_name)}</span>
+                                    <span class="detail-value">${this.escapeHtml(carHire.owner_name || '—')}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Email:</span>
-                                    <span class="detail-value">${this.escapeHtml(carHire.email)}</span>
+                                    <span class="detail-value">${this.escapeHtml(carHire.email || '—')}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Phone:</span>
-                                    <span class="detail-value">${carHire.phone}</span>
+                                    <span class="detail-value">${carHire.phone || '—'}</span>
                                 </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Category:</span>
+                                    <span class="detail-value">${cat.icon} ${cat.label}</span>
+                                </div>
+                                ${eventTypesHtml ? `<div class="detail-row"><span class="detail-label">Event Types:</span><span class="detail-value">${eventTypesHtml}</span></div>` : ''}
                             </div>
                             
                             <div class="detail-section">
-                                <h4>Pricing & Location</h4>
+                                <h4>Pricing &amp; Location</h4>
                                 <div class="detail-row">
                                     <span class="detail-label">Location:</span>
-                                    <span class="detail-value">${this.escapeHtml(carHire.location)}</span>
+                                    <span class="detail-value">${this.escapeHtml(carHire.location_name || carHire.location || '—')}</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Address:</span>
+                                    <span class="detail-value">${this.escapeHtml(carHire.address || '—')}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Daily Rate From:</span>
@@ -666,12 +735,18 @@ class EditOperations {
                                     <span class="detail-label">Monthly Rate From:</span>
                                     <span class="detail-value">MWK ${this.formatNumber(carHire.monthly_rate_from || 0)}</span>
                                 </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Business Hours:</span>
+                                    <span class="detail-value">${this.escapeHtml(carHire.business_hours || '—')}</span>
+                                </div>
                             </div>
 
                             <div class="detail-section full-width">
                                 <h4>Business Description</h4>
-                                <div class="detail-value">${carHire.description || 'No description provided'}</div>
+                                <div class="detail-value">${this.escapeHtml(carHire.description || 'No description provided.')}</div>
                             </div>
+
+                            ${fleetSectionHtml}
                         </div>
                     </div>
                     <div class="modal-actions">

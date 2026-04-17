@@ -137,6 +137,9 @@ try {
         case 'get_car_hire':
             getCarHire($pdo);
             break;
+        case 'get_car_hire_fleet_admin':
+            getCarHireFleetAdmin($pdo);
+            break;
         case 'update_car_hire':
             updateCarHire($pdo);
             break;
@@ -650,6 +653,36 @@ function getCarHire($pdo) {
         } else {
             echo json_encode(['success' => false, 'message' => 'Car hire not found']);
         }
+    } catch (PDOException $e) {
+        echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+    }
+}
+
+function getCarHireFleetAdmin($pdo) {
+    $carHireId = intval($_POST['car_hire_id'] ?? 0);
+    if (!$carHireId) {
+        echo json_encode(['success' => false, 'message' => 'Missing car_hire_id']);
+        return;
+    }
+    try {
+        $stmt = $pdo->prepare("
+            SELECT f.id, f.vehicle_name, f.vehicle_category, f.status,
+                   f.seats, f.cargo_capacity, f.event_suitable,
+                   f.daily_rate, f.registration_number, f.fuel_type, f.transmission,
+                   f.image, f.created_at
+            FROM car_hire_fleet f
+            WHERE f.company_id = ?
+            ORDER BY f.vehicle_category, f.created_at DESC
+        ");
+        $stmt->execute([$carHireId]);
+        $fleet = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Count by category
+        $counts = ['car' => 0, 'van' => 0, 'truck' => 0];
+        foreach ($fleet as $v) {
+            $cat = $v['vehicle_category'] ?? 'car';
+            if (isset($counts[$cat])) $counts[$cat]++;
+        }
+        echo json_encode(['success' => true, 'fleet' => $fleet, 'counts' => $counts]);
     } catch (PDOException $e) {
         echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
     }

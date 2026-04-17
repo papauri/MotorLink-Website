@@ -2127,10 +2127,12 @@ async loadDealers() {
         debugLog('Loading car hire...');
         const filters = {};
         const statusFilter = document.getElementById('carHireStatusFilter')?.value;
+        const categoryFilter = document.getElementById('carHireCategoryFilter')?.value;
         const locationFilter = document.getElementById('carHireLocationFilter')?.value;
         const searchFilter = document.getElementById('carHireSearchFilter')?.value;
         
         if (statusFilter) filters.status = statusFilter;
+        if (categoryFilter) filters.hire_category = categoryFilter;
         if (locationFilter) filters.location_id = locationFilter;
         if (searchFilter) filters.search = searchFilter;
         
@@ -2154,7 +2156,6 @@ async loadDealers() {
         debugLog('Car hire loading error details:', error);
         const tbody = document.getElementById('carHireTableBody');
         if (tbody) {
-            // Escape error message to prevent XSS
             const safeErrorMsg = this.escapeHtml(error.message || 'Unknown error');
             tbody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Error loading car hire: ${safeErrorMsg}</td></tr>`;
         }
@@ -2398,7 +2399,26 @@ displayCarHireTable(carHire) {
         return;
     }
 
-    const html = carHire.map(company => `
+    const categoryLabels = {
+        standard: { label: 'Standard', cls: 'cat-standard', icon: 'fa-car' },
+        events: { label: 'Events', cls: 'cat-events', icon: 'fa-calendar-alt' },
+        vans_trucks: { label: 'Vans & Trucks', cls: 'cat-vans_trucks', icon: 'fa-truck' },
+        all: { label: 'All Services', cls: 'cat-all', icon: 'fa-layer-group' }
+    };
+
+    const html = carHire.map(company => {
+        const cat = categoryLabels[company.hire_category] || { label: company.hire_category || 'Standard', cls: 'cat-standard', icon: 'fa-car' };
+        const vanCount = parseInt(company.van_count) || 0;
+        const truckCount = parseInt(company.truck_count) || 0;
+        const carCount = parseInt(company.car_count) || (parseInt(company.total_vehicles) || 0) - vanCount - truckCount;
+        const fleetBreakdown = `
+            <div class="fleet-mini-breakdown">
+                ${carCount > 0 ? `<span title="Cars"><i class="fas fa-car"></i> ${carCount}</span>` : ''}
+                ${vanCount > 0 ? `<span title="Vans" style="color:#8b5cf6"><i class="fas fa-van-shuttle"></i> ${vanCount}</span>` : ''}
+                ${truckCount > 0 ? `<span title="Trucks" style="color:#f97316"><i class="fas fa-truck"></i> ${truckCount}</span>` : ''}
+                ${(carCount + vanCount + truckCount) === 0 ? '<span class="text-muted">—</span>' : ''}
+            </div>`;
+        return `
         <tr>
             <td>${company.id || 'N/A'}</td>
             <td>
@@ -2410,10 +2430,10 @@ displayCarHireTable(carHire) {
                 <div class="location-info">
                     <strong>${company.location_name || 'N/A'}</strong>
                     ${company.district ? `<div class="text-muted small">District: ${this.escapeHtml(company.district)}</div>` : ''}
-                    ${company.region ? `<div class="text-muted small">Region: ${company.region}</div>` : ''}
                 </div>
             </td>
-            <td>${company.phone || 'N/A'}</td>
+            <td><span class="tag ${cat.cls}"><i class="fas ${cat.icon}"></i> ${cat.label}</span></td>
+            <td>${fleetBreakdown}</td>
             <td>MWK ${this.formatNumber(company.daily_rate_from || 0)}</td>
             <td>
                 <span class="status-badge status-${company.status || 'pending'}">${(company.status || 'pending').replace('_', ' ')}</span>
@@ -2421,7 +2441,6 @@ displayCarHireTable(carHire) {
                 ${company.is_verified ? '<div class="text-success small"><i class="fas fa-check-circle"></i> Verified</div>' : ''}
                 ${company.is_certified ? '<div class="text-info small"><i class="fas fa-certificate"></i> Certified</div>' : ''}
             </td>
-            <td>${this.formatDateShort(company.created_at)}</td>
             <td>
                 <div class="management-actions">
                     ${company.status === 'pending_approval' ? `
@@ -2455,8 +2474,8 @@ displayCarHireTable(carHire) {
                     </button>
                 </div>
             </td>
-        </tr>
-    `).join('');
+        </tr>`;
+    }).join('');
 
     tbody.innerHTML = html;
     this.enableTableSorting('carHireTable');
