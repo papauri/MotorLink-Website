@@ -332,23 +332,23 @@ function renderCompanies(data) {
                         ${company.daily_rate_from && company.daily_rate_to ? `
                             <div class="stat-item-inline price-item">
                                 <i class="fas fa-calendar-day"></i>
-                                <span class="company-rate-text">MWK ${formatNumber(company.daily_rate_from)} - ${formatNumber(company.daily_rate_to)}/day</span>
+                                <span class="company-rate-text">${CONFIG.CURRENCY_CODE || 'MWK'} ${formatNumber(company.daily_rate_from)} - ${formatNumber(company.daily_rate_to)}/day</span>
                             </div>
                         ` : company.daily_rate_from ? `
                             <div class="stat-item-inline price-item">
                                 <i class="fas fa-calendar-day"></i>
-                                <span class="company-rate-text">MWK ${formatNumber(company.daily_rate_from)}/day</span>
+                                <span class="company-rate-text">${CONFIG.CURRENCY_CODE || 'MWK'} ${formatNumber(company.daily_rate_from)}/day</span>
                             </div>
                         ` : ''}
                         ${company.weekly_rate_from && company.weekly_rate_to ? `
                             <div class="stat-item-inline price-item">
                                 <i class="fas fa-calendar-week"></i>
-                                <span class="company-rate-text">MWK ${formatNumber(company.weekly_rate_from)} - ${formatNumber(company.weekly_rate_to)}/week</span>
+                                <span class="company-rate-text">${CONFIG.CURRENCY_CODE || 'MWK'} ${formatNumber(company.weekly_rate_from)} - ${formatNumber(company.weekly_rate_to)}/week</span>
                             </div>
                         ` : company.weekly_rate_from ? `
                             <div class="stat-item-inline price-item">
                                 <i class="fas fa-calendar-week"></i>
-                                <span class="company-rate-text">MWK ${formatNumber(company.weekly_rate_from)}/week</span>
+                                <span class="company-rate-text">${CONFIG.CURRENCY_CODE || 'MWK'} ${formatNumber(company.weekly_rate_from)}/week</span>
                             </div>
                         ` : ''}
                     </div>

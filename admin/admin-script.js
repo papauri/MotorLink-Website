@@ -80,6 +80,28 @@ const debugLog = (...args) => {
     }
 };
 
+function getConfiguredCurrencyLabel() {
+    const symbol = document.getElementById('currency-symbol')?.value?.trim();
+    const code = document.getElementById('currency-code')?.value?.trim();
+    return symbol || code || 'LOCAL';
+}
+
+function formatConfiguredCurrencyAmount(amount, prefix) {
+    const numericAmount = Number(amount || 0);
+    const safeAmount = Number.isFinite(numericAmount) ? numericAmount : 0;
+    const formattedAmount = new Intl.NumberFormat().format(safeAmount);
+    return `${prefix || ''}${getConfiguredCurrencyLabel()} ${formattedAmount}`.trim();
+}
+
+function stripConfiguredCurrencyText(value) {
+    let normalized = String(value || '');
+    const label = getConfiguredCurrencyLabel();
+    if (label) {
+        normalized = normalized.replace(new RegExp(label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '');
+    }
+    return normalized.replace(/\b(?:MWK|USD|LOCAL)\b/g, '').replace(/,|\n/g, '').trim();
+}
+
 debugLog('Admin API Base URL:', ADMIN_API_BASE);
 
 class AdminDashboard {
@@ -300,7 +322,9 @@ class AdminDashboard {
             if (headerAdminNameEl) headerAdminNameEl.textContent = this.adminData.name;
         }
 
-        this.loadDashboardData();
+        Promise.resolve(loadSettings())
+            .catch((error) => { debugLog('Unable to preload admin settings:', error); })
+            .finally(() => { this.loadDashboardData(); });
     }
 
     showSection(section) {
@@ -438,7 +462,7 @@ class AdminDashboard {
                 document.getElementById('pendingItems').textContent = 
                     (stats.pending_cars + stats.pending_users + stats.pending_garages + stats.pending_dealers + (stats.pending_car_hire || 0)) || 0;
                 document.getElementById('todayRevenue').textContent = 
-                    `MWK ${this.formatNumber(stats.today_revenue || 0)}`;
+                    formatConfiguredCurrencyAmount(stats.today_revenue || 0);
                 
                 document.getElementById('pendingCount').textContent = 
                     (stats.pending_cars + stats.pending_users + stats.pending_garages + stats.pending_dealers + (stats.pending_car_hire || 0)) || 0;
@@ -453,7 +477,7 @@ class AdminDashboard {
             document.getElementById('totalCars').textContent = '0';
             document.getElementById('totalUsers').textContent = '0';
             document.getElementById('pendingItems').textContent = '0';
-            document.getElementById('todayRevenue').textContent = 'MWK 0';
+            document.getElementById('todayRevenue').textContent = formatConfiguredCurrencyAmount(0);
             this.updateServicesPendingBadges({ pending_garages: 0, pending_dealers: 0, pending_car_hire: 0 });
         }
     }
@@ -775,8 +799,8 @@ class AdminDashboard {
                 const stats = response.stats;
 
                 // Revenue from payments
-                document.getElementById('kpiRevenue').textContent = `MWK ${this.formatNumber(stats.total_revenue || 0)}`;
-                document.getElementById('kpiRevenueChange').textContent = `Today: MWK ${this.formatNumber(stats.today_revenue || 0)}`;
+                document.getElementById('kpiRevenue').textContent = formatConfiguredCurrencyAmount(stats.total_revenue || 0);
+                document.getElementById('kpiRevenueChange').textContent = formatConfiguredCurrencyAmount(stats.today_revenue || 0, 'Today: ');
                 document.getElementById('kpiRevenueChange').className = 'kpi-change positive';
 
                 // Active users
@@ -798,7 +822,7 @@ class AdminDashboard {
                 throw new Error('Failed to load stats');
             }
         } catch (error) {
-            document.getElementById('kpiRevenue').textContent = 'MWK 0';
+            document.getElementById('kpiRevenue').textContent = formatConfiguredCurrencyAmount(0);
             document.getElementById('kpiRevenueChange').textContent = 'No data';
             document.getElementById('kpiActiveUsers').textContent = '0';
             document.getElementById('kpiUsersChange').textContent = 'No data';
@@ -828,11 +852,11 @@ class AdminDashboard {
                 ctx.fillText('Total Revenue', canvas.width / 2, 100);
 
                 ctx.font = 'bold 48px Arial';
-                ctx.fillText(`MWK ${this.formatNumber(response.stats.total_revenue || 0)}`, canvas.width / 2, 160);
+                ctx.fillText(formatConfiguredCurrencyAmount(response.stats.total_revenue || 0), canvas.width / 2, 160);
 
                 ctx.font = '16px Arial';
                 ctx.fillStyle = '#666';
-                ctx.fillText(`Today: MWK ${this.formatNumber(response.stats.today_revenue || 0)}`, canvas.width / 2, 200);
+                ctx.fillText(formatConfiguredCurrencyAmount(response.stats.today_revenue || 0, 'Today: '), canvas.width / 2, 200);
             }
         } catch (error) {
         }
@@ -995,7 +1019,7 @@ class AdminDashboard {
                             <td><span class="badge badge-primary">#${index + 1}</span></td>
                             <td><strong>${this.escapeHtml(car.make_name || '')} ${this.escapeHtml(car.model_name || '')}</strong></td>
                             <td>${car.year || 'N/A'}</td>
-                            <td>MWK ${this.formatNumber(car.price || 0)}</td>
+                            <td>${formatConfiguredCurrencyAmount(car.price || 0)}</td>
                             <td><span class="badge badge-${car.status === 'active' ? 'success' : 'warning'}">${car.status || 'N/A'}</span></td>
                             <td>${car.created_at ? new Date(car.created_at).toLocaleDateString() : 'N/A'}</td>
                         </tr>
@@ -1487,7 +1511,7 @@ displayGuestListingsTable(cars) {
                 </td>
                 <td>${car.make_name}/${car.model_name}</td>
                 <td>${car.year}</td>
-                <td>MWK ${this.formatNumber(car.price)}</td>
+                <td>${formatConfiguredCurrencyAmount(car.price)}</td>
                 <td>${this.escapeHtml(car.location_name)}</td>
                 <td>${this.renderListingPaymentBadge(car)}</td>
                 <td>${this.formatDateShort(car.created_at)}</td>
@@ -1581,7 +1605,7 @@ displayGuestListingsTable(cars) {
                 </td>
                 <td>${car.make_name}/${car.model_name}</td>
                 <td>${car.year}</td>
-                <td>MWK ${this.formatNumber(car.price)}</td>
+                <td>${formatConfiguredCurrencyAmount(car.price)}</td>
                 <td>${this.escapeHtml(car.location_name)}</td>
                 <td>${dateStr}</td>
                 <td>
@@ -1662,7 +1686,7 @@ displayGuestListingsTable(cars) {
                                 <h4>Pricing & Location</h4>
                                 <div class="detail-row">
                                     <span class="detail-label">Price:</span>
-                                    <span class="detail-value">MWK ${this.formatNumber(car.price)}</span>
+                                    <span class="detail-value">${formatConfiguredCurrencyAmount(car.price)}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Negotiable:</span>
@@ -1931,7 +1955,7 @@ async loadPayments() {
     async markFreeListingAsPaid(listingId) {
         const amountInput = await this.showActionPromptDialog(
             'Mark Listing as Paid',
-            'Enter amount to record for this listing (MWK).',
+            `Enter amount to record for this listing (${getConfiguredCurrencyLabel()}).`,
             '0',
             'Record Verified Payment'
         );
@@ -1948,7 +1972,7 @@ async loadPayments() {
 
         const confirmed = await this.showActionConfirmDialog(
             'Confirm Mark as Paid',
-            `Record a verified payment of MWK ${this.formatNumber(amount)} for listing #${listingId}?`,
+            `Record a verified payment of ${formatConfiguredCurrencyAmount(amount)} for listing #${listingId}?`,
             'Record Payment',
             'btn-success'
         );
@@ -1992,13 +2016,13 @@ async loadPayments() {
             
             if (response.success && response.stats) {
                 const stats = response.stats;
-                document.getElementById('todayPayments').textContent = `MWK ${this.formatNumber(stats.today.amount || 0)}`;
+                document.getElementById('todayPayments').textContent = formatConfiguredCurrencyAmount(stats.today.amount || 0);
                 document.getElementById('todayPaymentsCount').textContent = `${stats.today.count || 0} payments`;
                 
-                document.getElementById('monthPayments').textContent = `MWK ${this.formatNumber(stats.month.amount || 0)}`;
+                document.getElementById('monthPayments').textContent = formatConfiguredCurrencyAmount(stats.month.amount || 0);
                 document.getElementById('monthPaymentsCount').textContent = `${stats.month.count || 0} payments`;
                 
-                document.getElementById('pendingPayments').textContent = `MWK ${this.formatNumber(stats.pending.amount || 0)}`;
+                document.getElementById('pendingPayments').textContent = formatConfiguredCurrencyAmount(stats.pending.amount || 0);
                 document.getElementById('pendingPaymentsCount').textContent = `${stats.pending.count || 0} payments`;
                 
                 debugLog('Payment stats loaded successfully');
@@ -2435,7 +2459,7 @@ displayCarHireTable(carHire) {
             </td>
             <td><span class="tag ${cat.cls}"><i class="fas ${cat.icon}"></i> ${cat.label}</span></td>
             <td>${fleetBreakdown}</td>
-            <td>MWK ${this.formatNumber(company.daily_rate_from || 0)}</td>
+            <td>${formatConfiguredCurrencyAmount(company.daily_rate_from || 0)}</td>
             <td>
                 <span class="status-badge status-${company.status || 'pending'}">${(company.status || 'pending').replace('_', ' ')}</span>
                 ${company.is_featured ? '<div class="text-warning small"><i class="fas fa-star"></i> Featured</div>' : ''}
@@ -3220,7 +3244,7 @@ async filterMakesModels() {
                 <h4><i class="fas fa-dollar-sign"></i> Pricing & Location</h4>
                 <div class="form-row">
                     <div class="form-group">
-                        <label>Price (MWK) *</label>
+                        <label>Price (${getConfiguredCurrencyLabel()}) *</label>
                         <input type="number" name="price" value="${car.price || ''}" min="0" step="1000" required>
                     </div>
                     <div class="form-group">
@@ -4231,7 +4255,7 @@ async filterMakesModels() {
                     <div class="text-muted small">${car.model_name || 'N/A'}</div>
                 </td>
                 <td>${car.year}</td>
-                <td>MWK ${this.formatNumber(car.price)}</td>
+                <td>${formatConfiguredCurrencyAmount(car.price)}</td>
                 <td>${this.escapeHtml(car.location_name || 'N/A')}</td>
                 <td>
                     <span class="status-badge status-${car.status}">${car.status.replace('_', ' ')}</span>
@@ -4317,7 +4341,7 @@ async filterMakesModels() {
                     <div class="text-muted small">${car.model_name || 'N/A'}</div>
                 </td>
                 <td>${car.year}</td>
-                <td>MWK ${this.formatNumber(car.price)}</td>
+                <td>${formatConfiguredCurrencyAmount(car.price)}</td>
                 <td>${this.escapeHtml(car.location_name || 'N/A')}</td>
                 <td>
                     <div>${this.escapeHtml(car.owner_name || 'N/A')}</div>
@@ -4367,7 +4391,7 @@ async filterMakesModels() {
                     <div class="text-muted small">${payment.user_email}</div>
                 </td>
                 <td>${this.formatServiceType(payment.service_type)}</td>
-                <td>MWK ${this.formatNumber(payment.amount)}</td>
+                <td>${formatConfiguredCurrencyAmount(payment.amount)}</td>
                 <td>${payment.payment_method ? this.capitalize(String(payment.payment_method).replace('_', ' ')) : '-'}</td>
                 <td>
                     <div>${payment.reference || '-'}</div>
@@ -5224,8 +5248,8 @@ async filterMakesModels() {
             let bValue = b.cells[columnIndex]?.textContent.trim() || '';
 
             // Remove currency symbols, commas, and badges for cleaner comparison
-            aValue = aValue.replace(/MWK|,|\n/g, '').trim();
-            bValue = bValue.replace(/MWK|,|\n/g, '').trim();
+            aValue = stripConfiguredCurrencyText(aValue);
+            bValue = stripConfiguredCurrencyText(bValue);
 
             // Try to parse as number
             const aNum = parseFloat(aValue);
@@ -5656,7 +5680,7 @@ function showAddCarModal() {
                             <input type="text" id="add-car-title" name="title" required class="form-control">
                         </div>
                         <div class="form-group">
-                            <label for="add-car-price">Price (MWK) *</label>
+                            <label for="add-car-price">Price (${getConfiguredCurrencyLabel()}) *</label>
                             <input type="number" id="add-car-price" name="price" required class="form-control">
                         </div>
                     </div>
@@ -5877,7 +5901,7 @@ function showAddPaymentModal(prefillListingId = '') {
                             <input type="number" id="manual-payment-listing-id" class="form-control" min="1" required value="${prefillListingId ? String(prefillListingId) : ''}">
                         </div>
                         <div class="form-group">
-                            <label for="manual-payment-amount">Amount (MWK) *</label>
+                            <label for="manual-payment-amount">Amount (${getConfiguredCurrencyLabel()}) *</label>
                             <input type="number" id="manual-payment-amount" class="form-control" min="0" step="0.01" required>
                         </div>
                     </div>
@@ -6556,10 +6580,10 @@ function updateFuelPriceStatusCard(data) {
     const petrol = data.prices.petrol || {};
     const diesel = data.prices.diesel || {};
     const petrolText = petrol.price_per_liter_mwk !== '' && petrol.price_per_liter_mwk !== undefined
-        ? `Petrol MWK ${Number(petrol.price_per_liter_mwk).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/L`
+        ? `Petrol ${getConfiguredCurrencyLabel()} ${Number(petrol.price_per_liter_mwk).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/L`
         : 'Petrol not set';
     const dieselText = diesel.price_per_liter_mwk !== '' && diesel.price_per_liter_mwk !== undefined
-        ? `Diesel MWK ${Number(diesel.price_per_liter_mwk).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/L`
+        ? `Diesel ${getConfiguredCurrencyLabel()} ${Number(diesel.price_per_liter_mwk).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/L`
         : 'Diesel not set';
     const resolvedDate = data.resolved_date || data.requested_date || getFuelPriceDefaultDate();
     const modeText = data.has_exact_date
@@ -6627,12 +6651,12 @@ async function saveFuelPriceSettings() {
         }
 
         if (petrolMwk === '' || Number(petrolMwk) <= 0) {
-            admin.showAlert('error', 'Please enter a valid petrol price in MWK');
+            admin.showAlert('error', `Please enter a valid petrol price in ${getConfiguredCurrencyLabel()}`);
             return;
         }
 
         if (dieselMwk === '' || Number(dieselMwk) <= 0) {
-            admin.showAlert('error', 'Please enter a valid diesel price in MWK');
+            admin.showAlert('error', `Please enter a valid diesel price in ${getConfiguredCurrencyLabel()}`);
             return;
         }
 

@@ -14,7 +14,7 @@ class SMTPMailer {
     private $connection;
     private $logFile;
     
-    public function __construct($host, $port, $username, $password, $fromEmail = null, $fromName = 'MotorLink Malawi') {
+    public function __construct($host, $port, $username, $password, $fromEmail = null, $fromName = 'MotorLink') {
         $this->host = $host;
         $this->port = $port;
         $this->username = $username;

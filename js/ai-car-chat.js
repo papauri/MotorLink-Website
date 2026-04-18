@@ -876,7 +876,7 @@ class AICarChat {
                 vehiclesText = `${vehicleCount} vehicle${vehicleCount > 1 ? 's' : ''} available`;
                 const rate = parseInt(company.matching_vehicles[0].daily_rate || 0, 10);
                 if (!Number.isNaN(rate) && rate > 0) {
-                    vehiclesText += ` from MWK ${rate.toLocaleString()}/day`;
+                    vehiclesText += ` from ${CONFIG.CURRENCY_CODE || 'MWK'} ${rate.toLocaleString()}/day`;
                 }
             } else if (company.total_vehicles > 0) {
                 vehiclesText = `${company.total_vehicles} vehicle${company.total_vehicles > 1 ? 's' : ''} available`;
@@ -925,7 +925,7 @@ class AICarChat {
             html += `
                 <article class="ai-chat-result-card ai-chat-search-result-item" data-card-type="listing" data-listing-id="${listingId}" tabindex="0" role="button" aria-label="Open ${makeName} ${modelName}">
                     <div class="ai-chat-result-title">${makeName} ${modelName} (${year})</div>
-                    <div class="ai-chat-result-price">MWK ${price}</div>
+                    <div class="ai-chat-result-price">${CONFIG.CURRENCY_CODE || 'MWK'} ${price}</div>
                     <div class="ai-chat-result-meta">
                         ${location ? `<span>📍 ${location}</span>` : ''}
                     </div>

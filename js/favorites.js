@@ -151,7 +151,7 @@ class FavoritesManager {
                     <div class="car-info">
                         <h3 class="car-title">${this.escapeHtml(listing.title)}</h3>
                         <div class="car-price">
-                            <span class="currency">MWK</span> ${this.formatNumber(listing.price)}
+                            <span class="currency">${CONFIG.CURRENCY_CODE || 'MWK'}</span> ${this.formatNumber(listing.price)}
                         </div>
                         <div class="car-meta">
                             <span><i class="fas fa-calendar"></i> ${listing.year || 'N/A'}</span>
@@ -384,7 +384,7 @@ class FavoritesManager {
                     <div style="padding: 16px;">
                         <h3 style="font-size: 1rem; font-weight: 700; color: #1f2937; margin: 0 0 8px 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${this.escapeHtml(listing.title)}</h3>
                         <div style="font-size: 1.25rem; font-weight: 700; color: #00c853; margin-bottom: 12px;">
-                            MWK ${this.formatNumber(listing.price)}
+                            ${CONFIG.CURRENCY_CODE || 'MWK'} ${this.formatNumber(listing.price)}
                         </div>
                         <div style="display: flex; gap: 12px; font-size: 0.75rem; color: #6b7280; margin-bottom: 12px;">
                             <span><i class="fas fa-calendar"></i> ${listing.year || 'N/A'}</span>

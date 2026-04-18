@@ -498,14 +498,14 @@ function renderFleet(data) {
                         <div class="pricing-row main-price">
                             <span class="price-label">Daily Rate</span>
                             <span class="price-value">
-                                <strong>MWK ${formatNumber(vehicle.daily_rate)}</strong>
+                                <strong>${CONFIG.CURRENCY_CODE || 'MWK'} ${formatNumber(vehicle.daily_rate)}</strong>
                                 <small>/day</small>
                             </span>
                         </div>
                         ${vehicle.weekly_rate ? `
                             <div class="pricing-row">
                                 <span class="price-label">Weekly Rate</span>
-                                <span class="price-value">MWK ${formatNumber(vehicle.weekly_rate)}</span>
+                                <span class="price-value">${CONFIG.CURRENCY_CODE || 'MWK'} ${formatNumber(vehicle.weekly_rate)}</span>
                             </div>
                         ` : `
                             <div class="pricing-row placeholder" aria-hidden="true">
@@ -516,7 +516,7 @@ function renderFleet(data) {
                         ${vehicle.monthly_rate ? `
                             <div class="pricing-row">
                                 <span class="price-label">Monthly Rate</span>
-                                <span class="price-value">MWK ${formatNumber(vehicle.monthly_rate)}</span>
+                                <span class="price-value">${CONFIG.CURRENCY_CODE || 'MWK'} ${formatNumber(vehicle.monthly_rate)}</span>
                             </div>
                         ` : `
                             <div class="pricing-row placeholder" aria-hidden="true">

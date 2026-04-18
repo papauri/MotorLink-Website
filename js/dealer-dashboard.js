@@ -268,7 +268,7 @@ class DealerDashboard {
                     <div class="car-details">
                         <h3>${car.title}</h3>
                         <p class="car-year-make">${car.year || 'N/A'} ${car.make || ''} ${car.model || ''}</p>
-                        <div class="car-price">MWK ${parseInt(car.price).toLocaleString()}</div>
+                        <div class="car-price">${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(car.price).toLocaleString()}</div>
                         <div class="car-meta">
                             <span class="views"><i class="fas fa-eye"></i> ${car.views || 0} views</span>
                             <span class="date"><i class="fas fa-calendar"></i> ${this.formatDate(car.created_at)}</span>
@@ -1135,7 +1135,7 @@ class DealerDashboard {
             if (priceChangePercent > 50) {
                 this.showNotification(
                     `Error: Price change too large. You can only change price by up to 50%. ` +
-                    `Original: MWK ${originalPrice.toLocaleString()}, New: MWK ${newPrice.toLocaleString()}. ` +
+                    `Original: ${CONFIG.CURRENCY_CODE || 'MWK'} ${originalPrice.toLocaleString()}, New: ${CONFIG.CURRENCY_CODE || 'MWK'} ${newPrice.toLocaleString()}. ` +
                     'This prevents changing a cheap car to an expensive one.',
                     'error'
                 );

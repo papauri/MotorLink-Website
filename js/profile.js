@@ -360,7 +360,7 @@ class ProfileManager {
                 icon: 'fas fa-plus',
                 html: isCarHire
                     ? `<a href="${listingUrl}">Add your first hire vehicle</a> so customers can find and book your fleet.`
-                    : `<a href="${listingUrl}">Create your first car listing</a> to start reaching buyers across Malawi.`
+                    : `<a href="${listingUrl}">Create your first car listing</a> to start reaching buyers.`
             },
             {
                 icon: 'fas fa-tachometer-alt',
@@ -408,7 +408,7 @@ class ProfileManager {
                     <div>
                         <strong>${escHtml(listing.title)}</strong>
                         <div style="font-size: 12px; color: #666; margin-top: 4px;">
-                            ${parseInt(listing.views) || 0} views &bull; MWK ${parseInt(listing.price || 0).toLocaleString()}
+                            ${parseInt(listing.views) || 0} views &bull; ${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(listing.price || 0).toLocaleString()}
                         </div>
                     </div>
                     <span class="status-badge ${statusClass}">${escHtml(listing.status || 'pending')}</span>
@@ -483,7 +483,7 @@ class ProfileManager {
                         <strong>${escHtml(listing.title)}</strong>
                         <div style="font-size: 12px; color: #666;">${escHtml(String(listing.year || ''))}${listing.year && listing.mileage ? ' &bull; ' : ''}${listing.mileage ? parseInt(listing.mileage).toLocaleString() + ' km' : ''}</div>
                     </td>
-                    <td>MWK ${parseInt(listing.price || 0).toLocaleString()}</td>
+                    <td>${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(listing.price || 0).toLocaleString()}</td>
                     <td>${parseInt(listing.views) || 0}</td>
                     <td><span class="status-badge ${statusClass}">${escHtml(listing.status || 'pending')}</span></td>
                     <td>

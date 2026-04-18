@@ -1,5 +1,5 @@
 // ============================================================================
-// MotorLink Malawi - Sell Car Functionality
+// MotorLink - Sell Car Functionality
 // ============================================================================
 // Multi-step car listing form with image upload and guest submission
 // Uses global CONFIG from config.js for API endpoints
@@ -154,12 +154,12 @@ class SellManager {
 
         if (freePriceEl) {
             freePriceEl.textContent = paymentEnabled && freePrice > 0
-                ? `MWK ${Math.round(freePrice).toLocaleString()}`
+                ? `${CONFIG.CURRENCY_CODE || 'MWK'} ${Math.round(freePrice).toLocaleString()}`
                 : 'FREE';
         }
         if (featuredPriceEl) {
             featuredPriceEl.textContent = paymentEnabled && featuredPrice > 0
-                ? `MWK ${Math.round(featuredPrice).toLocaleString()}`
+                ? `${CONFIG.CURRENCY_CODE || 'MWK'} ${Math.round(featuredPrice).toLocaleString()}`
                 : 'FREE';
         }
 
@@ -247,7 +247,7 @@ class SellManager {
         }
 
         panel.classList.remove('hidden');
-        summary.textContent = `Manual payment required: MWK ${Math.round(amount).toLocaleString()} for this listing. Admin verifies POP before approval.`;
+        summary.textContent = `Manual payment required: ${CONFIG.CURRENCY_CODE || 'MWK'} ${Math.round(amount).toLocaleString()} for this listing. Admin verifies POP before approval.`;
 
         const current = methodSelect.value;
         const labels = {
@@ -697,7 +697,7 @@ class SellManager {
             priceInput.addEventListener('input', (e) => {
                 const price = parseInt(e.target.value);
                 if (!isNaN(price) && price > 0 && price < 100000) {
-                    this.showFieldError(priceInput, 'Price must be at least MWK 100,000');
+                    this.showFieldError(priceInput, `Price must be at least ${CONFIG.CURRENCY_CODE || 'MWK'} 100,000`);
                 } else {
                     this.clearFieldError(priceInput);
                 }
@@ -706,7 +706,7 @@ class SellManager {
             priceInput.addEventListener('blur', () => {
                 const price = parseInt(priceInput.value);
                 if (!isNaN(price) && price < 100000) {
-                    this.showToast('Price must be at least MWK 100,000', 'error');
+                    this.showToast(`Price must be at least ${CONFIG.CURRENCY_CODE || 'MWK'} 100,000`, 'error');
                     priceInput.focus();
                 }
             });
@@ -1759,7 +1759,7 @@ removePhoto(index) {
         const priceInput = document.querySelector('[name="price"]');
         const price = parseInt(priceInput.value);
         if (isNaN(price) || price < 100000) {
-            this.showToast('Price must be at least MWK 100,000', 'error');
+            this.showToast(`Price must be at least ${CONFIG.CURRENCY_CODE || 'MWK'} 100,000`, 'error');
             priceInput.focus();
             return false;
         }
@@ -2216,7 +2216,7 @@ removePhoto(index) {
             <div style="display: grid; gap: 12px;">
                 <div><strong>Car:</strong> ${formData.get('year')} ${makeText} ${modelText}</div>
                 <div><strong>Title:</strong> ${formData.get('title')}</div>
-                <div><strong>Price:</strong> MWK ${parseInt(formData.get('price') || 0).toLocaleString()} ${formData.get('negotiable') ? '(Negotiable)' : ''}</div>
+                <div><strong>Price:</strong> ${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(formData.get('price') || 0).toLocaleString()} ${formData.get('negotiable') ? '(Negotiable)' : ''}</div>
                 <div><strong>Location:</strong> ${locationText}</div>
                 <div><strong>Condition:</strong> ${formData.get('condition_type')}</div>
                 <div><strong>Fuel Type:</strong> ${formData.get('fuel_type')}</div>
@@ -2291,10 +2291,10 @@ removePhoto(index) {
 
         if (this.listingRestrictions.payments_enabled) {
             typePrices.free = Number(this.listingRestrictions.free_listing_price || 0) > 0
-                ? `MWK ${Math.round(Number(this.listingRestrictions.free_listing_price || 0)).toLocaleString()}`
+                ? `${CONFIG.CURRENCY_CODE || 'MWK'} ${Math.round(Number(this.listingRestrictions.free_listing_price || 0)).toLocaleString()}`
                 : 'FREE';
             typePrices.featured = Number(this.listingRestrictions.featured_listing_price || 0) > 0
-                ? `MWK ${Math.round(Number(this.listingRestrictions.featured_listing_price || 0)).toLocaleString()}`
+                ? `${CONFIG.CURRENCY_CODE || 'MWK'} ${Math.round(Number(this.listingRestrictions.featured_listing_price || 0)).toLocaleString()}`
                 : 'FREE';
         }
 

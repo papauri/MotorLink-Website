@@ -1772,7 +1772,7 @@ class MotorLink {
                         <h3 class="car-title">${this.escapeHtml(listing.title)}</h3>
                         <div class="car-price-section">
                             <div class="car-price">
-                                <span class="currency">MWK</span>
+                                <span class="currency">${CONFIG.CURRENCY_CODE || 'MWK'}</span>
                                 <span class="amount">${this.formatNumber(listing.price)}</span>
                             </div>
                             ${listing.negotiable == 1 ? '<span class="negotiable-badge">Negotiable</span>' : ''}
@@ -3833,7 +3833,7 @@ class ShowroomManager {
                 '<span style="color: #6c757d; font-size: 0.8rem;">Fixed Price</span>';
             
             // Format price with commas
-            const formattedPrice = car.price ? `MWK ${parseInt(car.price).toLocaleString()}` : 'Price on request';
+            const formattedPrice = car.price ? `${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(car.price).toLocaleString()}` : 'Price on request';
             
             // Calculate car age
             const carAge = car.year ? new Date().getFullYear() - parseInt(car.year) : 'N/A';

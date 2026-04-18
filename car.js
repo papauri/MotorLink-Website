@@ -87,7 +87,7 @@ class CarDetailManager {
         const isOwnListing = currentUser && listing.user_id && parseInt(currentUser.id) === parseInt(listing.user_id);
         
         // Format price with commas
-        const formattedPrice = listing.price ? `MWK ${parseInt(listing.price).toLocaleString()}` : 'Price on request';
+        const formattedPrice = listing.price ? `${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(listing.price).toLocaleString()}` : 'Price on request';
         
         // Generate HTML for images
         let imagesHTML = '';
@@ -599,7 +599,7 @@ class CarDetailManager {
             const imageUrl = listing.featured_image_id
                 ? `${CONFIG.API_URL}?action=image&id=${listing.featured_image_id}`
                 : inlinePlaceholder;
-            const formattedPrice = listing.price ? `MWK ${parseInt(listing.price, 10).toLocaleString()}` : 'Price on request';
+            const formattedPrice = listing.price ? `${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(listing.price, 10).toLocaleString()}` : 'Price on request';
 
             return `
                 <div class="showroom-card" onclick="window.location.href='car.html?id=${listing.id}'">
@@ -810,7 +810,7 @@ class CarDetailManager {
                 ? `${CONFIG.API_URL}?action=image&id=${listing.featured_image_id}`
                 : inlinePlaceholder;
 
-            const formattedPrice = listing.price ? `MWK ${parseInt(listing.price).toLocaleString()}` : 'Price on request';
+            const formattedPrice = listing.price ? `${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(listing.price).toLocaleString()}` : 'Price on request';
 
             return `
                 <div class="showroom-card" onclick="window.location.href='car.html?id=${listing.id}'">

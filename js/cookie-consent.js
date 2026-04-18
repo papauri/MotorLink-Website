@@ -1,5 +1,5 @@
 /**
- * Cookie Consent Manager - MotorLink Malawi
+ * Cookie Consent Manager - MotorLink
  * GDPR/CCPA Compliant Cookie Consent System
  */
 

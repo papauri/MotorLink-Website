@@ -1,5 +1,5 @@
 /**
- * Malawi Phone Number Formatter
+ * Phone Number Formatter
  * Automatically formats phone numbers as user types
  * Format: +265 991 234 567
  */
@@ -8,7 +8,7 @@ function formatMalawiPhone(input) {
     // Get raw digits only
     let value = input.value.replace(/\D/g, '');
     
-    // Handle Malawi numbers
+    // Handle local numbers
     if (value.startsWith('0')) {
         // Remove leading 0 and add 265
         value = '265' + value.substring(1);

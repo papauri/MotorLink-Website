@@ -441,7 +441,7 @@ class ChatManager {
                 <img src="${listing.image || CONFIG.BASE_URL + 'assets/images/car-placeholder.jpg'}" alt="${listing.title}">
                 <div class="message-listing-preview-details">
                     <h4>${this.escapeHtml(listing.title)}</h4>
-                    <p>MWK ${parseInt(listing.price || 0).toLocaleString()}</p>
+                    <p>${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(listing.price || 0).toLocaleString()}</p>
                 </div>
             </div>
         `;
@@ -597,7 +597,7 @@ class ChatManager {
             if (data.success && data.listings) {
                 select.innerHTML = '<option value="">Select a listing to inquire about...</option>';
                 data.listings.forEach(listing => {
-                    select.innerHTML += `<option value="${listing.id}">${listing.title} - MWK ${parseInt(listing.price).toLocaleString()}</option>`;
+                    select.innerHTML += `<option value="${listing.id}">${listing.title} - ${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(listing.price).toLocaleString()}</option>`;
                 });
             }
         } catch (error) {
@@ -1059,7 +1059,7 @@ class ChatManager {
                         ${imageUrl ? `<img src="${imageUrl}" alt="${this.escapeHtml(listing.title)}">` : '<div class="no-image"><i class="fas fa-car"></i></div>'}
                         <div class="inquiry-listing-details">
                             <h4>${this.escapeHtml(listing.title)}</h4>
-                            <p class="price">MWK ${parseInt(listing.price || 0).toLocaleString()}</p>
+                            <p class="price">${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(listing.price || 0).toLocaleString()}</p>
                             <p class="meta">${listing.year || ''} ${listing.mileage ? '• ' + parseInt(listing.mileage).toLocaleString() + ' km' : ''}</p>
                         </div>
                     </div>

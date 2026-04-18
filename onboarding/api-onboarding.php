@@ -1,6 +1,6 @@
 <?php
 /**
- * MotorLink Malawi - Business Onboarding API
+ * MotorLink - Business Onboarding API
  * Complete fixed version for database connectivity
  */
 
@@ -154,7 +154,7 @@ define('DB_HOST', $runtimeDb['host']);
 define('DB_USER', $runtimeDb['user']);
 define('DB_PASS', $runtimeDb['pass']);
 define('DB_NAME', $runtimeDb['name']);
-define('SITE_NAME', 'MotorLink Malawi');
+define('SITE_NAME', 'MotorLink');
 define('SITE_URL', 'https://promanaged-it.com/motorlink');
 
 /**
@@ -524,7 +524,7 @@ function getOnboardingNotificationSettings($db) {
         'smtp_username' => defined('SMTP_USERNAME') ? SMTP_USERNAME : '',
         'smtp_password' => defined('SMTP_PASSWORD') ? SMTP_PASSWORD : '',
         'smtp_from_email' => defined('SMTP_FROM_EMAIL') ? SMTP_FROM_EMAIL : 'noreply@promanaged-it.com',
-        'smtp_from_name' => defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'MotorLink Malawi',
+        'smtp_from_name' => defined('SMTP_FROM_NAME') ? SMTP_FROM_NAME : 'MotorLink',
         'onboarding_whatsapp_enabled' => '0',
         'onboarding_whatsapp_api_url' => '',
         'onboarding_whatsapp_api_token' => '',
@@ -577,7 +577,7 @@ function sendOnboardingWelcomeEmail($db, $payload) {
             $portalUrl = rtrim(SITE_URL, '/') . '/login.html';
         }
 
-        $subject = 'MotorLink Malawi - Your New Account Credentials';
+        $subject = SITE_NAME . ' - Your New Account Credentials';
 
         $safeRecipientName = htmlspecialchars($recipientName, ENT_QUOTES, 'UTF-8');
         $safeBusinessName = htmlspecialchars($businessName, ENT_QUOTES, 'UTF-8');
@@ -595,7 +595,7 @@ function sendOnboardingWelcomeEmail($db, $payload) {
             <div style="font-family:Segoe UI,Arial,sans-serif;line-height:1.55;color:#113322;background:#f3fbf6;padding:20px;">
                 <div style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #dcefe2;border-radius:14px;overflow:hidden;">
                     <div style="background:linear-gradient(135deg,#1f8f4b,#0f6d37);color:#ffffff;padding:20px 22px;">
-                        <h2 style="margin:0;font-size:20px;">Welcome to MotorLink Malawi</h2>
+                        <h2 style="margin:0;font-size:20px;">Welcome to ' . htmlspecialchars(SITE_NAME, ENT_QUOTES, 'UTF-8') . '</h2>
                         <p style="margin:8px 0 0 0;font-size:14px;opacity:0.95;">Your onboarding is complete and your account is ready.</p>
                     </div>
                     <div style="padding:22px;">
@@ -614,7 +614,7 @@ function sendOnboardingWelcomeEmail($db, $payload) {
             </div>
         ';
 
-        $textMessage = "Welcome to MotorLink Malawi\n\n" .
+        $textMessage = "Welcome to " . SITE_NAME . "\n\n" .
             "Hello {$recipientName},\n" .
             "Your {$businessType} account for {$businessName} has been created.\n" .
             ($reference !== '' ? "Reference: {$reference}\n" : '') .
@@ -667,7 +667,7 @@ function normalizeWhatsappPhone($phone) {
         return '';
     }
 
-    // Malawi local format 0XXXXXXXXX -> 265XXXXXXXXX
+    // Local format 0XXXXXXXXX -> 265XXXXXXXXX
     if (strpos($digits, '0') === 0 && strlen($digits) >= 9) {
         return '265' . ltrim($digits, '0');
     }
@@ -733,7 +733,7 @@ function sendOnboardingWelcomeWhatsApp($db, $payload) {
         $plainPassword = (string)($payload['password'] ?? '');
         $portalUrl = trim((string)($settings['onboarding_portal_url'] ?? rtrim(SITE_URL, '/') . '/login.html'));
 
-        $messageText = "MotorLink Malawi Onboarding\n" .
+        $messageText = SITE_NAME . " Onboarding\n" .
             "Hello {$recipientName}, your account for {$businessName} is ready.\n" .
             "Login: {$portalUrl}\n" .
             "Username: {$username}\n" .
@@ -1218,7 +1218,7 @@ function getServices($db) {
 function getVehicleTypes($db) {
     $types = [
         "Economy", "Compact", "Sedan", "SUV", "Pickup", "Luxury",
-        "Sports Car", "Van", "Minibus", "4WD", "Executive", "Limousine"
+        "Sports Car", "Van", "Truck", "Minibus", "4WD", "Executive", "Limousine"
     ];
     
     sendSuccess(['vehicle_types' => $types]);
@@ -1438,13 +1438,20 @@ function addCarHireCompany($db) {
             throw new Exception('User creation failed: ' . $e->getMessage());
         }
 
+        // Sanitise hire_category
+        $allowed_hire_categories = ['standard', 'events', 'vans_trucks', 'all'];
+        $hire_category = in_array($input['hire_category'] ?? '', $allowed_hire_categories)
+            ? $input['hire_category']
+            : 'standard';
+
         // Create car hire company and link to user
         $stmt = $db->prepare("
             INSERT INTO car_hire_companies (user_id, business_name, owner_name, email, phone, whatsapp, address, location_id,
-                                           vehicle_types, services, special_services, daily_rate_from, weekly_rate_from, monthly_rate_from,
+                                           vehicle_types, services, special_services, hire_category, event_types,
+                                           daily_rate_from, weekly_rate_from, monthly_rate_from,
                                            years_established, business_hours, website, facebook_url, instagram_url, twitter_url, linkedin_url,
                                            description, verified, featured, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval', NOW(), NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending_approval', NOW(), NOW())
         ");
 
         $stmt->execute([
@@ -1459,6 +1466,8 @@ function addCarHireCompany($db) {
             !empty($input['vehicle_types']) ? json_encode($input['vehicle_types']) : null,
             !empty($input['services']) ? json_encode($input['services']) : null,
             !empty($input['special_services']) ? json_encode($input['special_services']) : null,
+            $hire_category,
+            !empty($input['event_types']) ? json_encode($input['event_types']) : null,
             $input['daily_rate_from'] ?? null,
             $input['weekly_rate_from'] ?? null,
             $input['monthly_rate_from'] ?? null,

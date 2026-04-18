@@ -271,7 +271,7 @@ class MyListingsManager {
                 <div class="listing-details">
                     <h3 class="listing-title">${this.escapeHtml(listing.title)}</h3>
                     <div class="listing-price">
-                        <span class="currency">MWK</span> ${this.formatNumber(listing.price)}
+                        <span class="currency">${CONFIG.CURRENCY_CODE || 'MWK'}</span> ${this.formatNumber(listing.price)}
                     </div>
                     ${isRejected && rejectionReason ? `
                         <div class="rejection-reason" style="margin: 12px 0; padding: 12px; background-color: #fee2e2; border-left: 4px solid #dc2626; border-radius: 4px;">
@@ -844,7 +844,7 @@ class MyListingsManager {
             ${imageUrl ? `<img src="${imageUrl}" alt="${this.escapeHtml(listing.title)}">` : ''}
             <div class="listing-preview-info">
                 <h4>${this.escapeHtml(listing.title)}</h4>
-                <p>MWK ${this.formatNumber(listing.price)}</p>
+                <p>${CONFIG.CURRENCY_CODE || 'MWK'} ${this.formatNumber(listing.price)}</p>
             </div>
         `;
 

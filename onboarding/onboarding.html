@@ -425,6 +425,69 @@
                             </label>
                             <div class="checkbox-grid" id="vehicleTypesContainer"></div>
                         </div>
+
+                        <div class="form-group">
+                            <label for="hire_category">
+                                <i class="fas fa-tags"></i>
+                                Hire Category
+                            </label>
+                            <select id="hire_category" name="hire_category">
+                                <option value="standard">Standard (General car hire)</option>
+                                <option value="events">Events (Weddings, funerals, corporate)</option>
+                                <option value="vans_trucks">Vans &amp; Trucks (Cargo, moving, logistics)</option>
+                                <option value="all">All Categories</option>
+                            </select>
+                            <div class="field-info">Choose the category that best describes your fleet focus</div>
+                        </div>
+
+                        <div class="form-group" id="eventTypesGroup" style="display:none;">
+                            <label>
+                                <i class="fas fa-calendar-check"></i>
+                                Event Types Covered
+                            </label>
+                            <div class="checkbox-grid">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="event_types" value="Wedding">
+                                    <span class="checkmark"></span>
+                                    Wedding
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="event_types" value="Corporate Event">
+                                    <span class="checkmark"></span>
+                                    Corporate Event
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="event_types" value="Funeral">
+                                    <span class="checkmark"></span>
+                                    Funeral
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="event_types" value="Birthday Party">
+                                    <span class="checkmark"></span>
+                                    Birthday Party
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="event_types" value="Prom Night">
+                                    <span class="checkmark"></span>
+                                    Prom Night
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="event_types" value="Airport VIP Transfer">
+                                    <span class="checkmark"></span>
+                                    Airport VIP Transfer
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="event_types" value="Graduation">
+                                    <span class="checkmark"></span>
+                                    Graduation
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="event_types" value="Church Event">
+                                    <span class="checkmark"></span>
+                                    Church Event
+                                </label>
+                            </div>
+                        </div>
                         
                         <div class="form-group">
                             <label>
@@ -462,6 +525,16 @@
                                     <span class="checkmark"></span>
                                     Corporate Rental
                                 </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="services" value="Van Hire">
+                                    <span class="checkmark"></span>
+                                    Van Hire
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="services" value="Truck Hire">
+                                    <span class="checkmark"></span>
+                                    Truck Hire
+                                </label>
                             </div>
                         </div>
                         
@@ -485,6 +558,11 @@
                                     <input type="checkbox" name="special_services" value="24/7 Service">
                                     <span class="checkmark"></span>
                                     24/7 Service
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="special_services" value="Chauffeur Service">
+                                    <span class="checkmark"></span>
+                                    Chauffeur Service
                                 </label>
                             </div>
                         </div>

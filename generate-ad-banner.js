@@ -213,7 +213,7 @@ function getDesktopSvg() {
 
   <rect x="48" y="548" width="1104" height="48" fill="#f2f4f6" clip-path="url(#cardClip)"/>
   <rect x="48" y="548" width="1104" height="1" fill="#dce2e8"/>
-  <text x="84" y="578" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" fill="#6c757d">MotorLink Malawi — Connecting Malawi's automotive community.</text>
+  <text x="84" y="578" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" fill="#6c757d">MotorLink — Connecting the automotive community.</text>
   <text x="1120" y="578" font-family="Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="700" fill="#2d6a4f" text-anchor="end">motorlink.mw</text>
 </svg>
 `;

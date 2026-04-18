@@ -1,6 +1,6 @@
 /**
  * Form Helpers - Reusable functions for populating form dropdowns from database
- * MotorLink Malawi
+ * MotorLink
  */
 
 class FormHelpers {

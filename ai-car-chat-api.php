@@ -11,6 +11,42 @@
 require_once __DIR__ . '/includes/runtime-site-config.php';
 
 /**
+ * Return the configured currency code for display in chat responses.
+ */
+function getChatCurrencyCode($db = null) {
+    static $code = null;
+    if ($code !== null) return $code;
+    if ($db === null && function_exists('getDB')) {
+        try { $db = getDB(); } catch (\Throwable $e) {}
+    }
+    if ($db) {
+        $cfg = motorlink_get_site_runtime_config($db);
+        $code = $cfg['currency_code'] ?? 'MWK';
+    } else {
+        $code = 'MWK';
+    }
+    return $code;
+}
+
+/**
+ * Return the configured site name for chat responses.
+ */
+function getChatSiteName($db = null) {
+    static $name = null;
+    if ($name !== null) return $name;
+    if ($db === null && function_exists('getDB')) {
+        try { $db = getDB(); } catch (\Throwable $e) {}
+    }
+    if ($db) {
+        $cfg = motorlink_get_site_runtime_config($db);
+        $name = $cfg['site_name'] ?? 'MotorLink';
+    } else {
+        $name = 'MotorLink';
+    }
+    return $name;
+}
+
+/**
  * Load AI provider API key from database settings.
  * Keys are stored in site_settings and never hardcoded in source files.
  */
@@ -883,9 +919,9 @@ When users ask about car topics, I explain concepts clearly and educationally:
 - **Reverse camera/sensors**: Helps avoid accidents when parking.
 - **Blind spot monitoring**: Alerts to vehicles in blind spots during lane changes.
 
-**Car Buying Tips for Malawi:**
-- **Import duties**: Factor in 25% duty + 16.5% VAT on imported vehicles.
-- **Right-hand drive**: Malawi drives on left, so RHD (Japanese/UK imports) are preferred.
+**Car Buying Tips:**
+- **Import duties**: Factor in applicable import duties and taxes on imported vehicles.
+- **Driving side**: Check if the vehicle matches local driving-side requirements (LHD vs RHD).
 - **Spare parts availability**: Toyota, Nissan, Honda parts are easiest to find locally.
 - **Resale value**: Toyota holds value best, followed by Nissan and Honda.
 - **Mileage considerations**: Under 100,000km is ideal, 100,000-150,000km is acceptable if well-maintained.
@@ -1409,12 +1445,13 @@ function handleFuelPriceQuery($db, $message, $conversationHistory) {
         } else {
             $lastUpdated = !empty($prices[0]['last_updated']) ? date('F j, Y g:i A', strtotime($prices[0]['last_updated'])) : 'Recently';
             
-            $response = "Here are the current fuel prices in Malawi:\n\n";
+            $response = "Here are the current fuel prices:\n\n";
             
             foreach ($prices as $price) {
                 $fuelType = ucfirst($price['fuel_type']);
                 $priceMWK = number_format($price['price_per_liter_mwk'], 2);
-                $response .= "⛽ **{$fuelType}**: MWK {$priceMWK} per liter";
+                $cc = getChatCurrencyCode($db);
+                $response .= "⛽ **{$fuelType}**: {$cc} {$priceMWK} per liter";
                 if (!empty($price['price_per_liter_usd'])) {
                     $priceUSD = number_format($price['price_per_liter_usd'], 2);
                     $response .= " (USD \${$priceUSD})";
@@ -2558,7 +2595,7 @@ function handleSearchQuery($db, $message, $conversationHistory) {
                     $response = "The best value " . (!empty($listing['model_name']) ? $listing['model_name'] : 'vehicle') . " I found is:\n\n";
                 }
                 
-                $response .= "[{$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - MWK {$price}]({$listingUrl}) - Reference #{$listing['id']}\n";
+                $response .= "[{$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - " . getChatCurrencyCode($db) . " {$price}]({$listingUrl}) - Reference #{$listing['id']}\n";
                 
                 // Add seller information if available
                 if (!empty($listing['seller_name'])) {
@@ -2608,7 +2645,7 @@ function handleSearchQuery($db, $message, $conversationHistory) {
                 foreach ($limitedListings as $listing) {
                     $price = isset($listing['price']) ? number_format($listing['price']) : 'Price on request';
                     $listingUrl = $baseUrl . "car.html?id=" . $listing['id'];
-                    $response .= "• [{$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - MWK {$price}]({$listingUrl}) - Reference #{$listing['id']}\n";
+                    $response .= "• [{$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - " . getChatCurrencyCode($db) . " {$price}]({$listingUrl}) - Reference #{$listing['id']}\n";
                     
                     // Add seller information if available
                     if (!empty($listing['seller_name'])) {
@@ -3495,7 +3532,7 @@ function handleCarRecommendationQuery($db, $message, $conversationHistory, $user
             $recommendationContext .= "- Preferred Model: {$requirements['model']}\n";
         }
         if (!empty($requirements['max_price'])) {
-            $recommendationContext .= "- Max Budget: MWK " . number_format($requirements['max_price']) . "\n";
+            $recommendationContext .= "- Max Budget: " . getChatCurrencyCode($db) . " " . number_format($requirements['max_price']) . "\n";
         }
         if (!empty($requirements['fuel_type'])) {
             $recommendationContext .= "- Fuel Type: {$requirements['fuel_type']}\n";
@@ -3520,7 +3557,7 @@ function handleCarRecommendationQuery($db, $message, $conversationHistory, $user
             foreach (array_slice($matchingCars, 0, 10) as $car) {
                 $recommendationContext .= "- {$car['make_name']} {$car['model_name']}";
                 if ($car['year']) $recommendationContext .= " ({$car['year']})";
-                if ($car['price']) $recommendationContext .= " - MWK " . number_format($car['price']);
+                if ($car['price']) $recommendationContext .= " - " . getChatCurrencyCode($db) . " " . number_format($car['price']);
                 if ($car['seats']) $recommendationContext .= " - {$car['seats']} seats";
                 if ($car['body_type']) $recommendationContext .= " - {$car['body_type']}";
                 $recommendationContext .= " - [View Listing]({$baseUrl}car.html?id={$car['id']})\n";
@@ -3864,7 +3901,7 @@ function extractCarRequirementsWithAI($db, $message) {
     \"fuel_type\": \"petrol, diesel, hybrid, electric\" or null,
     \"transmission\": \"manual, automatic\" or null,
     \"purpose\": \"family, business, city, off-road\" or null,
-    \"location\": \"Exact Malawi location (e.g., Lilongwe, Blantyre, Mzuzu)\" or null,
+    \"location\": \"Exact location (e.g., city or district name)\" or null,
     \"features\": [\"safety\", \"spacious\", \"fuel efficient\", \"reliable\"] or null
 }
 
@@ -4152,7 +4189,7 @@ function generateClarificationQuestions($requirements) {
     }
     
     if (empty($requirements['max_price'])) {
-        $questions[] = "What's your budget range? (e.g., under 10 million MWK)";
+        $questions[] = "What's your budget range? (e.g., under 10 million)";
     }
     
     if (empty($requirements['purpose']) && empty($requirements['seats'])) {
@@ -4651,7 +4688,7 @@ function buildCarRecommendationFallbackResponse($requirements, $matchingCars, $c
 
         foreach (array_slice($matchingCars, 0, 5) as $car) {
             $price = isset($car['price']) ? number_format((float)$car['price']) : 'Price on request';
-            $lines[] = "- {$car['make_name']} {$car['model_name']} ({$car['year']}) - MWK {$price} [View]({$baseUrl}car.html?id={$car['id']})";
+            $lines[] = "- {$car['make_name']} {$car['model_name']} ({$car['year']}) - " . getChatCurrencyCode() . " {$price} [View]({$baseUrl}car.html?id={$car['id']})";
         }
 
         if ($count > 5) {
@@ -5134,7 +5171,7 @@ function detectAndHandleAction($db, $message, $user, $userContext) {
                 if ($updatedListing && abs($updatedListing['price'] - $price) < 0.01) {
                     // Update successful
                     return [
-                        'response' => "✅ Price updated successfully! Your {$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - **Reference #{$listing['id']}** is now priced at MWK " . number_format($price) . " (was MWK " . number_format($oldPrice) . "). [View listing]({$listing['url']})",
+                        'response' => "✅ Price updated successfully! Your {$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - **Reference #{$listing['id']}** is now priced at " . getChatCurrencyCode($db) . " " . number_format($price) . " (was " . getChatCurrencyCode($db) . " " . number_format($oldPrice) . "). [View listing]({$listing['url']})",
                         'action_detected' => 'update_price',
                         'success' => true,
                         'listing_id' => $listing['id'],
@@ -5145,7 +5182,7 @@ function detectAndHandleAction($db, $message, $user, $userContext) {
                     $actualPrice = $updatedListing ? $updatedListing['price'] : 'unknown';
                     error_log("Price update verification failed - price mismatch. Expected: {$price}, Got: {$actualPrice} for listing ID: {$listing['id']}");
                     return [
-                        'response' => "❌ Price update verification failed. Expected MWK " . number_format($price) . " but got MWK " . number_format($actualPrice) . ". Please check the listing or try again.",
+                        'response' => "❌ Price update verification failed. Expected " . getChatCurrencyCode($db) . " " . number_format($price) . " but got " . getChatCurrencyCode($db) . " " . number_format($actualPrice) . ". Please check the listing or try again.",
                         'action_detected' => 'update_price',
                         'success' => false
                     ];
@@ -5178,7 +5215,7 @@ function detectAndHandleAction($db, $message, $user, $userContext) {
             
             $response = "Which listing would you like to update? I found " . count($listings) . " of your listings:\n\n";
             foreach (array_slice($listings, 0, 5) as $l) {
-                $response .= "• [{$l['make_name']} {$l['model_name']} ({$l['year']}) - MWK " . number_format($l['price']) . "]({$l['url']}) - **Reference #{$l['id']}**\n";
+                $response .= "• [{$l['make_name']} {$l['model_name']} ({$l['year']}) - " . getChatCurrencyCode($db) . " " . number_format($l['price']) . "]({$l['url']}) - **Reference #{$l['id']}**\n";
             }
             $response .= "\nPlease specify which one (e.g., 'update listing #{$listings[0]['id']} price to 5 million' or 'update the Toyota Hilux price to 5 million').";
             
@@ -5472,7 +5509,7 @@ function detectAndHandleAction($db, $message, $user, $userContext) {
                 $price = isset($listing['price']) ? number_format($listing['price']) : 'Price on request';
                 $listingUrl = $baseUrl . "car.html?id=" . $listing['id'];
                 $statusIcon = $listing['status'] === 'active' ? '✅' : ($listing['approval_status'] === 'pending' ? '⏳' : '❌');
-                $response .= "{$statusIcon} [{$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - MWK {$price}]({$listingUrl}) - **Reference #{$listing['id']}**";
+                $response .= "{$statusIcon} [{$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - " . getChatCurrencyCode($db) . " {$price}]({$listingUrl}) - **Reference #{$listing['id']}**";
                 if ($listing['location_name']) {
                     $response .= "\n   📍 {$listing['location_name']}";
                 }
@@ -6667,7 +6704,7 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                 }
                 
                 if (!empty($company['daily_rate_from'])) {
-                    $response .= "💰 Starting from: MWK " . number_format($company['daily_rate_from']) . "/day\n";
+                    $response .= "💰 Starting from: " . getChatCurrencyCode($db) . " " . number_format($company['daily_rate_from']) . "/day\n";
                 }
                 
                 // Show matching vehicle details if available
@@ -6678,7 +6715,7 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                         if (!empty($vehicle['make_name'])) $response .= $vehicle['make_name'] . " ";
                         if (!empty($vehicle['model_name'])) $response .= $vehicle['model_name'];
                         if (!empty($vehicle['seats'])) $response .= " ({$vehicle['seats']} seats)";
-                        if (!empty($vehicle['daily_rate'])) $response .= " - MWK " . number_format($vehicle['daily_rate']) . "/day";
+                        if (!empty($vehicle['daily_rate'])) $response .= " - " . getChatCurrencyCode($db) . " " . number_format($vehicle['daily_rate']) . "/day";
                         $response .= "\n";
                     }
                 }
@@ -6698,7 +6735,7 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                 }
                 
                 if (!empty($company['daily_rate_from'])) {
-                    $response .= "💰 Starting from: MWK " . number_format($company['daily_rate_from']) . "/day\n";
+                    $response .= "💰 Starting from: " . getChatCurrencyCode($db) . " " . number_format($company['daily_rate_from']) . "/day\n";
                 }
             } elseif ($isPriceComparison && !empty($results['companies'])) {
                 $company = $results['companies'][0];
@@ -6712,7 +6749,7 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                 $response .= ".\n\n";
 
                 if (!empty($company['daily_rate_from'])) {
-                    $response .= "💰 From MWK " . number_format($company['daily_rate_from']) . "/day\n";
+                    $response .= "\ud83d\udcb0 From \" . getChatCurrencyCode($db) . \" \" . number_format($company['daily_rate_from']) . \"/day\n";
                 }
                 if (!empty($company['phone'])) {
                     $response .= "📞 {$company['phone']}\n";
@@ -6742,7 +6779,7 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                     }
                     
                     if (!empty($company['daily_rate_from'])) {
-                        $response .= "  💰 From MWK " . number_format($company['daily_rate_from']) . "/day\n";
+                        $response .= "  💰 From " . getChatCurrencyCode($db) . " " . number_format($company['daily_rate_from']) . "/day\n";
                     }
                     
                     // Show matching vehicle details if available
@@ -7272,7 +7309,7 @@ function handleUserListingsQuery($db, $userId, $baseUrl) {
             $status = $listing['status'] === 'active' ? '✅' : '⏸️';
             $approval = $listing['approval_status'] === 'approved' ? '' : ($listing['approval_status'] === 'pending' ? ' ⏳ Pending' : ' ❌ Rejected');
             
-            $response .= "• {$status} [{$listing['make_name']} {$listing['model_name']} ({$listing['year']})]({$listingUrl}) - MWK {$price} - **Reference #{$listing['id']}**{$approval}\n";
+            $response .= "• {$status} [{$listing['make_name']} {$listing['model_name']} ({$listing['year']})]({$listingUrl}) - " . getChatCurrencyCode($db) . " {$price} - **Reference #{$listing['id']}**{$approval}\n";
         }
         
         if ($total > 10) {
@@ -7349,7 +7386,7 @@ function handleUserFleetQuery($db, $userId, $baseUrl) {
         
         foreach (array_slice($fleet, 0, 10) as $vehicle) {
             $status = ($vehicle['is_available'] == 1 && $vehicle['is_active'] == 1) ? '✅ Available' : '⏸️ Unavailable';
-            $rate = $vehicle['daily_rate'] ? 'MWK ' . number_format($vehicle['daily_rate']) . '/day' : 'Rate not set';
+            $rate = $vehicle['daily_rate'] ? getChatCurrencyCode($db) . ' ' . number_format($vehicle['daily_rate']) . '/day' : 'Rate not set';
             
             $response .= "• {$status} - {$vehicle['make_name']} {$vehicle['model_name']}";
             if ($vehicle['year']) {
@@ -7856,8 +7893,8 @@ function handleAnalyticsQuery($db, $userId, $userContext) {
         
         if ($stats['listings']['avg_price']) {
             $response .= "\n**Pricing Insights:**\n";
-            $response .= "• Average price: **MWK " . number_format($stats['listings']['avg_price']) . "**\n";
-            $response .= "• Price range: **MWK " . number_format($stats['listings']['min_price']) . "** - **MWK " . number_format($stats['listings']['max_price']) . "**\n";
+            $response .= "• Average price: **" . getChatCurrencyCode($db) . " " . number_format($stats['listings']['avg_price']) . "**\n";
+            $response .= "• Price range: **" . getChatCurrencyCode($db) . " " . number_format($stats['listings']['min_price']) . "** - **" . getChatCurrencyCode($db) . " " . number_format($stats['listings']['max_price']) . "**\n";
         }
         
         if ($stats['views'] > 0) {
@@ -7913,17 +7950,21 @@ function handlePriceSuggestion($db, $listing) {
             $suggestion = '';
             
             if ($currentPrice > $marketAvg * 1.15) {
-                $suggestion = "Your price is **" . round((($currentPrice - $marketAvg) / $marketAvg) * 100) . "% higher** than the market average. Consider reducing to **MWK " . number_format($marketAvg) . "** for faster sale.";
+                $cc = getChatCurrencyCode($db);
+                $suggestion = "Your price is **" . round((($currentPrice - $marketAvg) / $marketAvg) * 100) . "% higher** than the market average. Consider reducing to **{$cc} " . number_format($marketAvg) . "** for faster sale.";
             } elseif ($currentPrice < $marketAvg * 0.85) {
-                $suggestion = "Your price is **" . round((($marketAvg - $currentPrice) / $marketAvg) * 100) . "% lower** than the market average. You might be able to increase it to **MWK " . number_format($marketAvg) . "**.";
+                $cc = getChatCurrencyCode($db);
+                $suggestion = "Your price is **" . round((($marketAvg - $currentPrice) / $marketAvg) * 100) . "% lower** than the market average. You might be able to increase it to **{$cc} " . number_format($marketAvg) . "**.";
             } else {
-                $suggestion = "Your price is competitive! Market average is **MWK " . number_format($marketAvg) . "**.";
+                $cc = getChatCurrencyCode($db);
+                $suggestion = "Your price is competitive! Market average is **{$cc} " . number_format($marketAvg) . "**.";
             }
             
-            $response = "💰 **Price Analysis for {$listing['make_name']} {$listing['model_name']} ({$listing['year']}):**\n\n";
-            $response .= "• Your price: **MWK " . number_format($currentPrice) . "**\n";
-            $response .= "• Market average: **MWK " . number_format($marketAvg) . "**\n";
-            $response .= "• Market range: **MWK " . number_format($marketData['min_price']) . "** - **MWK " . number_format($marketData['max_price']) . "**\n";
+            $cc = getChatCurrencyCode($db);
+            $response = "\ud83d\udcb0 **Price Analysis for {$listing['make_name']} {$listing['model_name']} ({$listing['year']}):**\n\n";
+            $response .= "\u2022 Your price: **{$cc} " . number_format($currentPrice) . "**\n";
+            $response .= "\u2022 Market average: **{$cc} " . number_format($marketAvg) . "**\n";
+            $response .= "\u2022 Market range: **{$cc} " . number_format($marketData['min_price']) . "** - **{$cc} " . number_format($marketData['max_price']) . "**\n";
             $response .= "• Based on **{$marketData['count']}** similar listings\n\n";
             $response .= $suggestion;
             
@@ -7935,7 +7976,7 @@ function handlePriceSuggestion($db, $listing) {
             ];
         } else {
             return [
-                'response' => "I couldn't find enough similar listings in the market to provide a price suggestion. Your current price is **MWK " . number_format($listing['price']) . "**.",
+                'response' => "I couldn't find enough similar listings in the market to provide a price suggestion. Your current price is **" . getChatCurrencyCode($db) . " " . number_format($listing['price']) . "**.",
                 'action_detected' => 'price_suggestion',
                 'insufficient_data' => true
             ];
@@ -8083,13 +8124,14 @@ function handleBulkPriceUpdate($db, $userId, $value, $isPercentage) {
             ];
         }
         
-        $changeType = $isPercentage ? ($value > 0 ? "increased by {$value}%" : "decreased by " . abs($value) . "%") : ($value > 0 ? "increased by MWK " . number_format($value) : "decreased by MWK " . number_format(abs($value)));
+        $cc = getChatCurrencyCode($db);
+        $changeType = $isPercentage ? ($value > 0 ? "increased by {$value}%" : "decreased by " . abs($value) . "%") : ($value > 0 ? "increased by {$cc} " . number_format($value) : "decreased by {$cc} " . number_format(abs($value)));
         
         $response = "✅ **Bulk Price Update Complete!**\n\n";
         $response .= "Updated **{$updated}** listing(s) - prices {$changeType}:\n\n";
         
         foreach (array_slice($updates, 0, 5) as $update) {
-            $response .= "• {$update['listing']}: MWK " . number_format($update['old_price']) . " → MWK " . number_format($update['new_price']) . "\n";
+            $response .= "• {$update['listing']}: " . getChatCurrencyCode($db) . " " . number_format($update['old_price']) . " → " . getChatCurrencyCode($db) . " " . number_format($update['new_price']) . "\n";
         }
         
         if (count($updates) > 5) {
@@ -8250,7 +8292,7 @@ function handleUserListingSearch($db, $userId, $message) {
         $response = "🔍 **Found " . count($listings) . " of your listing(s):**\n\n";
         foreach ($listings as $listing) {
             $listingUrl = $baseUrl . "car.html?id=" . $listing['id'];
-            $response .= "• [{$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - MWK " . number_format($listing['price']) . "]({$listingUrl}) - **Reference #{$listing['id']}**\n";
+            $response .= "• [{$listing['make_name']} {$listing['model_name']} ({$listing['year']}) - " . getChatCurrencyCode($db) . " " . number_format($listing['price']) . "]({$listingUrl}) - **Reference #{$listing['id']}**\n";
         }
         
         return [
@@ -8449,7 +8491,7 @@ function handleFleetRateUpdate($db, $userId, $message, $rate) {
             $stmt->execute([$rate, $vehicle['id'], $company['id']]);
             
             return [
-                'response' => "✅ Daily rate updated! {$vehicle['make_name']} {$vehicle['model_name']} is now **MWK " . number_format($rate) . "/day**.",
+                'response' => "✅ Daily rate updated! {$vehicle['make_name']} {$vehicle['model_name']} is now **" . getChatCurrencyCode($db) . " " . number_format($rate) . "/day**.",
                 'action_detected' => 'fleet_rate',
                 'success' => true,
                 'vehicle_id' => $vehicle['id'],

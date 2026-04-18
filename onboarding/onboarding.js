@@ -445,6 +445,13 @@ class OnboardingForm {
             if (e.target.type === 'checkbox' || e.target.type === 'radio' || e.target.tagName === 'SELECT') {
                 this.validateCurrentStep();
             }
+            // Show/hide event types section based on hire category
+            if (e.target.id === 'hire_category') {
+                const group = document.getElementById('eventTypesGroup');
+                if (group) {
+                    group.style.display = (e.target.value === 'events' || e.target.value === 'all') ? '' : 'none';
+                }
+            }
         });
 
         // Add specific event listeners for email and phone (with debouncing)
@@ -1661,7 +1668,7 @@ class OnboardingForm {
     loadFallbackVehicleTypes() {
         const fallbackVehicleTypes = [
             "Economy", "Compact", "Sedan", "SUV", "Pickup",
-            "Luxury", "Sports Car", "Van", "Minibus", "4WD"
+            "Luxury", "Sports Car", "Van", "Truck", "Minibus", "4WD", "Executive", "Limousine"
         ];
         
         const container = document.getElementById('vehicleTypesContainer');
@@ -1778,9 +1785,19 @@ class OnboardingForm {
                 .map(cb => cb.value);
             const specialServices = Array.from(document.querySelectorAll('input[name="special_services"]:checked'))
                 .map(cb => cb.value);
+            const hireCategoryEl = document.getElementById('hire_category');
+            const hireCategory = hireCategoryEl ? hireCategoryEl.options[hireCategoryEl.selectedIndex]?.text : null;
+            const eventTypes = Array.from(document.querySelectorAll('input[name="event_types"]:checked'))
+                .map(cb => cb.value);
             
             if (vehicleTypes.length > 0) {
                 html += `<div class="review-item"><strong>Vehicle Types:</strong> <span>${vehicleTypes.join(', ')}</span></div>`;
+            }
+            if (hireCategory) {
+                html += `<div class="review-item"><strong>Hire Category:</strong> <span>${hireCategory}</span></div>`;
+            }
+            if (eventTypes.length > 0) {
+                html += `<div class="review-item"><strong>Event Types:</strong> <span>${eventTypes.join(', ')}</span></div>`;
             }
             if (services.length > 0) {
                 html += `<div class="review-item"><strong>Services:</strong> <span>${services.join(', ')}</span></div>`;
@@ -2122,6 +2139,9 @@ class OnboardingForm {
                 baseData.services = Array.from(document.querySelectorAll('input[name="services"]:checked'))
                     .map(cb => cb.value);
                 baseData.special_services = Array.from(document.querySelectorAll('input[name="special_services"]:checked'))
+                    .map(cb => cb.value);
+                baseData.hire_category = (document.getElementById('hire_category') || {}).value || 'standard';
+                baseData.event_types = Array.from(document.querySelectorAll('input[name="event_types"]:checked'))
                     .map(cb => cb.value);
                 baseData.daily_rate_from = data.daily_rate_from ? parseFloat(data.daily_rate_from) : null;
                 baseData.weekly_rate_from = data.weekly_rate_from ? parseFloat(data.weekly_rate_from) : null;

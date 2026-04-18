@@ -219,7 +219,7 @@ class CarHireDashboard {
                 <div class="car-details">
                     <h3>${year} ${make} ${model}</h3>
                     <p class="car-year-make">${infoText}</p>
-                    <div class="car-price">MWK ${vehicle.daily_rate ? parseInt(vehicle.daily_rate).toLocaleString() : '0'}/day</div>
+                    <div class="car-price">${CONFIG.CURRENCY_CODE || 'MWK'} ${vehicle.daily_rate ? parseInt(vehicle.daily_rate).toLocaleString() : '0'}/day</div>
                     <div class="car-meta">
                         <span class="status-badge status-${status}">${statusLabel}</span>
                         <span class="car-seats"><i class="fas fa-users"></i> ${vehicle.seats || 5} seats</span>
@@ -318,7 +318,7 @@ class CarHireDashboard {
                         <strong>Period:</strong> ${this.formatDate(rental.start_date)} - ${this.formatDate(rental.end_date)}
                     </div>
                     <div class="rental-info">
-                        <strong>Rate:</strong> MWK ${parseInt(rental.daily_rate).toLocaleString()}/day
+                        <strong>Rate:</strong> ${CONFIG.CURRENCY_CODE || 'MWK'} ${parseInt(rental.daily_rate).toLocaleString()}/day
                     </div>
                     <div class="rental-info">
                         <strong>Status:</strong> <span class="status-badge status-${rental.status}">${rental.status}</span>

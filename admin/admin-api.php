@@ -4165,7 +4165,7 @@ function handleAddCarHire($db) {
             $input['daily_rate_from'] ?? null,
             $input['weekly_rate_from'] ?? null,
             $input['monthly_rate_from'] ?? null,
-            $input['currency'] ?? 'MWK',
+            $input['currency'] ?? (motorlink_get_site_runtime_config($db)['currency_code'] ?? 'MWK'),
             $input['years_established'] ?? null,
             $input['business_hours'] ?? null,
             $input['website'] ?? null,
@@ -5040,12 +5040,12 @@ function handleSaveFuelPriceSettings($db) {
         $normalizedPrices = [];
         foreach ($fuelInputs as $fuelType => $values) {
             if ($values['mwk'] === null || $values['mwk'] === '' || !is_numeric((string)$values['mwk'])) {
-                throw new Exception(ucfirst($fuelType) . ' price (MWK) is required');
+                throw new Exception(ucfirst($fuelType) . ' price is required');
             }
 
             $mwkValue = round((float)$values['mwk'], 2);
             if ($mwkValue <= 0 || $mwkValue > 100000) {
-                throw new Exception(ucfirst($fuelType) . ' price (MWK) must be greater than 0 and less than 100000');
+                throw new Exception(ucfirst($fuelType) . ' price must be greater than 0 and less than 100000');
             }
 
             $usdValue = null;
@@ -5104,7 +5104,7 @@ function handleSaveFuelPriceSettings($db) {
             'fuel_prices_updated',
             'Fuel prices updated',
             sprintf(
-                'Date: %s | Petrol: MWK %.2f | Diesel: MWK %.2f | Source: %s',
+                'Date: %s | Petrol: %.2f | Diesel: %.2f | Source: %s',
                 $effectiveDate,
                 $normalizedPrices['petrol']['mwk'],
                 $normalizedPrices['diesel']['mwk'],

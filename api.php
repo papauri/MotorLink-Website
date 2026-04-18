@@ -1,6 +1,6 @@
 <?php
 /**
- * MotorLink Malawi - Complete API v4.0
+ * MotorLink - Complete API v4.0
  * Combined and optimized API file with all endpoints
  * Features: Car Marketplace, Car Hire, Garages, Dealers, Authentication, Admin
  */
@@ -4865,8 +4865,8 @@ function updateListing($db) {
 
                 if ($priceChangePercent > 50) {
                     sendError(
-                        'Price change too large. You can only change price by up to 50% (±' . number_format($originalPrice * 0.5) . ' MWK). ' .
-                        'Original: ' . number_format($originalPrice) . ' MWK, New: ' . number_format($newPrice) . ' MWK. ' .
+                        'Price change too large. You can only change price by up to 50% (±' . number_format($originalPrice * 0.5) . '). ' .
+                        'Original: ' . number_format($originalPrice) . ', New: ' . number_format($newPrice) . '. ' .
                         'This prevents changing a cheap car to an expensive one.',
                         400
                     );

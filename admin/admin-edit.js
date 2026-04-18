@@ -656,7 +656,7 @@ class EditOperations {
                         <td><i class="fas ${catIcon}"></i> ${this.escapeHtml((v.vehicle_category || 'car').charAt(0).toUpperCase() + (v.vehicle_category || 'car').slice(1))}</td>
                         <td><span style="color:${statusColor};font-weight:600;">${(v.status || 'N/A').replace('_', ' ')}</span></td>
                         <td>${isTransporter && v.cargo_capacity ? `<i class="fas fa-box"></i> ${this.escapeHtml(v.cargo_capacity)}` : (v.seats ? `${v.seats} seats` : '—')}</td>
-                        <td>MWK ${this.formatNumber(v.daily_rate || 0)}/day</td>
+                        <td>${getConfiguredCurrencyLabel()} ${this.formatNumber(v.daily_rate || 0)}/day</td>
                     </tr>`;
             }).join('');
 
@@ -725,15 +725,15 @@ class EditOperations {
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Daily Rate From:</span>
-                                    <span class="detail-value">MWK ${this.formatNumber(carHire.daily_rate_from || 0)}</span>
+                                    <span class="detail-value">${formatConfiguredCurrencyAmount(carHire.daily_rate_from || 0)}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Weekly Rate From:</span>
-                                    <span class="detail-value">MWK ${this.formatNumber(carHire.weekly_rate_from || 0)}</span>
+                                    <span class="detail-value">${formatConfiguredCurrencyAmount(carHire.weekly_rate_from || 0)}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Monthly Rate From:</span>
-                                    <span class="detail-value">MWK ${this.formatNumber(carHire.monthly_rate_from || 0)}</span>
+                                    <span class="detail-value">${formatConfiguredCurrencyAmount(carHire.monthly_rate_from || 0)}</span>
                                 </div>
                                 <div class="detail-row">
                                     <span class="detail-label">Business Hours:</span>
@@ -847,15 +847,15 @@ class EditOperations {
                                     <input type="text" id="carHireBusinessHours" name="business_hours" value="${carHire.business_hours || ''}" class="form-control" placeholder="e.g., 8AM-8PM or 24/7">
                                 </div>
                                 <div class="form-group">
-                                    <label for="carHireDailyRateFrom">Daily Rate From (MWK)</label>
+                                    <label for="carHireDailyRateFrom">Daily Rate From (${getConfiguredCurrencyLabel()})</label>
                                     <input type="number" id="carHireDailyRateFrom" name="daily_rate_from" value="${carHire.daily_rate_from || ''}" class="form-control">
                                 </div>
                                 <div class="form-group">
-                                    <label for="carHireWeeklyRateFrom">Weekly Rate From (MWK)</label>
+                                    <label for="carHireWeeklyRateFrom">Weekly Rate From (${getConfiguredCurrencyLabel()})</label>
                                     <input type="number" id="carHireWeeklyRateFrom" name="weekly_rate_from" value="${carHire.weekly_rate_from || ''}" class="form-control">
                                 </div>
                                 <div class="form-group">
-                                    <label for="carHireMonthlyRateFrom">Monthly Rate From (MWK)</label>
+                                    <label for="carHireMonthlyRateFrom">Monthly Rate From (${getConfiguredCurrencyLabel()})</label>
                                     <input type="number" id="carHireMonthlyRateFrom" name="monthly_rate_from" value="${carHire.monthly_rate_from || ''}" class="form-control">
                                 </div>
                                 <div class="form-group full-width">

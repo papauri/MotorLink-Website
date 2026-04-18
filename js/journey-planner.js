@@ -96,7 +96,7 @@ function resolveJourneyFuelSourceMeta(selectedVehicle, manualInputValue, vehicle
     return {
         type: 'default',
         label: 'Default journey estimate',
-        detail: `Using the Malawi ${fuelType === 'diesel' ? 'diesel' : 'petrol'} fallback average because no vehicle-specific fuel consumption was available`
+        detail: `Using the ${fuelType === 'diesel' ? 'diesel' : 'petrol'} fallback average because no vehicle-specific fuel consumption was available`
     };
 }
 
@@ -254,9 +254,9 @@ function initializeJourneyPlanner() {
 }
 
 function initMap() {
-    // Initialize map centered on Malawi
+    // Initialize map centered on configured country
     journeyMap = new google.maps.Map(document.getElementById('journeyMap'), {
-        center: { lat: -13.9626, lng: 33.7741 }, // Lilongwe, Malawi
+        center: { lat: -13.9626, lng: 33.7741 }, // Default center
         zoom: 7,
         mapTypeControl: true,
         streetViewControl: false
@@ -278,7 +278,7 @@ function initAutocomplete() {
         try {
             // Use new PlaceAutocompleteElement API
             const originAutocomplete = new google.maps.places.PlaceAutocompleteElement({
-                componentRestrictions: { country: 'mw' }, // Restrict to Malawi
+                componentRestrictions: { country: (CONFIG.COUNTRY_CODE || 'mw').toLowerCase() }, // Restrict to configured country
             });
             
             originAutocomplete.addEventListener('gmp-placeselect', async ({ place }) => {
@@ -306,7 +306,7 @@ function initAutocomplete() {
         try {
             // Use new PlaceAutocompleteElement API
             const destinationAutocomplete = new google.maps.places.PlaceAutocompleteElement({
-                componentRestrictions: { country: 'mw' }, // Restrict to Malawi
+                componentRestrictions: { country: (CONFIG.COUNTRY_CODE || 'mw').toLowerCase() }, // Restrict to configured country
             });
             
             destinationAutocomplete.addEventListener('gmp-placeselect', async ({ place }) => {
@@ -379,7 +379,7 @@ function displayFuelPrices(prices) {
         html += `
             <div style="padding: 10px 15px; background: white; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <div style="font-weight: bold; color: #333; margin-bottom: 5px;">${fuelTypeName}</div>
-                <div style="font-size: 1.2rem; color: #28a745; font-weight: bold;">MWK ${parseFloat(price.price_per_liter_mwk).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}/L</div>
+                <div style="font-size: 1.2rem; color: #28a745; font-weight: bold;">${CONFIG.CURRENCY_CODE || 'MWK'} ${parseFloat(price.price_per_liter_mwk).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}/L</div>
             </div>
         `;
     });
@@ -734,8 +734,8 @@ function renderPathOnMap(path, startLoc, endLoc) {
     journeyMap.fitBounds(bounds, 60);
 }
 
-function formatCurrencyMWK(value) {
-    return `MWK ${Number(value || 0).toLocaleString('en-US', {
+function formatCurrencyLocal(value) {
+    return `${CONFIG.CURRENCY_CODE || 'MWK'} ${Number(value || 0).toLocaleString('en-US', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     })}`;
@@ -784,8 +784,8 @@ function displayJourneyResults(results) {
             <div class="journey-result-grid">
                 <article class="journey-result-card journey-result-card-highlight">
                     <span class="journey-result-label">Estimated fuel cost</span>
-                    <strong class="journey-result-value journey-result-value-cost">${escapeHtml(formatCurrencyMWK(results.fuelCost))}</strong>
-                    <span class="journey-result-subtext">Based on ${results.fuelNeeded.toFixed(2)} L at ${escapeHtml(formatCurrencyMWK(results.fuelPrice))}/L</span>
+                    <strong class="journey-result-value journey-result-value-cost">${escapeHtml(formatCurrencyLocal(results.fuelCost))}</strong>
+                    <span class="journey-result-subtext">Based on ${results.fuelNeeded.toFixed(2)} L at ${escapeHtml(formatCurrencyLocal(results.fuelPrice))}/L</span>
                 </article>
                 <article class="journey-result-card">
                     <span class="journey-result-label">Distance</span>
@@ -809,7 +809,7 @@ function displayJourneyResults(results) {
                 </article>
                 <article class="journey-result-card">
                     <span class="journey-result-label">Fuel price</span>
-                    <strong class="journey-result-value">${escapeHtml(formatCurrencyMWK(results.fuelPrice))}/L</strong>
+                    <strong class="journey-result-value">${escapeHtml(formatCurrencyLocal(results.fuelPrice))}/L</strong>
                     <span class="journey-result-subtext">Latest available price loaded for this session</span>
                 </article>
             </div>
