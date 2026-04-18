@@ -6214,6 +6214,8 @@ function ensureAIProviderSiteSettingsRows($db) {
         return;
     }
 
+    $settingKeys = array_values($settingKeys);
+    $settingKeys = array_values($settingKeys);
     $placeholders = implode(',', array_fill(0, count($settingKeys), '?'));
     $stmt = $db->prepare("SELECT setting_key FROM site_settings WHERE setting_key IN ($placeholders)");
     $stmt->execute($settingKeys);
@@ -6238,9 +6240,9 @@ function getAIProviderKeyMetadata($db) {
     ensureAIProviderSiteSettingsRows($db);
 
     $definitions = getAIProviderSiteSettingDefinitions();
-    $settingKeys = array_map(function ($meta) {
+    $settingKeys = array_values(array_map(function ($meta) {
         return $meta['setting_key'];
-    }, $definitions);
+    }, $definitions));
     $placeholders = implode(',', array_fill(0, count($settingKeys), '?'));
     $stmt = $db->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ($placeholders)");
     $stmt->execute($settingKeys);

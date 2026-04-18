@@ -26,15 +26,12 @@ function getAIProviderLabel($provider) {
         'qwen' => 'Qwen',
         'glm' => 'GLM'
     ];
-    return $labels[$provider] ?? ucfirst($provider);
-}
 
-function isAIProviderEnabledInSettings($settings, $provider) {
-    $field = $provider . '_enabled';
-    return (int)($settings[$field] ?? 1) === 1;
+    return $labels[$provider] ?? ucfirst((string)$provider);
 }
 
 function getAIProviderEndpointAndDefaultModel($provider) {
+    $provider = normalizeAIProvider($provider);
     $configs = [
         'openai' => [
             'url' => 'https://api.openai.com/v1/chat/completions',
@@ -54,7 +51,6 @@ function getAIProviderEndpointAndDefaultModel($provider) {
         ]
     ];
 
-    $provider = normalizeAIProvider($provider);
     return $configs[$provider];
 }
 
@@ -106,20 +102,17 @@ function normalizeAILearningModelName($provider, $modelName, $fallbackModel = ''
 function getAILearningProviderFallbackModels($provider, $currentModel = '') {
     $provider = normalizeAIProvider($provider);
     $currentModel = strtolower(trim((string)$currentModel));
-    $fallbacks = [];
 
-    if ($provider === 'glm') {
-        $fallbacks = ['glm-4.7', 'glm-4.6', 'glm-4.5-air', 'glm-4.5', 'glm-5.1'];
-    } elseif ($provider === 'openai') {
-        $fallbacks = ['gpt-4o-mini'];
-    } elseif ($provider === 'deepseek') {
-        $fallbacks = ['deepseek-chat'];
-    } elseif ($provider === 'qwen') {
-        $fallbacks = ['qwen-plus'];
-    }
+    $fallbacks = [
+        'openai' => ['gpt-4o-mini'],
+        'deepseek' => ['deepseek-chat'],
+        'qwen' => ['qwen-plus', 'qwen-turbo'],
+        'glm' => ['glm-4.7', 'glm-5.1']
+    ];
 
-    return array_values(array_filter(array_unique($fallbacks), function ($model) use ($currentModel) {
-        return $model !== '' && $model !== $currentModel;
+    return array_values(array_filter($fallbacks[$provider] ?? [], function ($candidate) use ($currentModel) {
+        $candidate = strtolower(trim((string)$candidate));
+        return $candidate !== '' && $candidate !== $currentModel;
     }));
 }
 
@@ -137,23 +130,20 @@ function extractAILearningProviderError($provider, $responseBody, $httpCode) {
         return $fallbackMessage;
     }
 
-    $error = $decoded['error'] ?? null;
-    if (is_string($error) && trim($error) !== '') {
-        return $label . ' API error: ' . trim($error);
-    }
-
+    $error = $decoded['error'] ?? [];
     if (is_array($error)) {
         $message = trim((string)($error['message'] ?? ''));
         $type = trim((string)($error['type'] ?? ''));
         $code = trim((string)($error['code'] ?? ''));
 
         if ($message !== '') {
-            $detail = $label . ' API error: ' . $message;
-            if ($type !== '' || $code !== '') {
-                $detail .= ' (' . trim($type . ($type !== '' && $code !== '' ? ', ' : '') . $code, ', ') . ')';
-            }
-            return $detail;
+            $details = array_values(array_filter([$type, $code], function ($value) {
+                return $value !== '';
+            }));
+            return $label . ' API error: ' . $message . (!empty($details) ? ' (' . implode(', ', $details) . ')' : '');
         }
+    } elseif (is_string($error) && trim($error) !== '') {
+        return $label . ' API error: ' . trim($error);
     }
 
     $message = trim((string)($decoded['message'] ?? ''));
@@ -405,6 +395,11 @@ function getAILearningSettings($db) {
             'parts_cache_limit' => 500
         ];
     }
+}
+
+function isAIProviderEnabledInSettings(array $settings, $provider) {
+    $provider = normalizeAIProvider($provider);
+    return !empty($settings[$provider . '_enabled']);
 }
 
 /**
@@ -1130,6 +1125,210 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
     }
 }
 
+function detectVehicleSpecLearningTopic($topic) {
+    $topicLower = strtolower(trim((string)$topic));
+    if ($topicLower === '') {
+        return false;
+    }
+
+    $specKeywords = [
+        'spec', 'specs', 'specification', 'specifications', 'technical details',
+        'engine', 'horsepower', 'power', 'torque', 'fuel economy', 'fuel consumption',
+        'dimensions', 'length', 'width', 'height', 'wheelbase', 'ground clearance',
+        'transmission', 'gearbox', 'drivetrain', 'drive type', 'seating capacity', 'boot space'
+    ];
+
+    foreach ($specKeywords as $keyword) {
+        if (strpos($topicLower, $keyword) !== false) {
+            return true;
+        }
+    }
+
+    return preg_match('/\b(19|20)\d{2}\b/', $topicLower) === 1;
+}
+
+function buildSingleWebLearningMessages($topic) {
+    if (detectVehicleSpecLearningTopic($topic)) {
+        return [
+            [
+                'role' => 'system',
+                'content' => 'You are a careful automotive research assistant. Provide a structured vehicle specification summary for information that may not exist in the local database. Use only stable, widely known public-source knowledge patterns. If a figure depends on trim, engine, market, or year, say so clearly instead of inventing certainty. Structure the answer with headings such as Overview, Powertrain, Efficiency, Dimensions and Capacity, and Ownership Notes.'
+            ],
+            [
+                'role' => 'user',
+                'content' => $topic . ' Please provide a concise but comprehensive vehicle specification summary, highlight where specs may vary by trim or market, and keep the wording reusable for a cached knowledge base.'
+            ]
+        ];
+    }
+
+    return [
+        [
+            'role' => 'system',
+            'content' => 'You are a knowledgeable car expert. Provide comprehensive, accurate, and helpful information about car-related topics. Structure your response clearly with headings, bullet points, and detailed explanations.'
+        ],
+        [
+            'role' => 'user',
+            'content' => $topic . ' Please provide detailed and comprehensive information about this topic.'
+        ]
+    ];
+}
+
+function extractLearningVehicleContextFromQuery($db, $query) {
+    $result = ['make' => null, 'model' => null, 'year' => null];
+    $query = trim((string)$query);
+    if ($query === '') {
+        return $result;
+    }
+
+    $queryLower = strtolower($query);
+
+    try {
+        $makeStmt = $db->query("SELECT name FROM car_makes WHERE is_active = 1 ORDER BY CHAR_LENGTH(name) DESC, name ASC");
+        $makes = $makeStmt ? $makeStmt->fetchAll(PDO::FETCH_COLUMN) : [];
+
+        foreach ($makes as $make) {
+            $make = trim((string)$make);
+            if ($make !== '' && preg_match('/\\b' . preg_quote(strtolower($make), '/') . '\\b/i', $queryLower)) {
+                $result['make'] = $make;
+                break;
+            }
+        }
+
+        if ($result['make']) {
+            $makeIdStmt = $db->prepare("SELECT id FROM car_makes WHERE LOWER(name) = ? LIMIT 1");
+            $makeIdStmt->execute([strtolower((string)$result['make'])]);
+            $makeId = $makeIdStmt->fetchColumn();
+
+            if ($makeId) {
+                $modelStmt = $db->prepare("SELECT DISTINCT name FROM car_models WHERE is_active = 1 AND make_id = ? ORDER BY CHAR_LENGTH(name) DESC, name ASC");
+                $modelStmt->execute([$makeId]);
+                $models = $modelStmt->fetchAll(PDO::FETCH_COLUMN);
+            } else {
+                $modelStmt = $db->query("SELECT DISTINCT name FROM car_models WHERE is_active = 1 ORDER BY CHAR_LENGTH(name) DESC, name ASC");
+                $models = $modelStmt ? $modelStmt->fetchAll(PDO::FETCH_COLUMN) : [];
+            }
+        } else {
+            $modelStmt = $db->query("SELECT DISTINCT name FROM car_models WHERE is_active = 1 ORDER BY CHAR_LENGTH(name) DESC, name ASC");
+            $models = $modelStmt ? $modelStmt->fetchAll(PDO::FETCH_COLUMN) : [];
+        }
+
+        foreach ($models as $model) {
+            $model = trim((string)$model);
+            if ($model !== '' && preg_match('/\\b' . preg_quote(strtolower($model), '/') . '\\b/i', $queryLower)) {
+                $result['model'] = $model;
+                break;
+            }
+        }
+    } catch (Exception $e) {
+        error_log('extractLearningVehicleContextFromQuery error: ' . $e->getMessage());
+    }
+
+    if (preg_match('/\b(19|20)\d{2}\b/', $query, $yearMatch)) {
+        $result['year'] = (int)$yearMatch[0];
+    }
+
+    return $result;
+}
+
+function buildLearningPartNameFromQuery($query, array $vehicleContext) {
+    $partName = trim((string)$query);
+
+    if (!empty($vehicleContext['make'])) {
+        $partName = preg_replace('/\\b' . preg_quote((string)$vehicleContext['make'], '/') . '\\b/i', ' ', $partName, 1);
+    }
+    if (!empty($vehicleContext['model'])) {
+        $partName = preg_replace('/\\b' . preg_quote((string)$vehicleContext['model'], '/') . '\\b/i', ' ', $partName, 1);
+    }
+
+    $partName = preg_replace('/\b(19|20)\d{2}\b/', ' ', $partName, 1);
+    $partName = trim(preg_replace('/\s+/', ' ', (string)$partName));
+
+    return $partName !== '' ? $partName : trim((string)$query);
+}
+
+function buildSinglePartLearningMessages($query) {
+    return [
+        [
+            'role' => 'system',
+            'content' => 'You are a knowledgeable car parts expert. Provide comprehensive information about car parts using stable public-source knowledge patterns. IMPORTANT: Return valid JSON with these fields: part_name, part_number, oem_number, price_usd, description, compatibility, specifications, cross_reference. If an exact OEM or price can vary by engine, trim, or market, say so clearly in compatibility or description rather than inventing false certainty. Use null when exact numeric pricing is not available.'
+        ],
+        [
+            'role' => 'user',
+            'content' => $query . ' Please provide detailed information including OEM part number, compatibility, specifications, cross-reference numbers, and approximate USD pricing when known. Return only a valid JSON object.'
+        ]
+    ];
+}
+
+function normalizeLearningStructuredValue($value) {
+    if (is_array($value)) {
+        return json_encode($value);
+    }
+
+    $value = trim((string)$value);
+    return $value !== '' ? $value : null;
+}
+
+function parseStructuredPartLearningResponse($content, $fallbackPartName = 'Part') {
+    $parsed = [
+        'part_name' => trim((string)$fallbackPartName) !== '' ? trim((string)$fallbackPartName) : 'Part',
+        'part_number' => null,
+        'oem_number' => null,
+        'price_usd' => null,
+        'description' => null,
+        'compatibility' => null,
+        'specifications' => null,
+        'cross_reference' => null,
+        'summary' => trim((string)$content)
+    ];
+
+    $partData = null;
+    if (preg_match('/\{.*\}/s', (string)$content, $jsonMatches)) {
+        $partData = json_decode($jsonMatches[0], true);
+    } else {
+        $partData = json_decode((string)$content, true);
+    }
+
+    if (is_array($partData)) {
+        if (!empty($partData['part_name'])) {
+            $parsed['part_name'] = trim((string)$partData['part_name']);
+        }
+
+        $parsed['part_number'] = normalizeLearningStructuredValue($partData['part_number'] ?? $partData['oem_number'] ?? null);
+        $parsed['oem_number'] = normalizeLearningStructuredValue($partData['oem_number'] ?? $partData['part_number'] ?? null);
+        $parsed['price_usd'] = isset($partData['price_usd']) && $partData['price_usd'] !== ''
+            ? (float)$partData['price_usd']
+            : null;
+        $parsed['description'] = normalizeLearningStructuredValue($partData['description'] ?? null);
+        $parsed['compatibility'] = normalizeLearningStructuredValue($partData['compatibility'] ?? null);
+        $parsed['specifications'] = normalizeLearningStructuredValue($partData['specifications'] ?? null);
+        $parsed['cross_reference'] = normalizeLearningStructuredValue($partData['cross_reference'] ?? null);
+    }
+
+    if (empty($parsed['part_number'])) {
+        if (preg_match('/part\s*number[:\s]+([A-Z0-9\-]+)/i', (string)$content, $pnMatch)) {
+            $parsed['part_number'] = trim((string)$pnMatch[1]);
+            $parsed['oem_number'] = $parsed['part_number'];
+        } elseif (preg_match('/oem[:\s]+([A-Z0-9\-]+)/i', (string)$content, $oemMatch)) {
+            $parsed['oem_number'] = trim((string)$oemMatch[1]);
+            $parsed['part_number'] = $parsed['oem_number'];
+        }
+    }
+
+    if ($parsed['price_usd'] === null) {
+        if (preg_match('/\$(\d+\.?\d*)/', (string)$content, $priceMatch)) {
+            $parsed['price_usd'] = (float)$priceMatch[1];
+        } elseif (preg_match('/price[:\s]+\$?(\d+\.?\d*)/i', (string)$content, $priceMatch2)) {
+            $parsed['price_usd'] = (float)$priceMatch2[1];
+        }
+    }
+
+    if (!empty($parsed['description'])) {
+        $parsed['summary'] = $parsed['description'];
+    }
+
+    return $parsed;
+}
+
 /**
  * Learn a single web topic
  */
@@ -1142,25 +1341,21 @@ function learnSingleWebTopic($db, $topic, $provider = 'openai') {
             return ['success' => false, 'message' => 'Topic already exists in cache'];
         }
         
-        // Generate comprehensive answer
-        $messages = [
-            [
-                'role' => 'system',
-                'content' => 'You are a knowledgeable car expert. Provide comprehensive, accurate, and helpful information about car-related topics. Structure your response clearly with headings, bullet points, and detailed explanations.'
-            ],
-            [
-                'role' => 'user',
-                'content' => $topic . ' Please provide detailed and comprehensive information about this topic.'
-            ]
-        ];
+        $messages = buildSingleWebLearningMessages($topic);
         
         $response = callAILearningAPI($db, $provider, $messages);
         if (isset($response['error'])) {
             return ['success' => false, 'message' => $response['error']];
         }
         
-        $summary = $response['content'];
-        $sourcesJson = json_encode([['title' => 'AI Research - ' . ucfirst($provider), 'link' => null, 'snippet' => 'AI-generated content']]);
+        $summary = trim((string)($response['content'] ?? ''));
+        $sourcesJson = json_encode([[
+            'title' => 'AI Research - ' . ucfirst($provider),
+            'link' => null,
+            'snippet' => detectVehicleSpecLearningTopic($topic)
+                ? 'AI-generated vehicle specifications research'
+                : 'AI-generated automotive knowledge'
+        ]]);
         
         // Insert into database
         $stmt = $db->prepare("
@@ -1360,64 +1555,21 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                 $content = $response['content'];
                 $sourcesJson = json_encode([['title' => 'AI Research - ' . ucfirst($provider), 'link' => null, 'snippet' => 'AI-generated parts research']]);
 
-                preg_match('/(\w+)\s+(\w+)\s+(\d{4})?\s*(.*)/i', $query, $matches);
-                $makeName = $matches[1] ?? null;
-                $modelName = $matches[2] ?? null;
-                $year = !empty($matches[3]) ? (int)$matches[3] : null;
-                $partQuery = $matches[4] ?? $query;
-                $partName = trim($partQuery);
-                if (empty($partName)) {
-                    $partName = 'Part';
-                }
-
-                $partData = null;
-                $partNumber = null;
-                $oemNumber = null;
-                $priceUsd = null;
-                $description = null;
-                $compatibility = null;
-                $specifications = null;
-                $crossReference = null;
-
-                if (preg_match('/\{.*\}/s', $content, $jsonMatches)) {
-                    $partData = json_decode($jsonMatches[0], true);
-                } else {
-                    $partData = json_decode($content, true);
-                }
-
-                if (is_array($partData)) {
-                    $partNumber = $partData['part_number'] ?? $partData['oem_number'] ?? null;
-                    $oemNumber = $partData['oem_number'] ?? $partData['part_number'] ?? null;
-                    $priceUsd = isset($partData['price_usd']) ? (float)$partData['price_usd'] : null;
-                    $description = $partData['description'] ?? null;
-                    $compatibility = is_array($partData['compatibility'] ?? null) ? json_encode($partData['compatibility']) : ($partData['compatibility'] ?? null);
-                    $specifications = is_array($partData['specifications'] ?? null) ? json_encode($partData['specifications']) : ($partData['specifications'] ?? null);
-                    $crossReference = is_array($partData['cross_reference'] ?? null) ? json_encode($partData['cross_reference']) : null;
-
-                    if (!empty($partData['part_name'])) {
-                        $partName = $partData['part_name'];
-                    }
-                }
-
-                if (empty($partNumber)) {
-                    if (preg_match('/part\s*number[:\s]+([A-Z0-9\-]+)/i', $content, $pnMatch)) {
-                        $partNumber = trim($pnMatch[1]);
-                        $oemNumber = $partNumber;
-                    } elseif (preg_match('/oem[:\s]+([A-Z0-9\-]+)/i', $content, $oemMatch)) {
-                        $oemNumber = trim($oemMatch[1]);
-                        $partNumber = $oemNumber;
-                    }
-                }
-
-                if ($priceUsd === null) {
-                    if (preg_match('/\$(\d+\.?\d*)/', $content, $priceMatch)) {
-                        $priceUsd = (float)$priceMatch[1];
-                    } elseif (preg_match('/price[:\s]+\$?(\d+\.?\d*)/i', $content, $priceMatch2)) {
-                        $priceUsd = (float)$priceMatch2[1];
-                    }
-                }
-
-                $summary = !empty($description) ? $description : $content;
+                $vehicleContext = extractLearningVehicleContextFromQuery($db, $query);
+                $makeName = $vehicleContext['make'] ?? null;
+                $modelName = $vehicleContext['model'] ?? null;
+                $year = $vehicleContext['year'] ?? null;
+                $fallbackPartName = buildLearningPartNameFromQuery($query, $vehicleContext);
+                $partPayload = parseStructuredPartLearningResponse($content, $fallbackPartName);
+                $partName = $partPayload['part_name'];
+                $partNumber = $partPayload['part_number'];
+                $oemNumber = $partPayload['oem_number'];
+                $priceUsd = $partPayload['price_usd'];
+                $description = $partPayload['description'];
+                $compatibility = $partPayload['compatibility'];
+                $specifications = $partPayload['specifications'];
+                $crossReference = $partPayload['cross_reference'];
+                $summary = $partPayload['summary'];
 
                 try {
                     $stmt = $db->prepare("
@@ -1481,52 +1633,45 @@ function learnSinglePartTopic($db, $query, $provider = 'openai') {
             return ['success' => false, 'message' => 'Part query already exists in cache'];
         }
         
-        // Extract make/model/part from query
-        preg_match('/(\w+)\s+(\w+)\s+(\d{4})?\s*(.*)/i', $query, $matches);
-        $makeName = $matches[1] ?? null;
-        $modelName = $matches[2] ?? null;
-        $year = !empty($matches[3]) ? (int)$matches[3] : null;
-        $partQuery = $matches[4] ?? $query;
-        
-        // Generate comprehensive parts information
-        $messages = [
-            [
-                'role' => 'system',
-                'content' => 'You are a knowledgeable car parts expert. Provide comprehensive information about car parts including OEM part numbers, compatibility, specifications, cross-reference numbers, prices, and installation notes. Structure your response in a clear format with sections for part numbers, compatibility, specifications, and other relevant details.'
-            ],
-            [
-                'role' => 'user',
-                'content' => $query . ' Please provide detailed information including OEM part numbers, compatibility, specifications, cross-reference numbers, and any other relevant details.'
-            ]
-        ];
+        $vehicleContext = extractLearningVehicleContextFromQuery($db, $query);
+        $makeName = $vehicleContext['make'] ?? null;
+        $modelName = $vehicleContext['model'] ?? null;
+        $year = $vehicleContext['year'] ?? null;
+        $fallbackPartName = buildLearningPartNameFromQuery($query, $vehicleContext);
+
+        $messages = buildSinglePartLearningMessages($query);
         
         $response = callAILearningAPI($db, $provider, $messages);
         if (isset($response['error'])) {
             return ['success' => false, 'message' => $response['error']];
         }
         
-        $summary = $response['content'];
+        $partPayload = parseStructuredPartLearningResponse($response['content'], $fallbackPartName);
+        $summary = $partPayload['summary'];
         $sourcesJson = json_encode([['title' => 'AI Research - ' . ucfirst($provider), 'link' => null, 'snippet' => 'AI-generated parts research']]);
-        
-        // Extract part name from query (first word after make/model/year)
-        $partName = trim($partQuery);
-        if (empty($partName)) {
-            $partName = 'Part';
-        }
         
         // Insert into database
         $stmt = $db->prepare("
             INSERT INTO ai_parts_cache (
-                make_name, model_name, year, part_name, query_hash, summary, sources_json,
+                make_name, model_name, year, part_name, part_number, oem_number, price_usd,
+                description, compatibility, specifications, cross_reference,
+                query_hash, summary, sources_json,
                 created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
         ");
         $stmt->execute([
             $makeName,
             $modelName,
             $year,
-            $partName,
+            $partPayload['part_name'],
+            $partPayload['part_number'],
+            $partPayload['oem_number'],
+            $partPayload['price_usd'],
+            $partPayload['description'],
+            $partPayload['compatibility'],
+            $partPayload['specifications'],
+            $partPayload['cross_reference'],
             $queryHash,
             $summary,
             $sourcesJson
@@ -1549,7 +1694,6 @@ function learnFromUserQuery($db, $query, $isPartsQuery = false, $provider = 'aut
 
         $settings = getAILearningSettings($db);
         $provider = resolveEffectiveAILearningProvider($settings, $provider);
-        
         if (!isAIProviderEnabledInSettings($settings, $provider)) {
             return ['success' => false, 'message' => getAIProviderLabel($provider) . ' is disabled'];
         }

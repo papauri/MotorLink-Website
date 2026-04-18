@@ -2088,6 +2088,12 @@ function handleAICarChat($db) {
                     return;
                 }
 
+                if ($resolvedIntent === 'parts') {
+                    $logDeterministicUsage();
+                    handlePartsQuery($db, $message, $conversationHistory, $userContext);
+                    return;
+                }
+
                 if ($resolvedIntent === 'recommendation') {
                     $logDeterministicUsage();
                     handleCarRecommendationQuery($db, $message, $conversationHistory, $userContext);
@@ -2181,10 +2187,18 @@ function handleAICarChat($db) {
         $isCarSpecQuery = detectCarSpecQuery($message);
         
         if ($isCarSpecQuery) {
-            // Handle car spec query with database and internet search
+            // Handle car spec query with database and learned research context
             $logDeterministicUsage();
             handleCarSpecQuery($db, $message, $conversationHistory, $userContext);
             return; // Exit early after handling car spec query
+        }
+
+        $isPartsQuery = detectPartsQuery($message);
+
+        if ($isPartsQuery) {
+            $logDeterministicUsage();
+            handlePartsQuery($db, $message, $conversationHistory, $userContext);
+            return;
         }
         
         // Check if user is looking for car recommendations or searching for a car
@@ -4298,38 +4312,239 @@ function buildOutOfScopeResponse() {
     return "I'm sorry, I can't help with that type of request. I'm here to help with cars, vehicles, and general knowledge questions. How can I assist you today?";
 }
 
+function buildVehicleReferenceLabel($makeName, $modelName, $year = null) {
+    $parts = [];
+
+    if (!empty($year)) {
+        $parts[] = (int)$year;
+    }
+    if (!empty($makeName)) {
+        $parts[] = trim((string)$makeName);
+    }
+    if (!empty($modelName)) {
+        $parts[] = trim((string)$modelName);
+    }
+
+    return trim(implode(' ', $parts));
+}
+
+function buildVehicleContextualMessage($message, $makeName, $modelName, $year = null) {
+    $message = trim((string)$message);
+    if ($message === '') {
+        return $message;
+    }
+
+    $prefix = [];
+
+    if (!empty($year) && preg_match('/\b' . preg_quote((string)(int)$year, '/') . '\b/', $message) !== 1) {
+        $prefix[] = (int)$year;
+    }
+
+    if (!empty($makeName) && preg_match('/\b' . preg_quote((string)$makeName, '/') . '\b/i', $message) !== 1) {
+        $prefix[] = trim((string)$makeName);
+    }
+
+    if (!empty($modelName) && preg_match('/\b' . preg_quote((string)$modelName, '/') . '\b/i', $message) !== 1) {
+        $prefix[] = trim((string)$modelName);
+    }
+
+    if (empty($prefix)) {
+        return $message;
+    }
+
+    return trim(implode(' ', $prefix) . ' ' . $message);
+}
+
+function extractRequestedVehicleSpecTopics($message) {
+    $messageLower = strtolower(trim((string)$message));
+    if ($messageLower === '') {
+        return [];
+    }
+
+    $topicMap = [
+        'engine' => 'engine',
+        'horsepower' => 'horsepower',
+        'power' => 'power output',
+        'torque' => 'torque',
+        'fuel economy' => 'fuel economy',
+        'fuel consumption' => 'fuel economy',
+        'mileage' => 'fuel economy',
+        'transmission' => 'transmission',
+        'gearbox' => 'transmission',
+        'drivetrain' => 'drivetrain',
+        'drive type' => 'drivetrain',
+        '4x4' => 'drivetrain',
+        'awd' => 'drivetrain',
+        'dimensions' => 'dimensions',
+        'length' => 'dimensions',
+        'width' => 'dimensions',
+        'height' => 'dimensions',
+        'wheelbase' => 'dimensions',
+        'ground clearance' => 'ground clearance',
+        'clearance' => 'ground clearance',
+        'boot' => 'cargo capacity',
+        'cargo' => 'cargo capacity',
+        'trunk' => 'cargo capacity',
+        'seats' => 'seating capacity',
+        'seating capacity' => 'seating capacity',
+        'towing' => 'towing capacity',
+        'tow' => 'towing capacity',
+        'safety' => 'safety features',
+        'airbags' => 'safety features'
+    ];
+
+    $topics = [];
+    foreach ($topicMap as $keyword => $label) {
+        if (strpos($messageLower, $keyword) !== false) {
+            $topics[] = $label;
+        }
+    }
+
+    return array_values(array_unique($topics));
+}
+
+function queryVehicleSpecKnowledgeCache($db, $message, $makeName, $modelName, $year = null) {
+    if (empty($makeName) && empty($modelName)) {
+        return null;
+    }
+
+    try {
+        $terms = [];
+        if (!empty($makeName)) {
+            $terms[] = strtolower(trim((string)$makeName));
+        }
+        if (!empty($modelName)) {
+            $terms[] = strtolower(trim((string)$modelName));
+        }
+        if (!empty($year)) {
+            $terms[] = (string)(int)$year;
+        }
+
+        $conditions = [];
+        $params = [];
+        foreach ($terms as $term) {
+            $like = '%' . $term . '%';
+            $conditions[] = "LOWER(COALESCE(query_text, '')) LIKE ?";
+            $params[] = $like;
+            $conditions[] = "LOWER(COALESCE(summary, '')) LIKE ?";
+            $params[] = $like;
+        }
+
+        if (empty($conditions)) {
+            return null;
+        }
+
+        $stmt = $db->prepare("\n            SELECT query_text, summary, sources_json, created_at, updated_at\n            FROM ai_web_cache\n            WHERE " . implode(' OR ', $conditions) . "\n            ORDER BY updated_at DESC, created_at DESC\n            LIMIT 20\n        ");
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($rows)) {
+            return null;
+        }
+
+        $requestedTopics = extractRequestedVehicleSpecTopics($message);
+        foreach ($rows as &$row) {
+            $haystack = strtolower(trim((string)($row['query_text'] ?? '') . ' ' . (string)($row['summary'] ?? '')));
+            $score = 0;
+
+            if (!empty($makeName) && strpos($haystack, strtolower((string)$makeName)) !== false) {
+                $score += 45;
+            }
+            if (!empty($modelName) && strpos($haystack, strtolower((string)$modelName)) !== false) {
+                $score += 65;
+            }
+            if (!empty($year) && strpos($haystack, (string)(int)$year) !== false) {
+                $score += 20;
+            }
+
+            foreach ($requestedTopics as $topic) {
+                if (strpos($haystack, strtolower((string)$topic)) !== false) {
+                    $score += 12;
+                }
+            }
+
+            if (preg_match('/\b(spec|engine|fuel|transmission|drivetrain|horsepower|torque|dimensions|capacity)\b/i', $haystack)) {
+                $score += 8;
+            }
+
+            $row['_relevance'] = $score;
+        }
+        unset($row);
+
+        usort($rows, function ($left, $right) {
+            $scoreDiff = ((int)($right['_relevance'] ?? 0)) <=> ((int)($left['_relevance'] ?? 0));
+            if ($scoreDiff !== 0) {
+                return $scoreDiff;
+            }
+
+            return strcmp((string)($right['updated_at'] ?? ''), (string)($left['updated_at'] ?? ''));
+        });
+
+        $bestMatch = $rows[0];
+        if ((int)($bestMatch['_relevance'] ?? 0) < 55) {
+            return null;
+        }
+
+        return [
+            'found' => true,
+            'summary' => trim((string)($bestMatch['summary'] ?? '')),
+            'sources' => json_decode($bestMatch['sources_json'] ?? '[]', true),
+            'cache_type' => 'web'
+        ];
+    } catch (Exception $e) {
+        error_log('queryVehicleSpecKnowledgeCache error: ' . $e->getMessage());
+    }
+
+    return null;
+}
+
 /**
  * Handle car specification queries
  * Queries both database and internet for comprehensive answers
  */
 function handleCarSpecQuery($db, $message, $conversationHistory, $userContext) {
     try {
-        // Extract car make and model from message (using database)
         $extractedInfo = extractCarInfoFromMessage($db, $message);
         $contextualInfo = resolveCarSpecContextFromConversation($db, $message, $conversationHistory, $extractedInfo);
         $makeName = $contextualInfo['make'] ?? null;
         $modelName = $contextualInfo['model'] ?? null;
         $year = $contextualInfo['year'] ?? null;
-        
-        // Query database for car specs
-        $dbSpecs = queryCarSpecsFromDatabase($db, $makeName, $modelName, $year);
-        
-        // Check cache tables first
-        $cacheResult = queryCacheTables($db, $message);
-        $hasCacheData = $cacheResult['found'];
-        
-        // Query internet for additional specs (using OpenAI's knowledge) if not in cache
-        $internetSpecs = null;
-        
-        if (!$hasCacheData) {
-            $internetSpecs = queryCarSpecsFromInternet($message, $makeName, $modelName, $year);
-        } else {
-            // Use cached data
-            $internetSpecs = $cacheResult['summary'];
+        $effectiveMessage = buildVehicleContextualMessage($message, $makeName, $modelName, $year);
+        $vehicleLabel = buildVehicleReferenceLabel($makeName, $modelName, $year);
+        $requestedTopics = extractRequestedVehicleSpecTopics($effectiveMessage);
+
+        if ($effectiveMessage !== $message) {
+            updateAIChatPersistenceContext(['resolved_message' => $effectiveMessage]);
         }
-        
-        // Build enhanced context for AI
+
+        // Learn the fully-resolved spec question so future follow-ups hit cache.
+        scheduleContinuousLearningForQuery($db, $effectiveMessage);
+
+        $dbSpecs = queryCarSpecsFromDatabase($db, $makeName, $modelName, $year);
+
+        $cacheResult = queryCacheTables($db, $effectiveMessage);
+        if (empty($cacheResult['found'])) {
+            $vehicleSpecCache = queryVehicleSpecKnowledgeCache($db, $effectiveMessage, $makeName, $modelName, $year);
+            if (!empty($vehicleSpecCache['found'])) {
+                $cacheResult = $vehicleSpecCache;
+            }
+        }
+        $hasCacheData = !empty($cacheResult['found']);
+
+        $researchBrief = null;
+        if (!$hasCacheData) {
+            $researchBrief = queryCarSpecsFromInternet($effectiveMessage, $makeName, $modelName, $year);
+        }
+
         $specContext = "CAR SPECIFICATION QUERY DETECTED\n\n";
+
+        if ($vehicleLabel !== '') {
+            $specContext .= "VEHICLE CONTEXT:\n- {$vehicleLabel}\n\n";
+        }
+
+        if (!empty($requestedTopics)) {
+            $specContext .= "REQUESTED FOCUS:\n- " . implode(', ', $requestedTopics) . "\n\n";
+        }
         
         if ($dbSpecs && !empty($dbSpecs)) {
             $specContext .= "DATABASE RESULTS (from MotorLink database):\n";
@@ -4351,8 +4566,14 @@ function handleCarSpecQuery($db, $message, $conversationHistory, $userContext) {
             $specContext .= "DATABASE RESULTS: No matching specifications found in MotorLink database.\n\n";
         }
         
-        if ($internetSpecs) {
-            $specContext .= "INTERNET RESEARCH:\n{$internetSpecs}\n\n";
+        if ($hasCacheData && !empty($cacheResult['summary'])) {
+            $specContext .= "LEARNED SPEC KNOWLEDGE CACHE:\n{$cacheResult['summary']}\n\n";
+        } else {
+            $specContext .= "LEARNED SPEC KNOWLEDGE CACHE: No direct cached spec summary matched this query.\n\n";
+        }
+
+        if ($researchBrief) {
+            $specContext .= "RESEARCH BRIEF:\n{$researchBrief}\n\n";
         }
         
         // If no database results, try to find similar/alternative models
@@ -4405,15 +4626,13 @@ function handleCarSpecQuery($db, $message, $conversationHistory, $userContext) {
         }
         
         $specContext .= "INSTRUCTIONS:\n";
-        $specContext .= "- Provide a friendly, comprehensive answer about the car specifications\n";
-        $specContext .= "- If database has info, present it PRECISELY and mention it comes from MotorLink's database\n";
-        $specContext .= "- If database doesn't have it, use your AI knowledge and research to provide comprehensive information\n";
-        $specContext .= "- Clearly indicate data source: \"From MotorLink database\" vs \"Based on research\"\n";
-        $specContext .= "- If alternatives are available, suggest them: \"While we don't have that exact model, we do have...\"\n";
-        $specContext .= "- Be enthusiastic and helpful - celebrate finding the information!\n";
-        $specContext .= "- If multiple variants exist, explain the differences clearly in a structured format\n";
-        $specContext .= "- Use conversational, friendly language but be precise with data\n";
-        $specContext .= "- Format specifications clearly (use tables or lists for better readability)\n";
+        $specContext .= "- Provide a concise but comprehensive answer about the vehicle specifications\n";
+        $specContext .= "- If MotorLink database has info, present it precisely and label it as MotorLink database data\n";
+        $specContext .= "- If learned cache data exists, use it as the next-best source and label it as learned research cache\n";
+        $specContext .= "- If exact figures vary by trim, engine, drivetrain, or market, say that explicitly instead of inventing certainty\n";
+        $specContext .= "- Do not claim live browsing or real-time internet access\n";
+        $specContext .= "- If alternatives are available, suggest them clearly\n";
+        $specContext .= "- Format the answer with clear sections or bullets\n";
         
         // Get user context
         $user = getCurrentUser(true);
@@ -4425,15 +4644,14 @@ function handleCarSpecQuery($db, $message, $conversationHistory, $userContext) {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $baseUrl = $protocol . '://' . $serverHost . '/';
         
-        // Enhanced system prompt for spec queries
-        $systemPrompt = "Hey there! 👋 I'm MotorLink AI Assistant, your friendly automotive expert!
+        $systemPrompt = "You are MotorLink AI Assistant, an automotive specialist for Malawi users.
 
-{$contextInfo}
-BASE URL: {$baseUrl}
+    {$contextInfo}
+    BASE URL: {$baseUrl}
 
-{$specContext}
+    {$specContext}
 
-I'm here to help you with car specifications! I've checked both our MotorLink database and the internet to give you the most comprehensive answer possible. Let me share what I found! 🚗✨";
+    Answer clearly, stay factual, and prefer MotorLink database data whenever it exists.";
         
         // Build messages array
         $messages = [
@@ -4450,8 +4668,7 @@ I'm here to help you with car specifications! I've checked both our MotorLink da
             }
         }
         
-        // Add current user message
-        $messages[] = ['role' => 'user', 'content' => $message];
+        $messages[] = ['role' => 'user', 'content' => $effectiveMessage];
         
         // Call OpenAI API with enhanced context
         $response = callOpenAIAPIForSpecs($db, $user, $messages);
@@ -4460,7 +4677,7 @@ I'm here to help you with car specifications! I've checked both our MotorLink da
             sendSuccess($response);
         } else {
             // Provider fallback: return deterministic database/cache summary instead of hard failure.
-            $fallbackResponse = buildCarSpecFallbackResponse($message, $dbSpecs, $cacheResult, $alternatives);
+            $fallbackResponse = buildCarSpecFallbackResponse($effectiveMessage, $dbSpecs, $cacheResult, $alternatives);
             sendSuccess([
                 'response' => $fallbackResponse,
                 'source' => 'database_fallback'
@@ -4469,6 +4686,162 @@ I'm here to help you with car specifications! I've checked both our MotorLink da
     } catch (Exception $e) {
         error_log("handleCarSpecQuery error: " . $e->getMessage());
         sendError('I apologize, but I encountered an error while searching for car specifications. Please try again!', 500);
+    }
+}
+
+function buildPartsResearchBrief($message, $makeName, $modelName, $year = null, array $partInfo = []) {
+    $vehicleLabel = buildVehicleReferenceLabel($makeName, $modelName, $year);
+    $subject = trim((string)($partInfo['part_name'] ?? ''));
+
+    if ($subject === '' && !empty($partInfo['part_number'])) {
+        $subject = 'part number ' . strtoupper((string)$partInfo['part_number']);
+    }
+    if ($subject === '' && !empty($partInfo['oem_number'])) {
+        $subject = 'OEM ' . strtoupper((string)$partInfo['oem_number']);
+    }
+    if ($subject === '') {
+        $subject = 'the requested part';
+    }
+
+    $brief = "Research focus: {$subject}";
+    if ($vehicleLabel !== '') {
+        $brief .= " for {$vehicleLabel}";
+    }
+
+    $brief .= ". Prioritize exact fitment, OEM numbers, cross-references, compatibility notes, approximate price ranges, and installation cautions. If exact fitment depends on engine, trim, market, or VIN, say so clearly instead of inventing a single exact answer.";
+
+    return $brief;
+}
+
+function buildPartInfoFallbackResponse($message, $cacheResult, $makeName, $modelName, $year, array $partInfo) {
+    $response = "I checked MotorLink parts knowledge for your request: \"{$message}\".\n\n";
+
+    if (!empty($cacheResult['found']) && !empty($cacheResult['summary'])) {
+        $response .= "From learned parts knowledge:\n" . trim((string)$cacheResult['summary']) . "\n";
+    } else {
+        $response .= "I couldn't find an exact cached part match right now.\n";
+    }
+
+    $vehicleLabel = buildVehicleReferenceLabel($makeName, $modelName, $year);
+    if ($vehicleLabel !== '') {
+        $response .= "\nVehicle context: {$vehicleLabel}\n";
+    }
+
+    if (!empty($partInfo['part_name'])) {
+        $response .= "Requested part: {$partInfo['part_name']}\n";
+    }
+    if (!empty($partInfo['part_number'])) {
+        $response .= "Part number: " . strtoupper((string)$partInfo['part_number']) . "\n";
+    }
+    if (!empty($partInfo['oem_number']) && strtoupper((string)$partInfo['oem_number']) !== strtoupper((string)($partInfo['part_number'] ?? ''))) {
+        $response .= "OEM number: " . strtoupper((string)$partInfo['oem_number']) . "\n";
+    }
+
+    $response .= "\nTo narrow it down further, share the year, make, model, engine size, trim, or VIN/chassis number so I can match the correct fitment.";
+    return $response;
+}
+
+function handlePartsQuery($db, $message, $conversationHistory, $userContext) {
+    try {
+        $extractedInfo = extractCarInfoFromMessage($db, $message);
+        $contextualInfo = resolveCarSpecContextFromConversation($db, $message, $conversationHistory, $extractedInfo);
+        $makeName = $contextualInfo['make'] ?? null;
+        $modelName = $contextualInfo['model'] ?? null;
+        $year = $contextualInfo['year'] ?? null;
+        $effectiveMessage = buildVehicleContextualMessage($message, $makeName, $modelName, $year);
+        $partInfo = extractPartDetailsFromMessage($effectiveMessage);
+
+        if ($effectiveMessage !== $message) {
+            updateAIChatPersistenceContext(['resolved_message' => $effectiveMessage]);
+        }
+
+        // Learn the resolved parts query so later lookups can reuse structured fitment data.
+        scheduleContinuousLearningForQuery($db, $effectiveMessage);
+
+        $cacheResult = queryCacheTables($db, $effectiveMessage);
+        $vehicleLabel = buildVehicleReferenceLabel($makeName, $modelName, $year);
+
+        $partsContext = "CAR PARTS QUERY DETECTED\n\n";
+
+        if ($vehicleLabel !== '') {
+            $partsContext .= "VEHICLE CONTEXT:\n- {$vehicleLabel}\n\n";
+        }
+
+        if (!empty($partInfo['part_name']) || !empty($partInfo['part_number']) || !empty($partInfo['oem_number'])) {
+            $partsContext .= "REQUESTED PART DETAILS:\n";
+            if (!empty($partInfo['part_name'])) {
+                $partsContext .= "- Part: {$partInfo['part_name']}\n";
+            }
+            if (!empty($partInfo['part_number'])) {
+                $partsContext .= "- Part number: " . strtoupper((string)$partInfo['part_number']) . "\n";
+            }
+            if (!empty($partInfo['oem_number']) && strtoupper((string)$partInfo['oem_number']) !== strtoupper((string)($partInfo['part_number'] ?? ''))) {
+                $partsContext .= "- OEM number: " . strtoupper((string)$partInfo['oem_number']) . "\n";
+            }
+            $partsContext .= "\n";
+        }
+
+        if (!empty($cacheResult['found']) && !empty($cacheResult['summary'])) {
+            $partsContext .= "LEARNED PARTS CACHE:\n{$cacheResult['summary']}\n\n";
+        } else {
+            $partsContext .= "LEARNED PARTS CACHE: No direct cached parts match was found.\n\n";
+        }
+
+        $partsContext .= "RESEARCH BRIEF:\n" . buildPartsResearchBrief($effectiveMessage, $makeName, $modelName, $year, $partInfo) . "\n\n";
+        $partsContext .= "INSTRUCTIONS:\n";
+        $partsContext .= "- Answer as a MotorLink parts specialist\n";
+        $partsContext .= "- Use learned cache data as the primary source when available\n";
+        $partsContext .= "- If exact part numbers or OEM references depend on engine, trim, drivetrain, or market, say that explicitly\n";
+        $partsContext .= "- Never invent a precise OEM number, cross-reference, or price if you are not sure\n";
+        $partsContext .= "- Recommend VIN/chassis confirmation whenever fitment is variant-dependent\n";
+        $partsContext .= "- Format the answer with clear sections for fitment, numbers, and buying notes\n";
+
+        $user = getCurrentUser(true);
+        $userType = $userContext['user_type'] ?? 'user';
+        $contextInfo = "User Type: {$userType}";
+
+        $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $baseUrl = $protocol . '://' . $serverHost . '/';
+
+        $systemPrompt = "You are MotorLink AI Assistant, an automotive parts specialist for Malawi users.
+
+{$contextInfo}
+BASE URL: {$baseUrl}
+
+{$partsContext}
+
+Answer clearly, stay factual, and keep fitment guidance safe and practical.";
+
+        $messages = [
+            ['role' => 'system', 'content' => $systemPrompt]
+        ];
+
+        foreach ($conversationHistory as $historyItem) {
+            if (isset($historyItem['role']) && isset($historyItem['content'])) {
+                $messages[] = [
+                    'role' => $historyItem['role'],
+                    'content' => $historyItem['content']
+                ];
+            }
+        }
+
+        $messages[] = ['role' => 'user', 'content' => $effectiveMessage];
+
+        $response = callOpenAIAPIForSpecs($db, $user, $messages);
+
+        if ($response) {
+            sendSuccess($response);
+            return;
+        }
+
+        sendSuccess([
+            'response' => buildPartInfoFallbackResponse($effectiveMessage, $cacheResult, $makeName, $modelName, $year, $partInfo),
+            'source' => 'parts_cache_fallback'
+        ]);
+    } catch (Exception $e) {
+        error_log('handlePartsQuery error: ' . $e->getMessage());
+        sendError('I apologize, but I encountered an error while researching part information. Please try again!', 500);
     }
 }
 
@@ -5187,28 +5560,33 @@ function queryCarSpecsFromDatabase($db, $makeName, $modelName, $year = null) {
 }
 
 /**
- * Query car specifications from internet using OpenAI's knowledge
- * Note: This uses OpenAI's training data which includes web information
- * For true web search, you would need to integrate with a search API like Google Custom Search
+ * Build a structured research brief for vehicle specs that are missing locally.
+ * This does not perform live web browsing; it guides the provider to answer with
+ * broadly known automotive knowledge and to be explicit about trim/year variance.
  */
 function queryCarSpecsFromInternet($message, $makeName, $modelName, $year = null) {
-    // Build a focused query for internet research
-    $searchQuery = "";
-    
-    if ($makeName && $modelName) {
-        $searchQuery = "{$makeName} {$modelName}";
-        if ($year) {
-            $searchQuery .= " {$year}";
-        }
-        $searchQuery .= " specifications technical details";
-    } else {
-        $searchQuery = $message . " car specifications technical details";
+    $vehicleLabel = buildVehicleReferenceLabel($makeName, $modelName, $year);
+    $requestedTopics = extractRequestedVehicleSpecTopics($message);
+
+    if ($vehicleLabel === '') {
+        $vehicleLabel = trim((string)$message);
     }
-    
-    // Return context that will be used in the AI prompt
-    // The AI model (GPT-4o) has knowledge from its training data which includes web information
-    // For real-time web search, you would need to integrate with Google Custom Search API or similar
-    return "Please use your knowledge (including information from your training data which includes web sources) to provide comprehensive specifications for: {$searchQuery}. Include details about engine, transmission, fuel economy, dimensions, features, and any other relevant technical specifications.";
+
+    if (empty($requestedTopics)) {
+        $requestedTopics = [
+            'engine',
+            'transmission',
+            'drivetrain',
+            'fuel economy',
+            'dimensions',
+            'seating capacity',
+            'cargo capacity'
+        ];
+    }
+
+    return 'Research focus: ' . $vehicleLabel
+        . '. Prioritize ' . implode(', ', $requestedTopics)
+        . '. Use broadly known automotive reference knowledge, and clearly flag where exact figures may vary by trim, engine, drivetrain, market, or model year. Avoid invented certainty when exact local-database figures are unavailable.';
 }
 
 /**
