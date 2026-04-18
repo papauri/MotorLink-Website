@@ -6931,6 +6931,104 @@ function filterUsers() {
 /**
  * Load AI Chat Settings
  */
+function getAIProviderKeyFieldMap() {
+    return {
+        openai: {
+            label: 'OpenAI',
+            inputId: 'ai-openai-api-key',
+            statusId: 'ai-openai-api-key-status'
+        },
+        deepseek: {
+            label: 'DeepSeek',
+            inputId: 'ai-deepseek-api-key',
+            statusId: 'ai-deepseek-api-key-status'
+        },
+        qwen: {
+            label: 'Qwen',
+            inputId: 'ai-qwen-api-key',
+            statusId: 'ai-qwen-api-key-status'
+        },
+        glm: {
+            label: 'GLM',
+            inputId: 'ai-glm-api-key',
+            statusId: 'ai-glm-api-key-status'
+        }
+    };
+}
+
+function formatAIProviderLabel(provider) {
+    const fieldMap = getAIProviderKeyFieldMap();
+    return fieldMap[provider]?.label || provider;
+}
+
+function setAIProviderKeyAccess(canManageApiKeys) {
+    const fieldMap = getAIProviderKeyFieldMap();
+    const permissionStatus = document.getElementById('ai-provider-keys-permission-status');
+
+    Object.values(fieldMap).forEach((field) => {
+        const input = document.getElementById(field.inputId);
+        if (input) {
+            input.disabled = !canManageApiKeys;
+            if (!canManageApiKeys) {
+                input.value = '';
+            }
+        }
+    });
+
+    if (permissionStatus) {
+        if (canManageApiKeys) {
+            permissionStatus.textContent = 'Provider API keys are stored in site_settings. Leave a field blank to keep the current secret.';
+            permissionStatus.style.color = '#455a64';
+        } else {
+            permissionStatus.textContent = 'Only super admins can overwrite provider API keys. Stored values remain masked and are never shown in full.';
+            permissionStatus.style.color = '#c62828';
+        }
+    }
+}
+
+function applyAIProviderKeyMetadata(apiKeys = {}, canManageApiKeys = false) {
+    const fieldMap = getAIProviderKeyFieldMap();
+
+    Object.entries(fieldMap).forEach(([provider, field]) => {
+        const input = document.getElementById(field.inputId);
+        const statusEl = document.getElementById(field.statusId);
+        const providerMeta = apiKeys?.[provider] || {};
+        const isConfigured = providerMeta.configured === true;
+        const maskedValue = providerMeta.masked || '********';
+
+        if (input) {
+            input.value = '';
+            input.placeholder = isConfigured
+                ? `Stored: ${maskedValue}. Enter a new ${field.label} key to replace it.`
+                : `Enter a ${field.label} API key`;
+        }
+
+        if (statusEl) {
+            statusEl.textContent = isConfigured
+                ? `Status: Configured (${maskedValue})`
+                : 'Status: Not configured';
+            statusEl.style.color = isConfigured ? '#2e7d32' : '#c62828';
+        }
+    });
+
+    setAIProviderKeyAccess(!!canManageApiKeys);
+}
+
+function getAIProviderKeyPayload() {
+    const fieldMap = getAIProviderKeyFieldMap();
+    const payload = {};
+
+    Object.entries(fieldMap).forEach(([provider, field]) => {
+        const input = document.getElementById(field.inputId);
+        const value = input ? input.value.trim() : '';
+        if (value !== '') {
+            payload[provider] = value;
+        }
+    });
+
+    return payload;
+}
+
 async function loadAIChatSettings() {
     try {
         const apiUrl = getAdminAPIUrl();
@@ -6994,6 +7092,7 @@ async function loadAIChatSettings() {
 
             syncAIReasoningControlsState();
             updateModelBadge();
+            applyAIProviderKeyMetadata(data.api_keys || {}, data.can_manage_api_keys === true);
             
             document.getElementById('ai-max-tokens').value = data.settings.max_tokens_per_request || 600;
             document.getElementById('ai-temperature').value = data.settings.temperature || 0.8;
@@ -7016,6 +7115,7 @@ async function saveAIChatSettings() {
         const providerSelect = document.getElementById('ai-chat-provider');
         const selectedProvider = providerSelect ? providerSelect.value : 'openai';
         const selectedModel = getSelectedAIModelName();
+        const providerApiKeys = getAIProviderKeyPayload();
         
         // Get all values and validate
         const enabled = document.getElementById('ai-chat-enabled').checked ? 1 : 0;
@@ -7072,6 +7172,10 @@ async function saveAIChatSettings() {
             requests_per_day: requestsPerDay,
             requests_per_hour: requestsPerHour
         };
+
+        if (Object.keys(providerApiKeys).length > 0) {
+            settings.api_keys = providerApiKeys;
+        }
         
         const apiUrl = getAdminAPIUrl();
         const separator = apiUrl.includes('?') ? '&' : '?';
@@ -7095,6 +7199,9 @@ async function saveAIChatSettings() {
             await loadAIChatSettings();
             
             const savedSettings = data.settings || settings;
+            const updatedProviderKeys = Array.isArray(data.api_keys_updated)
+                ? data.api_keys_updated.map(formatAIProviderLabel)
+                : [];
             const successMsg = `AI Chat settings saved successfully! ` +
                 `Provider: ${savedSettings.ai_provider || selectedProvider}, ` +
                 `Model: ${savedSettings.model_name}, ` +
@@ -7105,7 +7212,8 @@ async function saveAIChatSettings() {
                 `Max Tokens: ${savedSettings.max_tokens_per_request}, ` +
                 `Temperature: ${savedSettings.temperature}, ` +
                 `Daily Limit: ${savedSettings.requests_per_day}, ` +
-                `Hourly Limit: ${savedSettings.requests_per_hour}`;
+                `Hourly Limit: ${savedSettings.requests_per_hour}` +
+                (updatedProviderKeys.length > 0 ? `, Updated API Keys: ${updatedProviderKeys.join(', ')}` : '');
             
             admin.showAlert('success', successMsg);
             // Update badge to show current model
@@ -7697,6 +7805,7 @@ async function triggerWebLearning() {
         
         if (data.success) {
             let learnedList = '';
+            let notesHtml = '';
             if (data.learned_topics && data.learned_topics.length > 0) {
                 learnedList = '<div style="margin-top: 10px; max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px;">';
                 learnedList += '<strong style="color: #28a745;"><i class="fas fa-lightbulb"></i> Topics Learned:</strong><ul style="margin: 5px 0 0 0; padding-left: 20px;">';
@@ -7708,10 +7817,22 @@ async function triggerWebLearning() {
                 }
                 learnedList += '</ul></div>';
             }
+
+            const notes = [];
+            if (data.message) {
+                notes.push(data.message);
+            }
+            if (Array.isArray(data.errors) && data.errors.length > 0) {
+                notes.push(`Issues encountered: ${data.errors.slice(0, 3).join(' | ')}`);
+            }
+            if (notes.length > 0) {
+                notesHtml = `<div style="margin-top: 10px;"><small style="color: #856404;">${notes.join('<br>')}</small></div>`;
+            }
             
             statusDiv.innerHTML = `<div class="alert alert-success">
                 <i class="fas fa-check-circle"></i> <strong>Successfully learned ${data.learned} topics!</strong>
                 ${data.requested > data.learned ? `<br><small>Requested: ${data.requested}, but daily limit may have been reached.</small>` : ''}
+                ${notesHtml}
                 ${learnedList}
             </div>`;
             admin.showAlert('success', `Successfully learned ${data.learned} web cache topics!`);
@@ -7777,6 +7898,7 @@ async function triggerPartsLearning() {
         
         if (data.success) {
             let learnedList = '';
+            let notesHtml = '';
             if (data.learned_parts && data.learned_parts.length > 0) {
                 learnedList = '<div style="margin-top: 10px; max-height: 200px; overflow-y: auto; background: #f8f9fa; padding: 10px; border-radius: 4px;">';
                 learnedList += '<strong style="color: #28a745;"><i class="fas fa-lightbulb"></i> Parts Learned:</strong><ul style="margin: 5px 0 0 0; padding-left: 20px;">';
@@ -7788,10 +7910,22 @@ async function triggerPartsLearning() {
                 }
                 learnedList += '</ul></div>';
             }
+
+            const notes = [];
+            if (data.message) {
+                notes.push(data.message);
+            }
+            if (Array.isArray(data.errors) && data.errors.length > 0) {
+                notes.push(`Issues encountered: ${data.errors.slice(0, 3).join(' | ')}`);
+            }
+            if (notes.length > 0) {
+                notesHtml = `<div style="margin-top: 10px;"><small style="color: #856404;">${notes.join('<br>')}</small></div>`;
+            }
             
             statusDiv.innerHTML = `<div class="alert alert-success">
                 <i class="fas fa-check-circle"></i> <strong>Successfully learned ${data.learned} parts!</strong>
                 ${data.requested > data.learned ? `<br><small>Requested: ${data.requested}, but daily limit may have been reached.</small>` : ''}
+                ${notesHtml}
                 ${learnedList}
             </div>`;
             admin.showAlert('success', `Successfully learned ${data.learned} parts cache topics!`);

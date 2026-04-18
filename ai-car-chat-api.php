@@ -131,7 +131,7 @@ function getAIChatProviderConfig($provider) {
         ],
         'glm' => [
             'url' => 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-            'default_model' => 'glm-4-flash'
+            'default_model' => 'glm-4.7'
         ]
     ];
     return $configs[$provider];
@@ -147,6 +147,9 @@ function normalizeAIChatModelName($provider, $modelName, $fallbackModel = '') {
 
     $aliases = [
         'glm' => [
+            'glm-4-flash' => 'glm-4.7',
+            'glm4flash' => 'glm-4.7',
+            'glm-flash' => 'glm-4.7',
             'glm5.5-turbo' => 'glm-5.5-turbo',
             'glm-5-5-turbo' => 'glm-5.5-turbo',
             'glm 5.5 turbo' => 'glm-5.5-turbo',
@@ -2862,32 +2865,35 @@ function detectCarSpecQuery($message) {
 /**
  * Detect if user message is asking about car parts
  */
-function detectPartsQuery($message) {
-    $messageLower = strtolower($message);
-    
-    // Keywords that indicate parts queries
-    $partsKeywords = [
+function getKnownCarPartsKeywords() {
+    return [
         'part number', 'part no', 'oem', 'oem number', 'oem part',
-        'brake pad', 'brake pads', 'brake disc', 'brake rotor',
-        'water pump', 'timing belt', 'timing chain',
-        'air filter', 'oil filter', 'fuel filter', 'cabin filter',
+        'brake pad', 'brake pads', 'brake disc', 'brake rotor', 'brake shoe', 'brake shoes',
+        'water pump', 'fuel pump', 'oil pump',
+        'timing belt', 'timing chain', 'serpentine belt', 'drive belt',
+        'air filter', 'oil filter', 'fuel filter', 'cabin filter', 'cabin air filter',
         'spark plug', 'spark plugs', 'ignition coil',
-        'alternator', 'starter', 'battery',
-        'shock absorber', 'struts', 'suspension',
-        'headlight', 'taillight', 'bumper', 'fender',
-        'windshield', 'windshield wiper', 'wiper blade',
-        'tire', 'tyre', 'wheel', 'rim',
+        'alternator', 'starter', 'starter motor', 'battery',
+        'shock absorber', 'shock absorbers', 'struts', 'suspension', 'control arm', 'ball joint', 'tie rod', 'cv joint', 'cv axle',
+        'headlight', 'headlamp', 'taillight', 'tail light', 'bumper', 'fender', 'side mirror',
+        'windshield', 'windscreen', 'windshield wiper', 'wiper blade',
+        'tire', 'tyre', 'wheel', 'rim', 'wheel bearing', 'hub bearing',
         'exhaust', 'muffler', 'catalytic converter',
-        'radiator', 'cooling fan', 'thermostat',
-        'transmission', 'clutch', 'flywheel',
-        'crankshaft', 'camshaft', 'piston', 'cylinder head',
+        'radiator', 'cooling fan', 'thermostat', 'radiator hose',
+        'transmission', 'clutch', 'clutch kit', 'flywheel',
+        'crankshaft', 'camshaft', 'piston', 'cylinder head', 'engine mount',
         'gasket', 'seal', 'bearing', 'bushing',
+        'sensor', 'oxygen sensor', 'mass airflow sensor', 'map sensor',
         'compatibility', 'cross reference', 'alternative part',
         'replace', 'replacement part', 'aftermarket part'
     ];
+}
+
+function detectPartsQuery($message) {
+    $messageLower = strtolower($message);
     
     // Check for parts keywords
-    foreach ($partsKeywords as $keyword) {
+    foreach (getKnownCarPartsKeywords() as $keyword) {
         if (strpos($messageLower, $keyword) !== false) {
             return true;
         }
@@ -4469,6 +4475,321 @@ I'm here to help you with car specifications! I've checked both our MotorLink da
 /**
  * Query cache tables (ai_web_cache and ai_parts_cache) for relevant information
  */
+function normalizePartsCacheSnippet($value, $maxLength = 220) {
+    $value = trim(preg_replace('/\s+/', ' ', (string)$value));
+    if ($value === '') {
+        return '';
+    }
+
+    if (strlen($value) > $maxLength) {
+        return rtrim(substr($value, 0, $maxLength - 3)) . '...';
+    }
+
+    return $value;
+}
+
+function extractPartDetailsFromMessage($message) {
+    $details = [
+        'part_name' => '',
+        'part_number' => '',
+        'oem_number' => ''
+    ];
+
+    $messageLower = strtolower($message);
+    $partsKeywords = getKnownCarPartsKeywords();
+    usort($partsKeywords, function ($left, $right) {
+        return strlen($right) <=> strlen($left);
+    });
+
+    foreach ($partsKeywords as $keyword) {
+        if (strpos($messageLower, $keyword) !== false) {
+            $details['part_name'] = $keyword;
+            break;
+        }
+    }
+
+    if (preg_match('/\b(?:oem(?:\s*(?:number|no|part))?|part(?:\s*(?:number|no))?)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-]{2,})\b/i', $message, $match)) {
+        $value = strtoupper(trim($match[1]));
+        $details['part_number'] = $value;
+        if (stripos($match[0], 'oem') !== false) {
+            $details['oem_number'] = $value;
+        }
+    } elseif (preg_match('/\b([A-Z0-9]{2,}(?:-[A-Z0-9]{2,}){1,4})\b/', strtoupper($message), $match)) {
+        $details['part_number'] = strtoupper(trim($match[1]));
+    }
+
+    if ($details['oem_number'] === '' && preg_match('/\boem(?:\s*(?:number|no|part))?\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-]{2,})\b/i', $message, $oemMatch)) {
+        $details['oem_number'] = strtoupper(trim($oemMatch[1]));
+        if ($details['part_number'] === '') {
+            $details['part_number'] = $details['oem_number'];
+        }
+    }
+
+    return $details;
+}
+
+function scorePartsCacheCandidate(array $row, array $carInfo, array $partInfo) {
+    $score = 0;
+    $rowMake = strtolower(trim((string)($row['make_name'] ?? '')));
+    $rowModel = strtolower(trim((string)($row['model_name'] ?? '')));
+    $rowPartName = strtolower(trim((string)($row['part_name'] ?? '')));
+    $rowPartNumber = strtoupper(trim((string)($row['part_number'] ?? '')));
+    $rowOemNumber = strtoupper(trim((string)($row['oem_number'] ?? '')));
+    $summaryText = strtolower(trim((string)($row['summary'] ?? '')));
+    $descriptionText = strtolower(trim((string)($row['description'] ?? '')));
+
+    $requestedPartNumber = strtoupper(trim((string)($partInfo['part_number'] ?? '')));
+    $requestedOemNumber = strtoupper(trim((string)($partInfo['oem_number'] ?? '')));
+    $requestedPartName = strtolower(trim((string)($partInfo['part_name'] ?? '')));
+
+    if ($requestedPartNumber !== '') {
+        if ($rowPartNumber === $requestedPartNumber) {
+            $score += 160;
+        }
+        if ($rowOemNumber === $requestedPartNumber) {
+            $score += 140;
+        }
+    }
+
+    if ($requestedOemNumber !== '') {
+        if ($rowOemNumber === $requestedOemNumber) {
+            $score += 160;
+        }
+        if ($rowPartNumber === $requestedOemNumber) {
+            $score += 140;
+        }
+    }
+
+    if ($requestedPartName !== '') {
+        if ($rowPartName === $requestedPartName) {
+            $score += 80;
+        } elseif ($rowPartName !== '' && (strpos($rowPartName, $requestedPartName) !== false || strpos($requestedPartName, $rowPartName) !== false)) {
+            $score += 60;
+        }
+
+        if ($summaryText !== '' && strpos($summaryText, $requestedPartName) !== false) {
+            $score += 20;
+        }
+
+        if ($descriptionText !== '' && strpos($descriptionText, $requestedPartName) !== false) {
+            $score += 15;
+        }
+    }
+
+    if (!empty($carInfo['make']) && $rowMake === strtolower((string)$carInfo['make'])) {
+        $score += 35;
+    }
+
+    if (!empty($carInfo['model']) && $rowModel === strtolower((string)$carInfo['model'])) {
+        $score += 35;
+    }
+
+    if (!empty($carInfo['year']) && !empty($row['year']) && (int)$row['year'] === (int)$carInfo['year']) {
+        $score += 20;
+    }
+
+    return $score;
+}
+
+function buildStructuredPartsCacheResult(array $matches) {
+    if (empty($matches)) {
+        return null;
+    }
+
+    $lines = ['LEARNED PARTS MATCHES:'];
+    $sources = [];
+    $seenSources = [];
+
+    foreach (array_slice($matches, 0, 3) as $match) {
+        $vehicleLabel = trim((string)($match['make_name'] ?? '') . ' ' . (string)($match['model_name'] ?? ''));
+        $partLabel = trim((string)($match['part_name'] ?? '')) ?: 'part';
+        $yearLabel = !empty($match['year']) ? ' (' . (int)$match['year'] . ')' : '';
+        $line = '- ' . trim($vehicleLabel . $yearLabel . ' ' . $partLabel);
+
+        $details = [];
+        if (!empty($match['part_number'])) {
+            $details[] = 'Part #: ' . strtoupper((string)$match['part_number']);
+        }
+        if (!empty($match['oem_number']) && strtoupper((string)$match['oem_number']) !== strtoupper((string)($match['part_number'] ?? ''))) {
+            $details[] = 'OEM: ' . strtoupper((string)$match['oem_number']);
+        }
+        if ($match['price_usd'] !== null && $match['price_usd'] !== '') {
+            $details[] = 'USD ' . number_format((float)$match['price_usd'], 2);
+        }
+        if (!empty($details)) {
+            $line .= ' | ' . implode(' | ', $details);
+        }
+
+        $lines[] = $line;
+
+        $description = normalizePartsCacheSnippet($match['description'] ?? '');
+        if ($description !== '') {
+            $lines[] = '  Description: ' . $description;
+        }
+
+        $compatibility = normalizePartsCacheSnippet($match['compatibility'] ?? '');
+        if ($compatibility !== '') {
+            $lines[] = '  Compatibility: ' . $compatibility;
+        }
+
+        $crossReference = normalizePartsCacheSnippet($match['cross_reference'] ?? '');
+        if ($crossReference !== '') {
+            $lines[] = '  Cross-reference: ' . $crossReference;
+        }
+
+        if ($description === '' && $compatibility === '' && $crossReference === '') {
+            $summary = normalizePartsCacheSnippet($match['summary'] ?? '');
+            if ($summary !== '') {
+                $lines[] = '  Summary: ' . $summary;
+            }
+        }
+
+        $rowSources = json_decode($match['sources_json'] ?? '[]', true);
+        if (!is_array($rowSources)) {
+            continue;
+        }
+
+        foreach ($rowSources as $source) {
+            if (!is_array($source)) {
+                continue;
+            }
+
+            $sourceKey = strtolower(trim((string)($source['title'] ?? ''))) . '|' . strtolower(trim((string)($source['link'] ?? '')));
+            if ($sourceKey === '|' || isset($seenSources[$sourceKey])) {
+                continue;
+            }
+
+            $seenSources[$sourceKey] = true;
+            $sources[] = $source;
+        }
+    }
+
+    return [
+        'found' => true,
+        'summary' => implode("\n", $lines),
+        'sources' => $sources,
+        'cache_type' => 'parts'
+    ];
+}
+
+function queryStructuredPartsCache($db, $message) {
+    $carInfo = extractCarInfoFromMessage($db, $message);
+    $partInfo = extractPartDetailsFromMessage($message);
+
+    if (($partInfo['part_name'] ?? '') === '' && ($partInfo['part_number'] ?? '') === '' && ($partInfo['oem_number'] ?? '') === '') {
+        return null;
+    }
+
+    $conditions = [];
+    $params = [];
+
+    if (($partInfo['part_number'] ?? '') !== '') {
+        $conditions[] = "UPPER(COALESCE(part_number, '')) = ?";
+        $params[] = strtoupper((string)$partInfo['part_number']);
+        $conditions[] = "UPPER(COALESCE(oem_number, '')) = ?";
+        $params[] = strtoupper((string)$partInfo['part_number']);
+    }
+
+    if (($partInfo['oem_number'] ?? '') !== '' && strtoupper((string)$partInfo['oem_number']) !== strtoupper((string)($partInfo['part_number'] ?? ''))) {
+        $conditions[] = "UPPER(COALESCE(oem_number, '')) = ?";
+        $params[] = strtoupper((string)$partInfo['oem_number']);
+        $conditions[] = "UPPER(COALESCE(part_number, '')) = ?";
+        $params[] = strtoupper((string)$partInfo['oem_number']);
+    }
+
+    if (($partInfo['part_name'] ?? '') !== '') {
+        $partLike = '%' . strtolower((string)$partInfo['part_name']) . '%';
+        $conditions[] = "LOWER(COALESCE(part_name, '')) LIKE ?";
+        $params[] = $partLike;
+        $conditions[] = "LOWER(COALESCE(summary, '')) LIKE ?";
+        $params[] = $partLike;
+        $conditions[] = "LOWER(COALESCE(description, '')) LIKE ?";
+        $params[] = $partLike;
+    }
+
+    if (!empty($carInfo['make'])) {
+        $conditions[] = "LOWER(COALESCE(make_name, '')) = ?";
+        $params[] = strtolower((string)$carInfo['make']);
+    }
+
+    if (!empty($carInfo['model'])) {
+        $conditions[] = "LOWER(COALESCE(model_name, '')) = ?";
+        $params[] = strtolower((string)$carInfo['model']);
+    }
+
+    if (!empty($carInfo['year'])) {
+        $conditions[] = "year = ?";
+        $params[] = (int)$carInfo['year'];
+    }
+
+    if (empty($conditions)) {
+        return null;
+    }
+
+    $query = "
+        SELECT make_name, model_name, year, part_name, part_number, oem_number, price_usd,
+               description, compatibility, specifications, cross_reference,
+               summary, sources_json, created_at, updated_at
+        FROM ai_parts_cache
+        WHERE " . implode(' OR ', $conditions) . "
+        ORDER BY updated_at DESC, created_at DESC
+        LIMIT 25
+    ";
+
+    $stmt = $db->prepare($query);
+    $stmt->execute($params);
+    $matches = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($matches)) {
+        return null;
+    }
+
+    foreach ($matches as &$match) {
+        $match['_relevance'] = scorePartsCacheCandidate($match, $carInfo, $partInfo);
+    }
+    unset($match);
+
+    usort($matches, function ($left, $right) {
+        $scoreDiff = ((int)($right['_relevance'] ?? 0)) <=> ((int)($left['_relevance'] ?? 0));
+        if ($scoreDiff !== 0) {
+            return $scoreDiff;
+        }
+
+        return strcmp((string)($right['updated_at'] ?? ''), (string)($left['updated_at'] ?? ''));
+    });
+
+    $rankedMatches = array_values(array_filter($matches, function ($match) use ($partInfo) {
+        $score = (int)($match['_relevance'] ?? 0);
+        if ($score < 35) {
+            return false;
+        }
+
+        $requestedPartNumber = strtoupper(trim((string)($partInfo['part_number'] ?? '')));
+        $requestedOemNumber = strtoupper(trim((string)($partInfo['oem_number'] ?? '')));
+        $requestedPartName = strtolower(trim((string)($partInfo['part_name'] ?? '')));
+        $rowPartNumber = strtoupper(trim((string)($match['part_number'] ?? '')));
+        $rowOemNumber = strtoupper(trim((string)($match['oem_number'] ?? '')));
+        $rowPartName = strtolower(trim((string)($match['part_name'] ?? '')));
+
+        if ($requestedPartNumber !== '' || $requestedOemNumber !== '') {
+            return ($requestedPartNumber !== '' && ($rowPartNumber === $requestedPartNumber || $rowOemNumber === $requestedPartNumber))
+                || ($requestedOemNumber !== '' && ($rowOemNumber === $requestedOemNumber || $rowPartNumber === $requestedOemNumber));
+        }
+
+        if ($requestedPartName !== '') {
+            return $rowPartName !== '' && (strpos($rowPartName, $requestedPartName) !== false || strpos($requestedPartName, $rowPartName) !== false);
+        }
+
+        return true;
+    }));
+
+    if (empty($rankedMatches)) {
+        return null;
+    }
+
+    return buildStructuredPartsCacheResult($rankedMatches);
+}
+
 function queryCacheTables($db, $message) {
     $result = [
         'found' => false,
@@ -4508,6 +4829,11 @@ function queryCacheTables($db, $message) {
                 $result['sources'] = json_decode($cacheEntry['sources_json'] ?? '[]', true);
                 $result['cache_type'] = 'parts';
                 return $result;
+            }
+
+            $structuredPartsCache = queryStructuredPartsCache($db, $message);
+            if (!empty($structuredPartsCache['found'])) {
+                return $structuredPartsCache;
             }
         }
         

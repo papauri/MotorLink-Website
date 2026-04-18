@@ -1912,6 +1912,39 @@
                                     <em><strong>Cost Impact:</strong> Changing models affects API costs. Monitor usage in "AI Chat Usage Logs" section.</em>
                                 </small>
                             </div>
+                            <div class="form-group" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+                                <label>Provider API Keys <span class="badge badge-warning" style="margin-left: 10px;">Shared with AI learning</span></label>
+                                <small class="form-text" style="display: block; margin-bottom: 12px;">
+                                    Stored in <strong>site_settings</strong>. Keys are never shown in full here. Leave a field blank to keep the current secret.
+                                </small>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="ai-openai-api-key">OpenAI API Key</label>
+                                        <input type="password" id="ai-openai-api-key" class="form-control" autocomplete="new-password" placeholder="Enter a new OpenAI API key to replace the stored one">
+                                        <small id="ai-openai-api-key-status" class="form-text">Status: Not configured</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="ai-deepseek-api-key">DeepSeek API Key</label>
+                                        <input type="password" id="ai-deepseek-api-key" class="form-control" autocomplete="new-password" placeholder="Enter a new DeepSeek API key to replace the stored one">
+                                        <small id="ai-deepseek-api-key-status" class="form-text">Status: Not configured</small>
+                                    </div>
+                                </div>
+                                <div class="row" style="margin-top: 12px;">
+                                    <div class="col-md-6">
+                                        <label for="ai-qwen-api-key">Qwen API Key</label>
+                                        <input type="password" id="ai-qwen-api-key" class="form-control" autocomplete="new-password" placeholder="Enter a new Qwen API key to replace the stored one">
+                                        <small id="ai-qwen-api-key-status" class="form-text">Status: Not configured</small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="ai-glm-api-key">GLM API Key</label>
+                                        <input type="password" id="ai-glm-api-key" class="form-control" autocomplete="new-password" placeholder="Enter a new GLM API key to replace the stored one">
+                                        <small id="ai-glm-api-key-status" class="form-text">Status: Not configured</small>
+                                    </div>
+                                </div>
+                                <small id="ai-provider-keys-permission-status" class="form-text" style="display: block; margin-top: 12px; color: #455a64;">
+                                    Only super admins should overwrite provider API keys from this panel.
+                                </small>
+                            </div>
                             <div class="form-group">
                                 <label for="ai-tuning-profile-badge">Current Request Profile <span id="ai-tuning-profile-badge" class="badge badge-secondary" style="margin-left: 10px;">Generic payload</span></label>
                                 <small id="ai-tuning-profile-status" class="form-text" style="display: block; margin-top: 6px; color: #455a64;">

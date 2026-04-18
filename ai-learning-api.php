@@ -50,12 +50,308 @@ function getAIProviderEndpointAndDefaultModel($provider) {
         ],
         'glm' => [
             'url' => 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-            'default_model' => 'glm-4-flash'
+            'default_model' => 'glm-4.7'
         ]
     ];
 
     $provider = normalizeAIProvider($provider);
     return $configs[$provider];
+}
+
+function normalizeAILearningModelName($provider, $modelName, $fallbackModel = '') {
+    $provider = normalizeAIProvider($provider);
+    $model = strtolower(trim((string)$modelName));
+
+    if ($model === '') {
+        return $fallbackModel !== '' ? $fallbackModel : getAIProviderEndpointAndDefaultModel($provider)['default_model'];
+    }
+
+    $aliases = [
+        'glm' => [
+            'glm-4-flash' => 'glm-4.7',
+            'glm4flash' => 'glm-4.7',
+            'glm-flash' => 'glm-4.7',
+            'glm5.5-turbo' => 'glm-5.5-turbo',
+            'glm-5-5-turbo' => 'glm-5.5-turbo',
+            'glm 5.5 turbo' => 'glm-5.5-turbo',
+            'glm5.1' => 'glm-5.1',
+            'glm-5-1' => 'glm-5.1',
+            'glm 5.1' => 'glm-5.1'
+        ]
+    ];
+
+    if (isset($aliases[$provider][$model])) {
+        return $aliases[$provider][$model];
+    }
+
+    if ($provider === 'glm' && strpos($model, 'glm-') === 0) {
+        return $model;
+    }
+
+    if ($provider === 'openai' && preg_match('/^(gpt-|o\d)/', $model)) {
+        return $model;
+    }
+
+    if ($provider === 'deepseek' && strpos($model, 'deepseek-') === 0) {
+        return $model;
+    }
+
+    if ($provider === 'qwen' && strpos($model, 'qwen-') === 0) {
+        return $model;
+    }
+
+    return $fallbackModel !== '' ? $fallbackModel : getAIProviderEndpointAndDefaultModel($provider)['default_model'];
+}
+
+function getAILearningProviderFallbackModels($provider, $currentModel = '') {
+    $provider = normalizeAIProvider($provider);
+    $currentModel = strtolower(trim((string)$currentModel));
+    $fallbacks = [];
+
+    if ($provider === 'glm') {
+        $fallbacks = ['glm-4.7', 'glm-4.6', 'glm-4.5-air', 'glm-4.5', 'glm-5.1'];
+    } elseif ($provider === 'openai') {
+        $fallbacks = ['gpt-4o-mini'];
+    } elseif ($provider === 'deepseek') {
+        $fallbacks = ['deepseek-chat'];
+    } elseif ($provider === 'qwen') {
+        $fallbacks = ['qwen-plus'];
+    }
+
+    return array_values(array_filter(array_unique($fallbacks), function ($model) use ($currentModel) {
+        return $model !== '' && $model !== $currentModel;
+    }));
+}
+
+function extractAILearningProviderError($provider, $responseBody, $httpCode) {
+    $provider = normalizeAIProvider($provider);
+    $label = getAIProviderLabel($provider);
+    $fallbackMessage = $label . ' API error: HTTP ' . (int)$httpCode;
+
+    if (!is_string($responseBody) || trim($responseBody) === '') {
+        return $fallbackMessage;
+    }
+
+    $decoded = json_decode($responseBody, true);
+    if (!is_array($decoded)) {
+        return $fallbackMessage;
+    }
+
+    $error = $decoded['error'] ?? null;
+    if (is_string($error) && trim($error) !== '') {
+        return $label . ' API error: ' . trim($error);
+    }
+
+    if (is_array($error)) {
+        $message = trim((string)($error['message'] ?? ''));
+        $type = trim((string)($error['type'] ?? ''));
+        $code = trim((string)($error['code'] ?? ''));
+
+        if ($message !== '') {
+            $detail = $label . ' API error: ' . $message;
+            if ($type !== '' || $code !== '') {
+                $detail .= ' (' . trim($type . ($type !== '' && $code !== '' ? ', ' : '') . $code, ', ') . ')';
+            }
+            return $detail;
+        }
+    }
+
+    $message = trim((string)($decoded['message'] ?? ''));
+    if ($message !== '') {
+        return $label . ' API error: ' . $message;
+    }
+
+    return $fallbackMessage;
+}
+
+function isAILearningMissingModelError($provider, $httpCode, $responseBody) {
+    if ((int)$httpCode !== 400 || !is_string($responseBody) || trim($responseBody) === '') {
+        return false;
+    }
+
+    $decoded = json_decode($responseBody, true);
+    if (!is_array($decoded)) {
+        return false;
+    }
+
+    $error = $decoded['error'] ?? [];
+    $message = '';
+    $code = '';
+
+    if (is_array($error)) {
+        $message = strtolower(trim((string)($error['message'] ?? '')));
+        $code = strtolower(trim((string)($error['code'] ?? '')));
+    } elseif (is_string($error)) {
+        $message = strtolower(trim($error));
+    }
+
+    if ($message === '' && isset($decoded['message'])) {
+        $message = strtolower(trim((string)$decoded['message']));
+    }
+
+    return strpos($message, 'model') !== false && (
+        strpos($message, 'not found') !== false ||
+        strpos($message, 'does not exist') !== false ||
+        strpos($message, 'not exist') !== false ||
+        strpos($message, '模型不存在') !== false ||
+        $code === '1211' ||
+        $code === 'model_not_found' ||
+        $code === 'invalid_model'
+    );
+}
+
+function buildAILearningRequestBody($provider, $model, $messages) {
+    $provider = normalizeAIProvider($provider);
+    $requestBody = [
+        'model' => $model,
+        'messages' => $messages,
+        'temperature' => 0.7,
+        'max_tokens' => 2000
+    ];
+
+    if ($provider === 'glm' && preg_match('/^glm-(4\.5|4\.6|4\.7|5\.1)(?:$|[-._:])/', $model) === 1) {
+        $requestBody['thinking'] = ['type' => 'disabled'];
+    }
+
+    return $requestBody;
+}
+
+function resolveEffectiveAILearningProvider(array $settings, $requestedProvider = 'auto') {
+    $requestedProvider = strtolower(trim((string)$requestedProvider));
+    if ($requestedProvider !== '' && $requestedProvider !== 'auto') {
+        return normalizeAIProvider($requestedProvider);
+    }
+
+    $learningProvider = strtolower(trim((string)($settings['ai_provider'] ?? 'auto')));
+    if ($learningProvider !== '' && $learningProvider !== 'auto') {
+        return normalizeAIProvider($learningProvider);
+    }
+
+    return normalizeAIProvider($settings['chat_ai_provider'] ?? 'openai');
+}
+
+function getLearningPriorityModelsFromDatabase($db, $limit = 100) {
+    $models = [];
+
+    try {
+        $limit = max(1, min((int)$limit, 500));
+        $stmt = $db->query("\n            SELECT DISTINCT mk.name AS make_name, cm.name AS model_name\n            FROM car_models cm\n            INNER JOIN car_makes mk ON cm.make_id = mk.id\n            WHERE cm.is_active = 1 AND mk.is_active = 1\n            ORDER BY mk.name, cm.name\n            LIMIT {$limit}\n        ");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($rows as $row) {
+            $makeName = trim((string)($row['make_name'] ?? ''));
+            $modelName = trim((string)($row['model_name'] ?? ''));
+            if ($makeName === '' || $modelName === '') {
+                continue;
+            }
+
+            $models[] = [
+                'make' => $makeName,
+                'model' => $modelName
+            ];
+        }
+    } catch (Exception $e) {
+        error_log('getLearningPriorityModelsFromDatabase error: ' . $e->getMessage());
+    }
+
+    return $models;
+}
+
+function buildIntentionalPartsQueriesFromDatabase(array $models, $limit = 500) {
+    $partTemplates = [
+        'brake pads part number',
+        'brake disc OEM number',
+        'brake shoes part number',
+        'oil filter part number',
+        'air filter part number',
+        'cabin air filter part number',
+        'spark plugs OEM number',
+        'serpentine belt part number',
+        'timing belt kit part number',
+        'water pump OEM number',
+        'fuel pump OEM number',
+        'fuel filter part number',
+        'radiator hose OEM number',
+        'radiator fan motor part number',
+        'thermostat housing OEM number',
+        'wheel bearing part number',
+        'wheel hub bearing part number',
+        'shock absorber OEM number',
+        'control arm OEM number',
+        'ball joint part number',
+        'cv joint OEM number',
+        'alternator OEM number',
+        'starter motor OEM number',
+        'oxygen sensor OEM number',
+        'engine mount OEM number',
+        'clutch kit part number',
+        'headlight bulb specification'
+    ];
+
+    $queries = [];
+    $seen = [];
+    $limit = max(1, min((int)$limit, 5000));
+
+    foreach ($models as $row) {
+        $makeName = trim((string)($row['make'] ?? ''));
+        $modelName = trim((string)($row['model'] ?? ''));
+        if ($makeName === '' || $modelName === '') {
+            continue;
+        }
+
+        foreach ($partTemplates as $template) {
+            $query = trim($makeName . ' ' . $modelName . ' ' . $template);
+            $queryKey = strtolower($query);
+            if (isset($seen[$queryKey])) {
+                continue;
+            }
+
+            $seen[$queryKey] = true;
+            $queries[] = $query;
+
+            if (count($queries) >= $limit) {
+                return $queries;
+            }
+        }
+    }
+
+    return $queries;
+}
+
+function executeAILearningAPIRequest($provider, $url, $apiKey, $messages, $model) {
+    $requestBody = buildAILearningRequestBody($provider, $model, $messages);
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $apiKey
+    ]);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
+    curl_setopt($ch, CURLOPT_TIMEOUT, 90);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30);
+
+    $isLocalDev = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false ||
+                   strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocalDev);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, !$isLocalDev ? 2 : 0);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+
+    if (function_exists('curl_close')) {
+        @curl_close($ch);
+    }
+
+    return [
+        'response' => $response,
+        'http_code' => (int)$httpCode,
+        'curl_error' => $error,
+        'model' => $model
+    ];
 }
 
 /**
@@ -73,20 +369,26 @@ function getAILearningSettings($db) {
                 'deepseek_enabled' => 1,
                 'qwen_enabled' => 1,
                 'glm_enabled' => 1,
-                'ai_provider' => 'openai',
+                'ai_provider' => 'auto',
+                'chat_ai_provider' => 'openai',
                 'web_cache_limit' => 20,
                 'parts_cache_limit' => 500
             ];
         }
 
-        $provider = normalizeAIProvider($settings['ai_provider'] ?? 'openai');
+        $learningProvider = strtolower(trim((string)($settings['learning_ai_provider'] ?? 'auto')));
+        if (!in_array($learningProvider, array_merge(['auto'], getSupportedAIProviders()), true)) {
+            $learningProvider = 'auto';
+        }
+        $chatProvider = normalizeAIProvider($settings['ai_provider'] ?? 'openai');
         
         return [
             'openai_enabled' => (int)($settings['openai_enabled'] ?? 1),
             'deepseek_enabled' => (int)($settings['deepseek_enabled'] ?? 1),
             'qwen_enabled' => (int)($settings['qwen_enabled'] ?? 1),
             'glm_enabled' => (int)($settings['glm_enabled'] ?? 1),
-            'ai_provider' => $provider,
+            'ai_provider' => $learningProvider,
+            'chat_ai_provider' => $chatProvider,
             'web_cache_limit' => (int)($settings['web_cache_daily_limit'] ?? 20),
             'parts_cache_limit' => (int)($settings['parts_cache_daily_limit'] ?? 500)
         ];
@@ -97,7 +399,8 @@ function getAILearningSettings($db) {
             'deepseek_enabled' => 1,
             'qwen_enabled' => 1,
             'glm_enabled' => 1,
-            'ai_provider' => 'openai',
+            'ai_provider' => 'auto',
+            'chat_ai_provider' => 'openai',
             'web_cache_limit' => 20,
             'parts_cache_limit' => 500
         ];
@@ -162,78 +465,83 @@ function callAILearningAPIBatch($db, $provider, $requests, $model = null) {
     $url = $providerConfig['url'];
     $defaultModel = $providerConfig['default_model'];
     
-    $model = $model ?? $defaultModel;
-    
-    // Create multi-handle
-    $mh = curl_multi_init();
-    $handles = [];
-    $results = [];
-    
-    // Create curl handles for each request
-    foreach ($requests as $index => $messages) {
-        $requestBody = [
-            'model' => $model,
-            'messages' => $messages,
-            'temperature' => 0.7,
-            'max_tokens' => 2000
-        ];
-        
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/json',
-            'Authorization: Bearer ' . $apiKey
-        ]);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 60);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
-        
-        $isLocalDev = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
-                       strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocalDev);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, !$isLocalDev ? 2 : 0);
-        
-        curl_multi_add_handle($mh, $ch);
-        $handles[$index] = $ch;
-        $results[$index] = null;
-    }
-    
-    // Execute all handles concurrently
-    $running = null;
-    do {
-        curl_multi_exec($mh, $running);
-        curl_multi_select($mh, 0.1);
-    } while ($running > 0);
-    
-    // Get results
-    foreach ($handles as $index => $ch) {
-        $response = curl_multi_getcontent($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        
-        curl_multi_remove_handle($mh, $ch);
-        if (function_exists('curl_close')) {
-            @curl_close($ch);
+    $model = normalizeAILearningModelName($provider, $model ?? $defaultModel, $defaultModel);
+    $candidateModels = array_merge([$model], getAILearningProviderFallbackModels($provider, $model));
+
+    foreach ($candidateModels as $candidateModel) {
+        $mh = curl_multi_init();
+        $handles = [];
+        $results = [];
+        $shouldRetryWithFallback = false;
+
+        foreach ($requests as $index => $messages) {
+            $requestBody = buildAILearningRequestBody($provider, $candidateModel, $messages);
+
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $apiKey
+            ]);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
+            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+
+            $isLocalDev = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
+                           strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocalDev);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, !$isLocalDev ? 2 : 0);
+
+            curl_multi_add_handle($mh, $ch);
+            $handles[$index] = $ch;
+            $results[$index] = null;
         }
-        
-        if ($error) {
-            $results[$index] = ['error' => 'cURL error: ' . $error];
-        } elseif ($httpCode !== 200) {
-            $results[$index] = ['error' => 'API error: HTTP ' . $httpCode];
-        } else {
-            $data = json_decode($response, true);
-            if (isset($data['choices'][0]['message']['content'])) {
-                $results[$index] = ['content' => $data['choices'][0]['message']['content']];
+
+        $running = null;
+        do {
+            curl_multi_exec($mh, $running);
+            curl_multi_select($mh, 0.1);
+        } while ($running > 0);
+
+        foreach ($handles as $index => $ch) {
+            $response = curl_multi_getcontent($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $error = curl_error($ch);
+
+            curl_multi_remove_handle($mh, $ch);
+            if (function_exists('curl_close')) {
+                @curl_close($ch);
+            }
+
+            if ($error) {
+                $results[$index] = ['error' => 'cURL error: ' . $error];
+            } elseif ($httpCode !== 200) {
+                if (isAILearningMissingModelError($provider, $httpCode, $response)) {
+                    $shouldRetryWithFallback = true;
+                }
+                $results[$index] = ['error' => extractAILearningProviderError($provider, $response, $httpCode)];
             } else {
-                $results[$index] = ['error' => 'Invalid API response'];
+                $data = json_decode($response, true);
+                if (isset($data['choices'][0]['message']['content'])) {
+                    $results[$index] = [
+                        'content' => $data['choices'][0]['message']['content'],
+                        'model_used' => $candidateModel
+                    ];
+                } else {
+                    $results[$index] = ['error' => 'Invalid API response'];
+                }
             }
         }
+
+        curl_multi_close($mh);
+
+        if (!$shouldRetryWithFallback) {
+            return $results;
+        }
     }
-    
-    curl_multi_close($mh);
-    
+
     return $results;
 }
 
@@ -250,58 +558,42 @@ function callAILearningAPI($db, $provider, $messages, $model = null) {
     $url = $providerConfig['url'];
     $defaultModel = $providerConfig['default_model'];
     
-    $model = $model ?? $defaultModel;
-    
-    $requestBody = [
-        'model' => $model,
-        'messages' => $messages,
-        'temperature' => 0.7,
-        'max_tokens' => 2000
-    ];
+    $model = normalizeAILearningModelName($provider, $model ?? $defaultModel, $defaultModel);
+    $candidateModels = array_merge([$model], getAILearningProviderFallbackModels($provider, $model));
     
     // Increase execution time limit for API calls
     set_time_limit(120);
-    
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        'Content-Type: application/json',
-        'Authorization: Bearer ' . $apiKey
-    ]);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
-    curl_setopt($ch, CURLOPT_TIMEOUT, 90); // Increase timeout to 90 seconds
-    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 30); // Connection timeout
-    
-    $isLocalDev = (strpos($_SERVER['HTTP_HOST'] ?? '', 'localhost') !== false || 
-                   strpos($_SERVER['HTTP_HOST'] ?? '', '127.0.0.1') !== false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocalDev);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, !$isLocalDev ? 2 : 0);
-    
-    $response = curl_exec($ch);
-    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $error = curl_error($ch);
-    
-    // curl_close is deprecated in PHP 8.5+, but still safe to use
-    if (function_exists('curl_close')) {
-        @curl_close($ch);
+
+    foreach ($candidateModels as $candidateModel) {
+        $result = executeAILearningAPIRequest($provider, $url, $apiKey, $messages, $candidateModel);
+
+        if (!empty($result['curl_error'])) {
+            return ['error' => 'cURL error: ' . $result['curl_error']];
+        }
+
+        if ((int)$result['http_code'] !== 200) {
+            if (isAILearningMissingModelError($provider, $result['http_code'], $result['response'])) {
+                continue;
+            }
+
+            return [
+                'error' => extractAILearningProviderError($provider, $result['response'], $result['http_code']),
+                'response' => $result['response']
+            ];
+        }
+
+        $data = json_decode($result['response'], true);
+        if (!isset($data['choices'][0]['message']['content'])) {
+            return ['error' => 'Invalid API response'];
+        }
+
+        return [
+            'content' => $data['choices'][0]['message']['content'],
+            'model_used' => $candidateModel
+        ];
     }
-    
-    if ($error) {
-        return ['error' => 'cURL error: ' . $error];
-    }
-    
-    if ($httpCode !== 200) {
-        return ['error' => 'API error: HTTP ' . $httpCode, 'response' => $response];
-    }
-    
-    $data = json_decode($response, true);
-    if (!isset($data['choices'][0]['message']['content'])) {
-        return ['error' => 'Invalid API response'];
-    }
-    
-    return ['content' => $data['choices'][0]['message']['content']];
+
+    return ['error' => getAIProviderLabel($provider) . ' API error: no supported model was accepted for learning requests'];
 }
 
 /**
@@ -632,8 +924,7 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
     try {
         $settings = getAILearningSettings($db);
         $limit = min($count, $settings['web_cache_limit']);
-        $provider = $provider === 'auto' ? $settings['ai_provider'] : $provider;
-        $provider = normalizeAIProvider($provider);
+        $provider = resolveEffectiveAILearningProvider($settings, $provider);
         
         if (!isAIProviderEnabledInSettings($settings, $provider)) {
             return ['success' => false, 'message' => getAIProviderLabel($provider) . ' is disabled in settings'];
@@ -650,21 +941,62 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
         if ($toLearn <= 0) {
             return ['success' => false, 'message' => 'No more topics can be learned today'];
         }
+
+        $learned = 0;
+        $errors = [];
+        $learnedTopics = [];
+
+        $databaseSeedTarget = min($toLearn, max(10, (int)ceil($toLearn * 0.6)));
+        $databaseSeedResult = learnWebCacheFromDatabaseCars($db, $databaseSeedTarget);
+        if (!empty($databaseSeedResult['success'])) {
+            $learned += (int)($databaseSeedResult['learned'] ?? 0);
+            $learnedTopics = array_merge($learnedTopics, $databaseSeedResult['learned_topics'] ?? []);
+            if (!empty($databaseSeedResult['errors'])) {
+                $errors = array_merge($errors, $databaseSeedResult['errors']);
+            }
+        } elseif (!empty($databaseSeedResult['message'])) {
+            $errors[] = $databaseSeedResult['message'];
+        }
+
+        $remainingToLearn = max(0, $toLearn - $learned);
+        if ($remainingToLearn <= 0) {
+            return [
+                'success' => true,
+                'mode' => 'database_intentional',
+                'learned' => $learned,
+                'requested' => $toLearn,
+                'errors' => $errors,
+                'learned_topics' => $learnedTopics
+            ];
+        }
         
         // Generate topics to learn
         $messages = [
             [
                 'role' => 'system',
-                'content' => 'You are a helpful assistant that generates educational car-related topics. Generate a list of ' . $toLearn . ' diverse and useful car-related topics that would be helpful for car owners, buyers, and enthusiasts. Each topic should be a clear question or topic title. Return only a JSON array of strings, one topic per item. Topics should cover various aspects: maintenance, specifications, repairs, buying advice, technology, safety, etc.'
+                'content' => 'You are a helpful assistant that generates educational car-related topics. Generate a list of ' . $remainingToLearn . ' diverse and useful car-related topics that would be helpful for car owners, buyers, and enthusiasts. Each topic should be a clear question or topic title. Return only a JSON array of strings, one topic per item. Topics should cover various aspects: maintenance, specifications, repairs, buying advice, technology, safety, etc. Avoid duplicate manufacturer specification topics because those are already being seeded directly from the MotorLink database.'
             ],
             [
                 'role' => 'user',
-                'content' => 'Generate ' . $toLearn . ' car-related topics to learn about.'
+                'content' => 'Generate ' . $remainingToLearn . ' car-related topics to learn about. Focus on maintenance, ownership, repairs, diagnostics, and safety topics that complement manufacturer specifications.'
             ]
         ];
         
         $response = callAILearningAPI($db, $provider, $messages);
         if (isset($response['error'])) {
+            if ($learned > 0) {
+                $errors[] = $response['error'];
+                return [
+                    'success' => true,
+                    'mode' => 'database_intentional_partial',
+                    'learned' => $learned,
+                    'requested' => $toLearn,
+                    'errors' => $errors,
+                    'learned_topics' => $learnedTopics,
+                    'message' => 'Deterministic database learning completed, but AI topic expansion failed: ' . $response['error']
+                ];
+            }
+
             return ['success' => false, 'message' => $response['error']];
         }
         
@@ -692,7 +1024,7 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
                 if (!empty($line) && strlen($line) > 10) {
                     $topics[] = $line;
                 }
-                if (count($topics) >= $toLearn) break;
+                if (count($topics) >= $remainingToLearn) break;
             }
         }
         
@@ -700,7 +1032,7 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
         $topicsToLearn = [];
         $topicHashes = [];
         foreach ($topics as $topic) {
-            if (count($topicsToLearn) >= $toLearn) break;
+            if (count($topicsToLearn) >= $remainingToLearn) break;
             
             $topic = trim($topic);
             if (empty($topic)) continue;
@@ -719,18 +1051,15 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
         if (empty($topicsToLearn)) {
             return [
                 'success' => true,
-                'learned' => 0,
+                'learned' => $learned,
                 'requested' => $toLearn,
-                'errors' => [],
-                'learned_topics' => []
+                'errors' => $errors,
+                'learned_topics' => $learnedTopics
             ];
         }
         
         // Prepare batch requests
         $batchSize = 10; // Process 10 topics concurrently
-        $learned = 0;
-        $errors = [];
-        $learnedTopics = [];
         
         $batches = array_chunk($topicsToLearn, $batchSize);
         $hashBatches = array_chunk($topicHashes, $batchSize);
@@ -855,55 +1184,33 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
     try {
         $settings = getAILearningSettings($db);
         $limit = min($count, $settings['parts_cache_limit']);
-        $provider = $provider === 'auto' ? $settings['ai_provider'] : $provider;
-        $provider = normalizeAIProvider($provider);
-        
+        $provider = resolveEffectiveAILearningProvider($settings, $provider);
+
         if (!isAIProviderEnabledInSettings($settings, $provider)) {
             return ['success' => false, 'message' => getAIProviderLabel($provider) . ' is disabled in settings'];
         }
-        
+
         $learnedToday = getTopicsLearnedToday($db, 'ai_parts_cache');
         if ($learnedToday >= $settings['parts_cache_limit']) {
             return ['success' => false, 'message' => "Daily limit of {$settings['parts_cache_limit']} parts already reached"];
         }
-        
+
         $remaining = $settings['parts_cache_limit'] - $learnedToday;
         $toLearn = min($limit, $remaining);
-        
+
         if ($toLearn <= 0) {
             return ['success' => false, 'message' => 'No more parts can be learned today'];
         }
-        
-        // Get makes and models from database to prioritize
+
+        $dbModels = getLearningPriorityModelsFromDatabase($db, 150);
         $dbMakes = [];
-        $dbModels = [];
-        try {
-            $stmt = $db->query("SELECT DISTINCT name FROM car_makes WHERE is_active = 1 ORDER BY name");
-            $makes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($makes as $make) {
-                $dbMakes[] = strtolower($make['name']);
+        foreach ($dbModels as $modelRow) {
+            $makeLower = strtolower(trim((string)($modelRow['make'] ?? '')));
+            if ($makeLower !== '' && !in_array($makeLower, $dbMakes, true)) {
+                $dbMakes[] = $makeLower;
             }
-            
-            $stmt = $db->query("
-                SELECT DISTINCT mk.name as make_name, cm.name as model_name 
-                FROM car_models cm 
-                INNER JOIN car_makes mk ON cm.make_id = mk.id 
-                WHERE cm.is_active = 1 AND mk.is_active = 1 
-                ORDER BY mk.name, cm.name
-                LIMIT 100
-            ");
-            $models = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($models as $model) {
-                $dbModels[] = [
-                    'make' => strtolower($model['make_name']),
-                    'model' => strtolower($model['model_name'])
-                ];
-            }
-        } catch (Exception $e) {
-            error_log("Error fetching makes/models for prioritization: " . $e->getMessage());
         }
-        
-        // Build make/model list for AI prompt
+
         $makeModelList = '';
         if (!empty($dbMakes)) {
             $makeModelList = "\n\nPRIORITY: Focus on these makes and models from our database first:\n";
@@ -912,65 +1219,65 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                 $makeModelList .= "Example combinations: ";
                 $examples = [];
                 foreach (array_slice($dbModels, 0, 10) as $model) {
-                    $examples[] = $model['make'] . ' ' . $model['model'];
+                    $examples[] = strtolower($model['make']) . ' ' . strtolower($model['model']);
                 }
                 $makeModelList .= implode(', ', $examples);
             }
         }
-        
-        // Generate parts to learn about
-        $messages = [
-            [
-                'role' => 'system',
-                'content' => 'You are a helpful assistant that generates car parts information requests. Generate a list of ' . $toLearn . ' diverse car parts with make/model combinations that would be useful for car owners and mechanics. Each item should be a query about a specific car part for a specific make/model (e.g., "Toyota Corolla 2020 brake pads part number", "Honda Civic 2018 water pump compatibility"). Return only a JSON array of strings, one query per item. Focus on common parts: brake pads, filters, belts, pumps, sensors, etc.' . $makeModelList
-            ],
-            [
-                'role' => 'user',
-                'content' => 'Generate ' . $toLearn . ' car parts queries to learn about. ' . (!empty($dbMakes) ? 'Prioritize makes and models from our database: ' . implode(', ', array_slice($dbMakes, 0, 15)) : '')
-            ]
-        ];
-        
-        $response = callAILearningAPI($db, $provider, $messages);
-        if (isset($response['error'])) {
-            return ['success' => false, 'message' => $response['error']];
-        }
-        
-        // Parse queries from response
-        $content = $response['content'];
-        $queries = [];
-        
-        // Try to extract JSON array
-        if (preg_match('/\[.*\]/s', $content, $matches)) {
-            $decoded = json_decode($matches[0], true);
-            if (is_array($decoded)) {
-                $queries = $decoded;
-            }
-        }
-        
-        // Fallback: extract lines
+
+        $queries = buildIntentionalPartsQueriesFromDatabase($dbModels, $toLearn * 2);
+
         if (empty($queries)) {
-            $lines = explode("\n", $content);
-            foreach ($lines as $line) {
-                $line = trim($line);
-                if (empty($line)) continue;
-                $line = preg_replace('/^[\d\s\.\-\*\•]+/', '', $line);
-                $line = trim($line, '"\'');
-                if (!empty($line) && strlen($line) > 10) {
-                    $queries[] = $line;
+            $messages = [
+                [
+                    'role' => 'system',
+                    'content' => 'You are a helpful assistant that generates car parts information requests. Generate a list of ' . $toLearn . ' diverse car parts with make/model combinations that would be useful for car owners and mechanics. Each item should be a query about a specific car part for a specific make/model (e.g., "Toyota Corolla 2020 brake pads part number", "Honda Civic 2018 water pump compatibility"). Return only a JSON array of strings, one query per item. Focus on common parts: brake pads, filters, belts, pumps, sensors, etc.' . $makeModelList
+                ],
+                [
+                    'role' => 'user',
+                    'content' => 'Generate ' . $toLearn . ' car parts queries to learn about. ' . (!empty($dbMakes) ? 'Prioritize makes and models from our database: ' . implode(', ', array_slice($dbMakes, 0, 15)) : '')
+                ]
+            ];
+
+            $response = callAILearningAPI($db, $provider, $messages);
+            if (isset($response['error'])) {
+                return ['success' => false, 'message' => $response['error']];
+            }
+
+            $content = $response['content'];
+            $queries = [];
+
+            if (preg_match('/\[.*\]/s', $content, $matches)) {
+                $decoded = json_decode($matches[0], true);
+                if (is_array($decoded)) {
+                    $queries = $decoded;
                 }
-                if (count($queries) >= $toLearn) break;
+            }
+
+            if (empty($queries)) {
+                $lines = explode("\n", $content);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line)) continue;
+                    $line = preg_replace('/^[\d\s\.\-\*\•]+/', '', $line);
+                    $line = trim($line, '"\'');
+                    if (!empty($line) && strlen($line) > 10) {
+                        $queries[] = $line;
+                    }
+                    if (count($queries) >= $toLearn) {
+                        break;
+                    }
+                }
             }
         }
-        
-        // Prioritize queries that match database makes/models
+
         $prioritizedQueries = [];
         $otherQueries = [];
-        
+
         foreach ($queries as $query) {
             $queryLower = strtolower(trim($query));
             $isPrioritized = false;
-            
-            // Check if query contains a make from our database
+
             foreach ($dbMakes as $make) {
                 if (strpos($queryLower, $make) !== false) {
                     $prioritizedQueries[] = $query;
@@ -978,35 +1285,31 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                     break;
                 }
             }
-            
+
             if (!$isPrioritized) {
                 $otherQueries[] = $query;
             }
         }
-        
-        // Combine: prioritized first, then others
+
         $queries = array_merge($prioritizedQueries, $otherQueries);
-        
-        // Filter out queries that already exist
+
         $queriesToLearn = [];
         $queryHashes = [];
         foreach ($queries as $query) {
             if (count($queriesToLearn) >= $toLearn) break;
-            
+
             $query = trim($query);
             if (empty($query)) continue;
-            
+
             $queryHash = hash('sha256', strtolower(trim($query)));
-            
-            // Check if already exists
             if (queryExistsInCache($db, 'ai_parts_cache', $queryHash)) {
                 continue;
             }
-            
+
             $queriesToLearn[] = $query;
             $queryHashes[] = $queryHash;
         }
-        
+
         if (empty($queriesToLearn)) {
             return [
                 'success' => true,
@@ -1016,20 +1319,18 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                 'learned_parts' => []
             ];
         }
-        
-        // Process in concurrent batches
-        $batchSize = 10; // Process 10 parts concurrently
+
+        $batchSize = 10;
         $learned = 0;
         $errors = [];
         $learnedParts = [];
-        
+
         $batches = array_chunk($queriesToLearn, $batchSize);
         $hashBatches = array_chunk($queryHashes, $batchSize);
-        
+
         foreach ($batches as $batchIndex => $batch) {
             $hashBatch = $hashBatches[$batchIndex];
-            
-            // Prepare messages for batch
+
             $messagesBatch = [];
             foreach ($batch as $query) {
                 $messagesBatch[] = [
@@ -1043,25 +1344,22 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                     ]
                 ];
             }
-            
-            // Make concurrent API calls
+
             $responses = callAILearningAPIBatch($db, $provider, $messagesBatch);
-            
-            // Process results
+
             foreach ($batch as $idx => $query) {
                 if ($learned >= $toLearn) break 2;
-                
+
                 $response = $responses[$idx] ?? null;
                 if (!$response || isset($response['error'])) {
                     $errors[] = $response['error'] ?? 'Failed to learn part';
                     continue;
                 }
-                
+
                 $queryHash = $hashBatch[$idx];
                 $content = $response['content'];
                 $sourcesJson = json_encode([['title' => 'AI Research - ' . ucfirst($provider), 'link' => null, 'snippet' => 'AI-generated parts research']]);
-                
-                // Extract make/model/part from query
+
                 preg_match('/(\w+)\s+(\w+)\s+(\d{4})?\s*(.*)/i', $query, $matches);
                 $makeName = $matches[1] ?? null;
                 $modelName = $matches[2] ?? null;
@@ -1071,8 +1369,7 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                 if (empty($partName)) {
                     $partName = 'Part';
                 }
-                
-                // Parse JSON response from AI to extract part number and price
+
                 $partData = null;
                 $partNumber = null;
                 $oemNumber = null;
@@ -1081,15 +1378,13 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                 $compatibility = null;
                 $specifications = null;
                 $crossReference = null;
-                
-                // Try to extract JSON from response
+
                 if (preg_match('/\{.*\}/s', $content, $jsonMatches)) {
                     $partData = json_decode($jsonMatches[0], true);
                 } else {
-                    // Try parsing the entire content as JSON
                     $partData = json_decode($content, true);
                 }
-                
+
                 if (is_array($partData)) {
                     $partNumber = $partData['part_number'] ?? $partData['oem_number'] ?? null;
                     $oemNumber = $partData['oem_number'] ?? $partData['part_number'] ?? null;
@@ -1098,16 +1393,13 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                     $compatibility = is_array($partData['compatibility'] ?? null) ? json_encode($partData['compatibility']) : ($partData['compatibility'] ?? null);
                     $specifications = is_array($partData['specifications'] ?? null) ? json_encode($partData['specifications']) : ($partData['specifications'] ?? null);
                     $crossReference = is_array($partData['cross_reference'] ?? null) ? json_encode($partData['cross_reference']) : null;
-                    
-                    // Update part_name if provided in JSON
+
                     if (!empty($partData['part_name'])) {
                         $partName = $partData['part_name'];
                     }
                 }
-                
-                // If JSON parsing failed, try to extract part number and price from text
+
                 if (empty($partNumber)) {
-                    // Look for patterns like "Part Number: ABC123" or "OEM: XYZ789"
                     if (preg_match('/part\s*number[:\s]+([A-Z0-9\-]+)/i', $content, $pnMatch)) {
                         $partNumber = trim($pnMatch[1]);
                         $oemNumber = $partNumber;
@@ -1116,23 +1408,17 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                         $partNumber = $oemNumber;
                     }
                 }
-                
+
                 if ($priceUsd === null) {
-                    // Look for price patterns like "$29.99" or "Price: $45.50 USD"
                     if (preg_match('/\$(\d+\.?\d*)/', $content, $priceMatch)) {
                         $priceUsd = (float)$priceMatch[1];
                     } elseif (preg_match('/price[:\s]+\$?(\d+\.?\d*)/i', $content, $priceMatch2)) {
                         $priceUsd = (float)$priceMatch2[1];
                     }
                 }
-                
-                // Use content as summary/description if no structured data
-                $summary = $content;
-                if (!empty($description)) {
-                    $summary = $description;
-                }
-                
-                // Insert into database
+
+                $summary = !empty($description) ? $description : $content;
+
                 try {
                     $stmt = $db->prepare("
                         INSERT INTO ai_parts_cache (
@@ -1159,7 +1445,7 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                         $summary,
                         $sourcesJson
                     ]);
-                    
+
                     $learned++;
                     $learnedParts[] = $query;
                 } catch (Exception $e) {
@@ -1168,7 +1454,7 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                 }
             }
         }
-        
+
         return [
             'success' => true,
             'learned' => $learned,
@@ -1176,7 +1462,7 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
             'errors' => $errors,
             'learned_parts' => $learnedParts
         ];
-        
+
     } catch (Exception $e) {
         error_log("Error learning parts cache topics: " . $e->getMessage());
         return ['success' => false, 'message' => $e->getMessage()];
@@ -1262,8 +1548,7 @@ function learnFromUserQuery($db, $query, $isPartsQuery = false, $provider = 'aut
         incrementLearningTelemetry($db, 'attempts');
 
         $settings = getAILearningSettings($db);
-        $provider = $provider === 'auto' ? $settings['ai_provider'] : $provider;
-        $provider = normalizeAIProvider($provider);
+        $provider = resolveEffectiveAILearningProvider($settings, $provider);
         
         if (!isAIProviderEnabledInSettings($settings, $provider)) {
             return ['success' => false, 'message' => getAIProviderLabel($provider) . ' is disabled'];

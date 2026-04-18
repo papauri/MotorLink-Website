@@ -6144,6 +6144,164 @@ function handleCertifyCarHire($db) {
     }
 }
 
+function getAIProviderSiteSettingDefinitions() {
+    return [
+        'openai' => [
+            'label' => 'OpenAI',
+            'setting_key' => 'openai_api_key',
+            'description' => 'OpenAI API key used by MotorLink AI chat and AI learning'
+        ],
+        'deepseek' => [
+            'label' => 'DeepSeek',
+            'setting_key' => 'deepseek_api_key',
+            'description' => 'DeepSeek API key used by MotorLink AI chat and AI learning'
+        ],
+        'qwen' => [
+            'label' => 'Qwen',
+            'setting_key' => 'qwen_api_key',
+            'description' => 'Qwen API key used by MotorLink AI chat and AI learning'
+        ],
+        'glm' => [
+            'label' => 'GLM',
+            'setting_key' => 'glm_api_key',
+            'description' => 'GLM API key used by MotorLink AI chat and AI learning'
+        ]
+    ];
+}
+
+function adminCanManageAIProviderSecrets($db) {
+    if (($_SESSION['admin_role'] ?? '') === 'super_admin') {
+        return true;
+    }
+
+    try {
+        $adminId = $_SESSION['admin_id'] ?? null;
+        if (!$adminId) {
+            return false;
+        }
+
+        $stmt = $db->prepare("SELECT role FROM admin_users WHERE id = ? LIMIT 1");
+        $stmt->execute([$adminId]);
+        $role = $stmt->fetchColumn();
+        return $role === 'super_admin';
+    } catch (Exception $e) {
+        error_log('adminCanManageAIProviderSecrets error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+function maskAdminSecretValue($value) {
+    $value = trim((string)$value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (strlen($value) <= 4) {
+        return '********';
+    }
+
+    $suffix = substr($value, -4);
+    return '********' . $suffix;
+}
+
+function ensureAIProviderSiteSettingsRows($db) {
+    $definitions = getAIProviderSiteSettingDefinitions();
+    $settingKeys = array_map(function ($meta) {
+        return $meta['setting_key'];
+    }, $definitions);
+
+    if (empty($settingKeys)) {
+        return;
+    }
+
+    $placeholders = implode(',', array_fill(0, count($settingKeys), '?'));
+    $stmt = $db->prepare("SELECT setting_key FROM site_settings WHERE setting_key IN ($placeholders)");
+    $stmt->execute($settingKeys);
+    $existing = array_fill_keys($stmt->fetchAll(PDO::FETCH_COLUMN), true);
+
+    $insert = $db->prepare("INSERT INTO site_settings (setting_key, setting_value, setting_group, setting_type, description, is_public)
+                            VALUES (?, '', 'ai', 'string', ?, 0)");
+
+    foreach ($definitions as $meta) {
+        if (isset($existing[$meta['setting_key']])) {
+            continue;
+        }
+
+        $insert->execute([
+            $meta['setting_key'],
+            $meta['description']
+        ]);
+    }
+}
+
+function getAIProviderKeyMetadata($db) {
+    ensureAIProviderSiteSettingsRows($db);
+
+    $definitions = getAIProviderSiteSettingDefinitions();
+    $settingKeys = array_map(function ($meta) {
+        return $meta['setting_key'];
+    }, $definitions);
+    $placeholders = implode(',', array_fill(0, count($settingKeys), '?'));
+    $stmt = $db->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ($placeholders)");
+    $stmt->execute($settingKeys);
+
+    $values = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $values[$row['setting_key']] = (string)($row['setting_value'] ?? '');
+    }
+
+    $metadata = [];
+    foreach ($definitions as $provider => $meta) {
+        $value = trim((string)($values[$meta['setting_key']] ?? ''));
+        $metadata[$provider] = [
+            'configured' => $value !== '',
+            'masked' => $value !== '' ? maskAdminSecretValue($value) : ''
+        ];
+    }
+
+    return $metadata;
+}
+
+function buildAIProviderKeySettingsPayload(array $inputKeys) {
+    $definitions = getAIProviderSiteSettingDefinitions();
+    $payload = [];
+    $updatedProviders = [];
+
+    foreach ($inputKeys as $provider => $rawValue) {
+        if (!isset($definitions[$provider])) {
+            throw new Exception('Unknown AI provider key payload: ' . $provider);
+        }
+
+        $value = trim((string)$rawValue);
+        if ($value === '') {
+            continue;
+        }
+
+        if (strlen($value) > 512) {
+            throw new Exception($definitions[$provider]['label'] . ' API key is too long.');
+        }
+
+        if (preg_match('/[\x00-\x1F\x7F]/', $value)) {
+            throw new Exception($definitions[$provider]['label'] . ' API key contains invalid characters.');
+        }
+
+        $meta = $definitions[$provider];
+        $payload[$meta['setting_key']] = [
+            'value' => $value,
+            'group' => 'ai',
+            'type' => 'string',
+            'description' => $meta['description'],
+            'is_public' => 0
+        ];
+        $updatedProviders[] = $provider;
+    }
+
+    return [
+        'payload' => $payload,
+        'providers' => $updatedProviders
+    ];
+}
+
 /**
  * Get AI Chat Settings
  */
@@ -6257,7 +6415,12 @@ function handleGetAIChatSettings($db) {
         $settings['requests_per_hour'] = (int)($settings['requests_per_hour'] ?? 10);
         $settings['enabled'] = (int)($settings['enabled'] ?? 1);
         
-        echo json_encode(['success' => true, 'settings' => $settings]);
+        echo json_encode([
+            'success' => true,
+            'settings' => $settings,
+            'api_keys' => getAIProviderKeyMetadata($db),
+            'can_manage_api_keys' => adminCanManageAIProviderSecrets($db)
+        ]);
     } catch (Exception $e) {
         error_log("handleGetAIChatSettings error: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Failed to get AI chat settings']);
@@ -6275,6 +6438,7 @@ function handleSaveAIChatSettings($db) {
         
         $aiProvider = trim($data['ai_provider'] ?? 'openai');
         $modelName = trim($data['model_name'] ?? 'gpt-4o');
+        $apiKeysInput = isset($data['api_keys']) && is_array($data['api_keys']) ? $data['api_keys'] : [];
         $openaiEnabled = isset($data['openai_enabled']) ? (int)$data['openai_enabled'] : 1;
         $openAIReasoningEnabled = isset($data['openai_reasoning_enabled']) ? (int)$data['openai_reasoning_enabled'] : 1;
         $openAIReasoningEffort = strtolower(trim((string)($data['openai_reasoning_effort'] ?? 'medium')));
@@ -6317,6 +6481,15 @@ function handleSaveAIChatSettings($db) {
         }
         if ($requestsPerHour < 1 || $requestsPerHour > 100) {
             throw new Exception('Requests per hour must be between 1 and 100');
+        }
+
+        $apiKeyUpdate = buildAIProviderKeySettingsPayload($apiKeysInput);
+        $siteSettingsPayload = $apiKeyUpdate['payload'];
+        $updatedKeyProviders = $apiKeyUpdate['providers'];
+        $canManageApiKeys = adminCanManageAIProviderSecrets($db);
+
+        if (!empty($updatedKeyProviders) && !$canManageApiKeys) {
+            sendAdminError('Only super admins can update AI provider API keys.', 'SUPER_ADMIN_REQUIRED', 403);
         }
         
         try {
@@ -6390,6 +6563,9 @@ function handleSaveAIChatSettings($db) {
         } catch (Exception $e) {
             $hasUpdatedBy = false;
         }
+
+        ensureAIProviderSiteSettingsRows($db);
+        $db->beginTransaction();
         
         if ($hasUpdatedBy) {
             // Table has updated_by column
@@ -6447,6 +6623,10 @@ function handleSaveAIChatSettings($db) {
         if (!$result) {
             throw new Exception('Failed to execute database update');
         }
+
+        if (!empty($siteSettingsPayload)) {
+            motorlink_upsert_site_settings($db, $siteSettingsPayload);
+        }
         
         // Verify the save by reading back from database
         $verifyStmt = $db->prepare("SELECT * FROM ai_chat_settings WHERE id = 1");
@@ -6456,9 +6636,11 @@ function handleSaveAIChatSettings($db) {
         if (!$savedSettings) {
             throw new Exception('Settings were not saved correctly');
         }
+
+        $db->commit();
         
         // Log the change
-        error_log("AI Chat Settings updated by admin ID {$adminId}: provider={$aiProvider}, model={$modelName}, reasoning_enabled={$openAIReasoningEnabled}, reasoning_effort={$openAIReasoningEffort}, deepseek_auto_profile_enabled={$deepseekAutoProfileEnabled}, glm_auto_profile_enabled={$glmAutoProfileEnabled}, max_tokens={$maxTokens}, temp={$temperature}, daily_limit={$requestsPerDay}, hourly_limit={$requestsPerHour}, enabled={$enabled}");
+        error_log("AI Chat Settings updated by admin ID {$adminId}: provider={$aiProvider}, model={$modelName}, reasoning_enabled={$openAIReasoningEnabled}, reasoning_effort={$openAIReasoningEffort}, deepseek_auto_profile_enabled={$deepseekAutoProfileEnabled}, glm_auto_profile_enabled={$glmAutoProfileEnabled}, max_tokens={$maxTokens}, temp={$temperature}, daily_limit={$requestsPerDay}, hourly_limit={$requestsPerHour}, enabled={$enabled}, updated_api_keys=" . implode(',', $updatedKeyProviders));
         
         echo json_encode([
             'success' => true, 
@@ -6479,9 +6661,15 @@ function handleSaveAIChatSettings($db) {
                 'requests_per_day' => (int)$savedSettings['requests_per_day'],
                 'requests_per_hour' => (int)$savedSettings['requests_per_hour'],
                 'enabled' => (int)$savedSettings['enabled']
-            ]
+            ],
+            'api_keys' => getAIProviderKeyMetadata($db),
+            'can_manage_api_keys' => $canManageApiKeys,
+            'api_keys_updated' => $updatedKeyProviders
         ]);
     } catch (Exception $e) {
+        if ($db instanceof PDO && $db->inTransaction()) {
+            $db->rollBack();
+        }
         error_log("handleSaveAIChatSettings error: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Failed to save settings: ' . $e->getMessage()]);
     }
@@ -6929,6 +7117,11 @@ function handleSaveAILearningSettings($db) {
             // Column exists, ignore
         }
         try {
+            $db->exec("ALTER TABLE ai_chat_settings ADD COLUMN learning_ai_provider VARCHAR(20) DEFAULT 'auto'");
+        } catch (Exception $e) {
+            // Column exists, ignore
+        }
+        try {
             $db->exec("ALTER TABLE ai_chat_settings ADD COLUMN qwen_enabled TINYINT(1) DEFAULT 1");
         } catch (Exception $e) {
             // Column exists, ignore
@@ -6956,7 +7149,7 @@ function handleSaveAILearningSettings($db) {
                 deepseek_enabled = ?,
                 qwen_enabled = ?,
                 glm_enabled = ?,
-                ai_provider = ?,
+                learning_ai_provider = ?,
                 web_cache_daily_limit = ?,
                 parts_cache_daily_limit = ?,
                 updated_at = NOW(),
