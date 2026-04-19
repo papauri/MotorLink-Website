@@ -433,6 +433,14 @@ function isAIChatTokenLimitErrorResponse($httpCode, $errorMessage = '', $errorTy
 function getAIChatProviderRetryOrder($db, $settings, $preferredProvider) {
     $preferredProvider = normalizeAIChatProvider($preferredProvider);
 
+    // Prefer the selected provider exclusively when it is enabled and keyed.
+    if (isAIChatProviderEnabled($settings, $preferredProvider)) {
+        $preferredApiKey = getAIProviderApiKeyFromDB($preferredProvider, $db);
+        if (is_string($preferredApiKey) && trim($preferredApiKey) !== '') {
+            return [$preferredProvider];
+        }
+    }
+
     $ordered = [$preferredProvider, 'openai', 'deepseek', 'qwen', 'glm'];
     $retryOrder = [];
 
@@ -529,7 +537,8 @@ function callAIChatProviderForMainChat($db, $user, $messages, $settings, $prefer
                 'Authorization: Bearer ' . $providerApiKey
             ]);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$disableSSL);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $disableSSL ? 0 : 2);
 
@@ -11402,7 +11411,6 @@ function checkAIChatRateLimit($db, $userId, $settings) {
             FROM ai_chat_usage 
             WHERE user_id = ? 
             AND DATE(created_at) = CURDATE()
-            AND COALESCE(tuning_profile, 'generic_payload') <> 'deterministic_no_provider'
         ");
         $stmt->execute([$userId]);
         $dailyUsage = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -11420,7 +11428,6 @@ function checkAIChatRateLimit($db, $userId, $settings) {
             FROM ai_chat_usage 
             WHERE user_id = ? 
             AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
-            AND COALESCE(tuning_profile, 'generic_payload') <> 'deterministic_no_provider'
         ");
         $stmt->execute([$userId]);
         $hourlyUsage = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -11432,7 +11439,6 @@ function checkAIChatRateLimit($db, $userId, $settings) {
                 FROM ai_chat_usage 
                 WHERE user_id = ? 
                 AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
-                AND COALESCE(tuning_profile, 'generic_payload') <> 'deterministic_no_provider'
             ");
             $stmt->execute([$userId]);
             $oldestRequest = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -11475,7 +11481,6 @@ function getUserAIChatUsageRemaining($db, $userId) {
             FROM ai_chat_usage 
             WHERE user_id = ? 
             AND DATE(created_at) = CURDATE()
-            AND COALESCE(tuning_profile, 'generic_payload') <> 'deterministic_no_provider'
         ");
         $stmt->execute([$userId]);
         $dailyUsage = $stmt->fetch(PDO::FETCH_ASSOC);

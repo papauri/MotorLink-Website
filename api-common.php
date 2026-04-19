@@ -5,7 +5,7 @@
  */
 
 // Prevent direct access
-if (basename($_SERVER['PHP_SELF']) === 'api-common.php') {
+if (PHP_SAPI !== 'cli' && basename($_SERVER['PHP_SELF'] ?? '') === 'api-common.php') {
     http_response_code(403);
     exit('Direct access not allowed');
 }
@@ -27,7 +27,8 @@ header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 // Handle preflight OPTIONS request
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+$requestMethod = $_SERVER['REQUEST_METHOD'] ?? '';
+if ($requestMethod === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
@@ -120,10 +121,18 @@ function loadFinalDbConfigFromSiteSettings(array $bootstrapConfig) {
 $bootstrapDb = getBootstrapDbConfig($defaultDbHost);
 $runtimeDb = loadFinalDbConfigFromSiteSettings($bootstrapDb);
 
-define('DB_HOST', $runtimeDb['host']);
-define('DB_USER', $runtimeDb['user']);
-define('DB_PASS', $runtimeDb['pass']);
-define('DB_NAME', $runtimeDb['name']);
+if (!defined('DB_HOST')) {
+    define('DB_HOST', $runtimeDb['host']);
+}
+if (!defined('DB_USER')) {
+    define('DB_USER', $runtimeDb['user']);
+}
+if (!defined('DB_PASS')) {
+    define('DB_PASS', $runtimeDb['pass']);
+}
+if (!defined('DB_NAME')) {
+    define('DB_NAME', $runtimeDb['name']);
+}
 
 // Start session if not already started
 if (session_status() == PHP_SESSION_NONE) {

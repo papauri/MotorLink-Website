@@ -12,9 +12,9 @@ class AICarChat {
         this.currentUser = null;
         this.isSending = false;
         this.retryCount = 0;
-        this.maxRetries = 5; // Reasonable retry limit — stop after 5 attempts
-        this.baseRetryDelay = 2000; // Start with 2 seconds
-        this.maxRetryDelay = 15000; // Max 15 seconds between retries
+        this.maxRetries = 2; // Keep retries short to avoid long waits on mobile connections
+        this.baseRetryDelay = 1200; // Start with ~1.2 seconds
+        this.maxRetryDelay = 6000; // Cap delay at 6 seconds
         this.currentRetryTimeout = null;
         this.pendingMessage = null;
         this._lastDragWasMove = false;
