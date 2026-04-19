@@ -6957,8 +6957,9 @@ function handleTriggerAIWebLearning($db) {
         $input = json_decode(file_get_contents('php://input'), true);
         $count = isset($input['count']) ? (int)$input['count'] : 20;
         $provider = isset($input['provider']) ? trim($input['provider']) : 'auto';
+        $model = isset($input['model']) ? trim((string)$input['model']) : null;
         
-        $result = learnWebCacheTopics($db, $count, $provider);
+        $result = learnWebCacheTopics($db, $count, $provider, $model);
         
         if ($result['success']) {
             logActivity($db, 'ai_learning', 'AI Web Cache Learning', "Learned {$result['learned']} topics", $_SESSION['admin_id'] ?? null);
@@ -7002,8 +7003,9 @@ function handleTriggerAIPartsLearning($db) {
         $input = json_decode(file_get_contents('php://input'), true);
         $count = isset($input['count']) ? (int)$input['count'] : 500;
         $provider = isset($input['provider']) ? trim($input['provider']) : 'auto';
+        $model = isset($input['model']) ? trim((string)$input['model']) : null;
         
-        $result = learnPartsCacheTopics($db, $count, $provider);
+        $result = learnPartsCacheTopics($db, $count, $provider, $model);
         
         if ($result['success']) {
             logActivity($db, 'ai_learning', 'AI Parts Cache Learning', "Learned {$result['learned']} parts", $_SESSION['admin_id'] ?? null);
@@ -7081,6 +7083,11 @@ function handleSaveAILearningSettings($db) {
     requireAdmin();
     
     try {
+        require_once __DIR__ . '/../ai-learning-api.php';
+        if (function_exists('ensureAILearningSchema')) {
+            ensureAILearningSchema($db);
+        }
+
         $input = json_decode(file_get_contents('php://input'), true);
         
         $openaiEnabled = isset($input['openai_enabled']) ? (int)$input['openai_enabled'] : 1;
@@ -7088,12 +7095,16 @@ function handleSaveAILearningSettings($db) {
         $qwenEnabled = isset($input['qwen_enabled']) ? (int)$input['qwen_enabled'] : 1;
         $glmEnabled = isset($input['glm_enabled']) ? (int)$input['glm_enabled'] : 1;
         $aiProvider = isset($input['ai_provider']) ? trim($input['ai_provider']) : 'glm';
+        $learningModelName = trim((string)($input['learning_model_name'] ?? ''));
         $webCacheLimit = isset($input['web_cache_limit']) ? (int)$input['web_cache_limit'] : 20;
         $partsCacheLimit = isset($input['parts_cache_limit']) ? (int)$input['parts_cache_limit'] : 500;
         
         // Validate
         if (!in_array($aiProvider, ['openai', 'deepseek', 'qwen', 'glm', 'auto'], true)) {
             throw new Exception('Invalid AI provider. Must be openai, deepseek, qwen, glm, or auto');
+        }
+        if ($learningModelName !== '' && (strlen($learningModelName) > 120 || !preg_match('/^[a-zA-Z0-9._:-]+$/', $learningModelName))) {
+            throw new Exception('Invalid learning model name format. Use letters, numbers, dot, underscore, dash, and colon only (max 120 chars).');
         }
         if ($webCacheLimit < 1 || $webCacheLimit > 1000) {
             throw new Exception('Web cache limit must be between 1 and 1000');
@@ -7124,6 +7135,11 @@ function handleSaveAILearningSettings($db) {
             // Column exists, ignore
         }
         try {
+            $db->exec("ALTER TABLE ai_chat_settings ADD COLUMN learning_model_name VARCHAR(120) DEFAULT 'glm-4.7-flash'");
+        } catch (Exception $e) {
+            // Column exists, ignore
+        }
+        try {
             $db->exec("ALTER TABLE ai_chat_settings ADD COLUMN qwen_enabled TINYINT(1) DEFAULT 1");
         } catch (Exception $e) {
             // Column exists, ignore
@@ -7143,6 +7159,15 @@ function handleSaveAILearningSettings($db) {
         } catch (Exception $e) {
             // Column exists, ignore
         }
+
+        $db->prepare("
+            INSERT INTO ai_chat_settings (
+                id, ai_provider, model_name, openai_enabled, deepseek_enabled, qwen_enabled, glm_enabled,
+                learning_ai_provider, learning_model_name, web_cache_daily_limit, parts_cache_daily_limit, enabled
+            )
+            VALUES (1, 'glm', 'glm-4.7-flash', 1, 1, 1, 1, 'glm', 'glm-4.7-flash', 20, 500, 1)
+            ON DUPLICATE KEY UPDATE id = id
+        ")->execute();
         
         // Update settings
         $stmt = $db->prepare("
@@ -7152,6 +7177,7 @@ function handleSaveAILearningSettings($db) {
                 qwen_enabled = ?,
                 glm_enabled = ?,
                 learning_ai_provider = ?,
+                learning_model_name = ?,
                 web_cache_daily_limit = ?,
                 parts_cache_daily_limit = ?,
                 updated_at = NOW(),
@@ -7164,13 +7190,14 @@ function handleSaveAILearningSettings($db) {
             $qwenEnabled,
             $glmEnabled,
             $aiProvider,
+            $learningModelName !== '' ? $learningModelName : null,
             $webCacheLimit,
             $partsCacheLimit,
             $_SESSION['admin_id'] ?? null
         ]);
         
         logActivity($db, 'settings_update', 'AI Learning Settings Updated', 
-            "Provider: {$aiProvider}, Web Limit: {$webCacheLimit}, Parts Limit: {$partsCacheLimit}", 
+            "Provider: {$aiProvider}, Model: " . ($learningModelName !== '' ? $learningModelName : 'provider-default') . ", Web Limit: {$webCacheLimit}, Parts Limit: {$partsCacheLimit}", 
             $_SESSION['admin_id'] ?? null);
         
         echo json_encode(['success' => true, 'message' => 'Settings saved successfully']);

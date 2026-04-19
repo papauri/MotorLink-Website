@@ -3,12 +3,9 @@
  * AI Learning API
  * Handles automatic and manual learning for ai_web_cache and ai_parts_cache tables
  */
-
 // Don't require api-common.php - it sends headers and conflicts with admin API
 // The functions in this file don't use getDB() - they receive $db as a parameter
 // This allows the file to be used from both main API and admin API
-
-// API keys are loaded from database settings for security.
 
 function getSupportedAIProviders() {
     return ['openai', 'deepseek', 'qwen', 'glm'];
@@ -119,6 +116,50 @@ function getAILearningProviderFallbackModels($provider, $currentModel = '') {
     }));
 }
 
+function ensureAILearningSchema($db) {
+    static $schemaEnsured = false;
+
+    if ($schemaEnsured || !($db instanceof PDO)) {
+        return;
+    }
+
+    $alterStatements = [
+        "ALTER TABLE ai_chat_settings ADD COLUMN learning_ai_provider VARCHAR(20) DEFAULT 'auto'",
+        "ALTER TABLE ai_chat_settings ADD COLUMN learning_model_name VARCHAR(120) DEFAULT 'glm-4.7-flash'",
+        "ALTER TABLE ai_chat_settings ADD COLUMN web_cache_daily_limit INT DEFAULT 20",
+        "ALTER TABLE ai_chat_settings ADD COLUMN parts_cache_daily_limit INT DEFAULT 500",
+        "ALTER TABLE ai_web_cache ADD COLUMN learning_provider VARCHAR(20) DEFAULT NULL",
+        "ALTER TABLE ai_web_cache ADD COLUMN learning_model VARCHAR(120) DEFAULT NULL",
+        "ALTER TABLE ai_web_cache ADD COLUMN learning_status VARCHAR(20) DEFAULT 'learned'",
+        "ALTER TABLE ai_parts_cache ADD COLUMN learning_provider VARCHAR(20) DEFAULT NULL",
+        "ALTER TABLE ai_parts_cache ADD COLUMN learning_model VARCHAR(120) DEFAULT NULL",
+        "ALTER TABLE ai_parts_cache ADD COLUMN learning_status VARCHAR(20) DEFAULT 'learned'"
+    ];
+
+    foreach ($alterStatements as $statement) {
+        try {
+            $db->exec($statement);
+        } catch (Exception $e) {
+            // Column already exists or the table is managed elsewhere.
+        }
+    }
+
+    try {
+        $db->prepare("
+            INSERT INTO ai_chat_settings (
+                id, ai_provider, model_name, openai_enabled, deepseek_enabled, qwen_enabled, glm_enabled,
+                learning_ai_provider, learning_model_name, web_cache_daily_limit, parts_cache_daily_limit, enabled
+            )
+            VALUES (1, 'glm', 'glm-4.7-flash', 1, 1, 1, 1, 'glm', 'glm-4.7-flash', 20, 500, 1)
+            ON DUPLICATE KEY UPDATE id = id
+        ")->execute();
+    } catch (Exception $e) {
+        error_log('ensureAILearningSchema seed row error: ' . $e->getMessage());
+    }
+
+    $schemaEnsured = true;
+}
+
 function extractAILearningProviderError($provider, $responseBody, $httpCode) {
     $provider = normalizeAIProvider($provider);
     $label = getAIProviderLabel($provider);
@@ -155,6 +196,161 @@ function extractAILearningProviderError($provider, $responseBody, $httpCode) {
     }
 
     return $fallbackMessage;
+}
+
+function isAILearningRateLimitError($message, $responseBody = '', $httpCode = 0) {
+    $haystacks = [
+        strtolower(trim((string)$message)),
+        strtolower(trim((string)$responseBody))
+    ];
+
+    if ((int)$httpCode === 429) {
+        return true;
+    }
+
+    foreach ($haystacks as $haystack) {
+        if ($haystack === '') {
+            continue;
+        }
+
+        if (strpos($haystack, 'rate limit') !== false ||
+            strpos($haystack, 'rate-limited') !== false ||
+            strpos($haystack, 'too many requests') !== false ||
+            strpos($haystack, '速率限制') !== false ||
+            strpos($haystack, '请求频率') !== false ||
+            strpos($haystack, '(1302)') !== false ||
+            strpos($haystack, ' 1302') !== false) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function getAILearningProviderRetryOrder($db, array $settings, $preferredProvider, $requestedProvider = 'auto') {
+    $preferredProvider = normalizeAIProvider($preferredProvider);
+    $requestedProvider = strtolower(trim((string)$requestedProvider));
+    $configuredLearningProvider = strtolower(trim((string)($settings['ai_provider'] ?? 'auto')));
+    $chatProvider = strtolower(trim((string)($settings['chat_ai_provider'] ?? '')));
+
+    $isExplicitRequestedProvider = $requestedProvider !== '' && $requestedProvider !== 'auto';
+    $isExplicitConfiguredProvider = $configuredLearningProvider !== '' && $configuredLearningProvider !== 'auto';
+    $allowCrossProviderFallback = !$isExplicitRequestedProvider && !$isExplicitConfiguredProvider;
+
+    $ordered = [$preferredProvider];
+
+    if ($allowCrossProviderFallback && in_array($chatProvider, getSupportedAIProviders(), true)) {
+        $ordered[] = $chatProvider;
+    }
+
+    if ($allowCrossProviderFallback) {
+        foreach (['openai', 'deepseek', 'qwen', 'glm'] as $provider) {
+            $ordered[] = $provider;
+        }
+    }
+
+    $candidates = [];
+    foreach (array_values(array_unique($ordered)) as $provider) {
+        if (!isAIProviderEnabledInSettings($settings, $provider)) {
+            continue;
+        }
+
+        if (!getAPIKey($db, $provider)) {
+            continue;
+        }
+
+        $candidates[] = $provider;
+    }
+
+    return !empty($candidates) ? $candidates : [$preferredProvider];
+}
+
+function callAILearningAPIWithFallback($db, array $settings, $provider, $messages, $model = null, $requestedProvider = 'auto') {
+    $providerOrder = getAILearningProviderRetryOrder($db, $settings, $provider, $requestedProvider);
+    $fallbackNotes = [];
+    $lastResponse = null;
+
+    foreach ($providerOrder as $candidateProvider) {
+        $response = callAILearningAPI($db, $candidateProvider, $messages, $candidateProvider === normalizeAIProvider($provider) ? $model : null);
+
+        if (!isset($response['error'])) {
+            $response['provider_used'] = $candidateProvider;
+            if (!empty($fallbackNotes)) {
+                $response['fallback_notes'] = $fallbackNotes;
+            }
+            return $response;
+        }
+
+        $lastResponse = $response;
+        if (!isAILearningRateLimitError($response['error'] ?? '', $response['response'] ?? '')) {
+            $response['provider_used'] = $candidateProvider;
+            if (!empty($fallbackNotes)) {
+                $response['fallback_notes'] = $fallbackNotes;
+            }
+            return $response;
+        }
+
+        if (count($providerOrder) > 1) {
+            $fallbackNotes[] = getAIProviderLabel($candidateProvider) . ' is rate-limiting learning requests right now; trying the next enabled provider.';
+        }
+    }
+
+    $lastResponse = is_array($lastResponse) ? $lastResponse : ['error' => 'No enabled AI learning provider was available'];
+    $lastResponse['fallback_notes'] = $fallbackNotes;
+    return $lastResponse;
+}
+
+function isAILearningBatchRateLimited(array $responses) {
+    if (empty($responses)) {
+        return false;
+    }
+
+    $successfulResponses = 0;
+    $errorResponses = 0;
+    $rateLimitedResponses = 0;
+
+    foreach ($responses as $response) {
+        if (is_array($response) && !isset($response['error'])) {
+            $successfulResponses++;
+            continue;
+        }
+
+        $errorResponses++;
+        if (isAILearningRateLimitError($response['error'] ?? '')) {
+            $rateLimitedResponses++;
+        }
+    }
+
+    return $successfulResponses === 0 && $errorResponses > 0 && $rateLimitedResponses === $errorResponses;
+}
+
+function callAILearningAPIBatchWithFallback($db, array $settings, $provider, array $requests, $model = null, $requestedProvider = 'auto') {
+    $providerOrder = getAILearningProviderRetryOrder($db, $settings, $provider, $requestedProvider);
+    $fallbackNotes = [];
+    $lastResponses = [];
+
+    foreach ($providerOrder as $candidateProvider) {
+        $responses = callAILearningAPIBatch($db, $candidateProvider, $requests, $candidateProvider === normalizeAIProvider($provider) ? $model : null);
+        $lastResponses = $responses;
+
+        if (!isAILearningBatchRateLimited($responses)) {
+            return [
+                'responses' => $responses,
+                'provider_used' => $candidateProvider,
+                'fallback_notes' => $fallbackNotes
+            ];
+        }
+
+        if (count($providerOrder) > 1) {
+            $fallbackNotes[] = getAIProviderLabel($candidateProvider) . ' is rate-limiting learning requests right now; trying the next enabled provider.';
+        }
+    }
+
+    return [
+        'responses' => $lastResponses,
+        'provider_used' => normalizeAIProvider($provider),
+        'fallback_notes' => $fallbackNotes
+    ];
 }
 
 function isAILearningMissingModelError($provider, $httpCode, $responseBody) {
@@ -221,6 +417,102 @@ function resolveEffectiveAILearningProvider(array $settings, $requestedProvider 
     }
 
     return normalizeAIProvider($settings['chat_ai_provider'] ?? 'openai');
+}
+
+function resolveEffectiveAILearningModel(array $settings, $provider, $requestedModel = null) {
+    $provider = normalizeAIProvider($provider);
+    $fallbackModel = getAIProviderEndpointAndDefaultModel($provider)['default_model'];
+    $requestedModel = trim((string)$requestedModel);
+
+    if ($requestedModel !== '' && !in_array(strtolower($requestedModel), ['auto', '__auto__'], true)) {
+        return normalizeAILearningModelName($provider, $requestedModel, $fallbackModel);
+    }
+
+    return normalizeAILearningModelName($provider, $settings['learning_model_name'] ?? '', $fallbackModel);
+}
+
+function buildAILearningSourcesJson($providerUsed, $modelUsed, $snippet, $title = null) {
+    $providerUsed = trim((string)$providerUsed);
+    $modelUsed = trim((string)$modelUsed);
+
+    if ($title === null || trim((string)$title) === '') {
+        $title = $providerUsed === 'database'
+            ? 'MotorLink Database'
+            : 'AI Research - ' . getAIProviderLabel($providerUsed !== '' ? $providerUsed : 'openai');
+    }
+
+    $payload = [
+        'title' => $title,
+        'link' => null,
+        'snippet' => $snippet
+    ];
+
+    if ($providerUsed !== '') {
+        $payload['provider'] = $providerUsed;
+    }
+    if ($modelUsed !== '') {
+        $payload['model'] = $modelUsed;
+    }
+
+    return json_encode([$payload]);
+}
+
+function insertAIWebCacheRecord($db, $queryHash, $queryText, $summary, $sourcesJson, $learningProvider = null, $learningModel = null, $learningStatus = 'learned') {
+    ensureAILearningSchema($db);
+
+    $stmt = $db->prepare("
+        INSERT INTO ai_web_cache (
+            query_hash, query_text, summary, sources_json,
+            learning_provider, learning_model, learning_status,
+            created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    ");
+
+    $stmt->execute([
+        $queryHash,
+        $queryText,
+        $summary,
+        $sourcesJson,
+        $learningProvider,
+        $learningModel,
+        $learningStatus
+    ]);
+}
+
+function insertAIPartsCacheRecord($db, array $payload) {
+    ensureAILearningSchema($db);
+
+    $stmt = $db->prepare("
+        INSERT INTO ai_parts_cache (
+            make_name, model_name, year, part_name, part_number, oem_number, price_usd,
+            description, compatibility, specifications, cross_reference,
+            query_hash, summary, sources_json,
+            learning_provider, learning_model, learning_status,
+            created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    ");
+
+    $stmt->execute([
+        $payload['make_name'] ?? null,
+        $payload['model_name'] ?? null,
+        $payload['year'] ?? null,
+        $payload['part_name'] ?? null,
+        $payload['part_number'] ?? null,
+        $payload['oem_number'] ?? null,
+        $payload['price_usd'] ?? null,
+        $payload['description'] ?? null,
+        $payload['compatibility'] ?? null,
+        $payload['specifications'] ?? null,
+        $payload['cross_reference'] ?? null,
+        $payload['query_hash'] ?? null,
+        $payload['summary'] ?? null,
+        $payload['sources_json'] ?? null,
+        $payload['learning_provider'] ?? null,
+        $payload['learning_model'] ?? null,
+        $payload['learning_status'] ?? 'learned'
+    ]);
 }
 
 function getLearningPriorityModelsFromDatabase($db, $limit = 100) {
@@ -352,6 +644,7 @@ function executeAILearningAPIRequest($provider, $url, $apiKey, $messages, $model
  */
 function getAILearningSettings($db) {
     try {
+        ensureAILearningSchema($db);
         $stmt = $db->prepare("SELECT * FROM ai_chat_settings WHERE id = 1");
         $stmt->execute();
         $settings = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -363,6 +656,7 @@ function getAILearningSettings($db) {
                 'qwen_enabled' => 1,
                 'glm_enabled' => 1,
                 'ai_provider' => 'glm',
+                'learning_model_name' => 'glm-4.7-flash',
                 'chat_ai_provider' => 'glm',
                 'web_cache_limit' => 20,
                 'parts_cache_limit' => 500
@@ -374,6 +668,12 @@ function getAILearningSettings($db) {
             $learningProvider = 'auto';
         }
         $chatProvider = normalizeAIProvider($settings['ai_provider'] ?? 'openai');
+        $modelProvider = $learningProvider !== 'auto' ? $learningProvider : $chatProvider;
+        $learningModel = normalizeAILearningModelName(
+            $modelProvider,
+            $settings['learning_model_name'] ?? '',
+            getAIProviderEndpointAndDefaultModel($modelProvider)['default_model']
+        );
         
         return [
             'openai_enabled' => (int)($settings['openai_enabled'] ?? 1),
@@ -381,6 +681,7 @@ function getAILearningSettings($db) {
             'qwen_enabled' => (int)($settings['qwen_enabled'] ?? 1),
             'glm_enabled' => (int)($settings['glm_enabled'] ?? 1),
             'ai_provider' => $learningProvider,
+            'learning_model_name' => $learningModel,
             'chat_ai_provider' => $chatProvider,
             'web_cache_limit' => (int)($settings['web_cache_daily_limit'] ?? 20),
             'parts_cache_limit' => (int)($settings['parts_cache_daily_limit'] ?? 500)
@@ -393,6 +694,7 @@ function getAILearningSettings($db) {
             'qwen_enabled' => 1,
             'glm_enabled' => 1,
             'ai_provider' => 'glm',
+            'learning_model_name' => 'glm-4.7-flash',
             'chat_ai_provider' => 'glm',
             'web_cache_limit' => 20,
             'parts_cache_limit' => 500
@@ -812,6 +1114,7 @@ function buildIntentionalDatabaseCarQueries(array $row) {
  */
 function learnWebCacheFromDatabaseCars($db, $count = 300) {
     try {
+        ensureAILearningSchema($db);
         $target = max(1, min((int)$count, 5000));
         $modelFetchLimit = max(50, (int)ceil($target / 2));
 
@@ -878,16 +1181,8 @@ function learnWebCacheFromDatabaseCars($db, $count = 300) {
                 }
 
                 try {
-                    $sourcesJson = json_encode([
-                        [
-                            'title' => 'MotorLink Database',
-                            'link' => null,
-                            'snippet' => 'Structured data from MotorLink car_models'
-                        ]
-                    ]);
-
-                    $insert = $db->prepare("INSERT INTO ai_web_cache (query_hash, query_text, summary, sources_json, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())");
-                    $insert->execute([$queryHash, $queryText, $summary, $sourcesJson]);
+                    $sourcesJson = buildAILearningSourcesJson('database', 'database_seed', 'Structured data from MotorLink car_models', 'MotorLink Database');
+                    insertAIWebCacheRecord($db, $queryHash, $queryText, $summary, $sourcesJson, 'database', 'database_seed', 'seeded');
 
                     incrementLearningTelemetry($db, 'success');
                     $learned++;
@@ -918,11 +1213,13 @@ function learnWebCacheFromDatabaseCars($db, $count = 300) {
 /**
  * Learn topics for ai_web_cache (general car topics)
  */
-function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
+function learnWebCacheTopics($db, $count = 20, $provider = 'openai', $model = null) {
     try {
         $settings = getAILearningSettings($db);
         $limit = min($count, $settings['web_cache_limit']);
+        $requestedProvider = strtolower(trim((string)$provider));
         $provider = resolveEffectiveAILearningProvider($settings, $provider);
+        $resolvedModel = resolveEffectiveAILearningModel($settings, $provider, $model);
         
         if (!isAIProviderEnabledInSettings($settings, $provider)) {
             return ['success' => false, 'message' => getAIProviderLabel($provider) . ' is disabled in settings'];
@@ -979,8 +1276,11 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
                 'content' => 'Generate ' . $remainingToLearn . ' car-related topics to learn about. Focus on maintenance, ownership, repairs, diagnostics, and safety topics that complement manufacturer specifications.'
             ]
         ];
-        
-        $response = callAILearningAPI($db, $provider, $messages);
+
+        $response = callAILearningAPIWithFallback($db, $settings, $provider, $messages, $resolvedModel, $requestedProvider);
+        if (!empty($response['fallback_notes'])) {
+            $errors = array_merge($errors, $response['fallback_notes']);
+        }
         if (isset($response['error'])) {
             if ($learned > 0) {
                 $errors[] = $response['error'];
@@ -1081,7 +1381,12 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
             }
             
             // Make concurrent API calls
-            $responses = callAILearningAPIBatch($db, $provider, $messagesBatch);
+            $batchResult = callAILearningAPIBatchWithFallback($db, $settings, $provider, $messagesBatch, $resolvedModel, $requestedProvider);
+            $responses = $batchResult['responses'] ?? [];
+            $providerUsedForBatch = $batchResult['provider_used'] ?? $provider;
+            if (!empty($batchResult['fallback_notes'])) {
+                $errors = array_merge($errors, $batchResult['fallback_notes']);
+            }
             
             // Process results
             foreach ($batch as $idx => $topic) {
@@ -1095,15 +1400,12 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
                 
                 $queryHash = $hashBatch[$idx];
                 $summary = $response['content'];
-                $sourcesJson = json_encode([['title' => 'AI Research - ' . ucfirst($provider), 'link' => null, 'snippet' => 'AI-generated content']]);
+                $modelUsedForRow = $response['model_used'] ?? $resolvedModel;
+                $sourcesJson = buildAILearningSourcesJson($providerUsedForBatch, $modelUsedForRow, 'AI-generated content');
                 
                 // Insert into database
                 try {
-                    $stmt = $db->prepare("
-                        INSERT INTO ai_web_cache (query_hash, query_text, summary, sources_json, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, NOW(), NOW())
-                    ");
-                    $stmt->execute([$queryHash, $topic, $summary, $sourcesJson]);
+                    insertAIWebCacheRecord($db, $queryHash, $topic, $summary, $sourcesJson, $providerUsedForBatch, $modelUsedForRow, 'learned');
                     
                     $learned++;
                     $learnedTopics[] = $topic;
@@ -1121,7 +1423,9 @@ function learnWebCacheTopics($db, $count = 20, $provider = 'openai') {
             'errors' => $errors,
             'learned_topics' => $learnedTopics
         ];
-        
+    } catch (Throwable $e) {
+        error_log("Error learning web cache topics: " . $e->getMessage());
+        return ['success' => false, 'message' => $e->getMessage()];
     } catch (Exception $e) {
         error_log("Error learning web cache topics: " . $e->getMessage());
         return ['success' => false, 'message' => $e->getMessage()];
@@ -1335,40 +1639,38 @@ function parseStructuredPartLearningResponse($content, $fallbackPartName = 'Part
 /**
  * Learn a single web topic
  */
-function learnSingleWebTopic($db, $topic, $provider = 'openai') {
+function learnSingleWebTopic($db, $topic, $provider = 'openai', $model = null) {
     try {
+        $settings = getAILearningSettings($db);
+        $requestedProvider = strtolower(trim((string)$provider));
+        $provider = resolveEffectiveAILearningProvider($settings, $provider);
+        $resolvedModel = resolveEffectiveAILearningModel($settings, $provider, $model);
+
         $queryHash = hash('sha256', strtolower(trim($topic)));
-        
-        // Check if already exists
         if (queryExistsInCache($db, 'ai_web_cache', $queryHash)) {
             return ['success' => false, 'message' => 'Topic already exists in cache'];
         }
-        
+
         $messages = buildSingleWebLearningMessages($topic);
-        
-        $response = callAILearningAPI($db, $provider, $messages);
+        $response = callAILearningAPIWithFallback($db, $settings, $provider, $messages, $resolvedModel, $requestedProvider);
         if (isset($response['error'])) {
             return ['success' => false, 'message' => $response['error']];
         }
-        
+
         $summary = trim((string)($response['content'] ?? ''));
-        $sourcesJson = json_encode([[
-            'title' => 'AI Research - ' . ucfirst($provider),
-            'link' => null,
-            'snippet' => detectVehicleSpecLearningTopic($topic)
+        $providerUsed = $response['provider_used'] ?? $provider;
+        $modelUsed = $response['model_used'] ?? $resolvedModel;
+        $sourcesJson = buildAILearningSourcesJson(
+            $providerUsed,
+            $modelUsed,
+            detectVehicleSpecLearningTopic($topic)
                 ? 'AI-generated vehicle specifications research'
                 : 'AI-generated automotive knowledge'
-        ]]);
-        
-        // Insert into database
-        $stmt = $db->prepare("
-            INSERT INTO ai_web_cache (query_hash, query_text, summary, sources_json, created_at, updated_at)
-            VALUES (?, ?, ?, ?, NOW(), NOW())
-        ");
-        $stmt->execute([$queryHash, $topic, $summary, $sourcesJson]);
-        
-        return ['success' => true, 'id' => $db->lastInsertId()];
-        
+        );
+
+        insertAIWebCacheRecord($db, $queryHash, $topic, $summary, $sourcesJson, $providerUsed, $modelUsed, 'learned');
+
+        return ['success' => true, 'id' => $db->lastInsertId(), 'provider_used' => $providerUsed, 'model_used' => $modelUsed];
     } catch (Exception $e) {
         error_log("Error learning single web topic: " . $e->getMessage());
         return ['success' => false, 'message' => $e->getMessage()];
@@ -1378,11 +1680,13 @@ function learnSingleWebTopic($db, $topic, $provider = 'openai') {
 /**
  * Learn topics for ai_parts_cache (car parts and part numbers)
  */
-function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
+function learnPartsCacheTopics($db, $count = 500, $provider = 'openai', $model = null) {
     try {
         $settings = getAILearningSettings($db);
         $limit = min($count, $settings['parts_cache_limit']);
+        $requestedProvider = strtolower(trim((string)$provider));
         $provider = resolveEffectiveAILearningProvider($settings, $provider);
+        $resolvedModel = resolveEffectiveAILearningModel($settings, $provider, $model);
 
         if (!isAIProviderEnabledInSettings($settings, $provider)) {
             return ['success' => false, 'message' => getAIProviderLabel($provider) . ' is disabled in settings'];
@@ -1437,7 +1741,7 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                 ]
             ];
 
-            $response = callAILearningAPI($db, $provider, $messages);
+            $response = callAILearningAPIWithFallback($db, $settings, $provider, $messages, $resolvedModel, $requestedProvider);
             if (isset($response['error'])) {
                 return ['success' => false, 'message' => $response['error']];
             }
@@ -1543,7 +1847,12 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                 ];
             }
 
-            $responses = callAILearningAPIBatch($db, $provider, $messagesBatch);
+            $batchResult = callAILearningAPIBatchWithFallback($db, $settings, $provider, $messagesBatch, $resolvedModel, $requestedProvider);
+            $responses = $batchResult['responses'] ?? [];
+            $providerUsedForBatch = $batchResult['provider_used'] ?? $provider;
+            if (!empty($batchResult['fallback_notes'])) {
+                $errors = array_merge($errors, $batchResult['fallback_notes']);
+            }
 
             foreach ($batch as $idx => $query) {
                 if ($learned >= $toLearn) break 2;
@@ -1556,7 +1865,8 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
 
                 $queryHash = $hashBatch[$idx];
                 $content = $response['content'];
-                $sourcesJson = json_encode([['title' => 'AI Research - ' . ucfirst($provider), 'link' => null, 'snippet' => 'AI-generated parts research']]);
+                $modelUsedForRow = $response['model_used'] ?? $resolvedModel;
+                $sourcesJson = buildAILearningSourcesJson($providerUsedForBatch, $modelUsedForRow, 'AI-generated parts research');
 
                 $vehicleContext = extractLearningVehicleContextFromQuery($db, $query);
                 $makeName = $vehicleContext['make'] ?? null;
@@ -1575,30 +1885,24 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
                 $summary = $partPayload['summary'];
 
                 try {
-                    $stmt = $db->prepare("
-                        INSERT INTO ai_parts_cache (
-                            make_name, model_name, year, part_name, part_number, oem_number, price_usd,
-                            description, compatibility, specifications, cross_reference,
-                            query_hash, summary, sources_json,
-                            created_at, updated_at
-                        )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-                    ");
-                    $stmt->execute([
-                        $makeName,
-                        $modelName,
-                        $year,
-                        $partName,
-                        $partNumber,
-                        $oemNumber,
-                        $priceUsd,
-                        $description,
-                        $compatibility,
-                        $specifications,
-                        $crossReference,
-                        $queryHash,
-                        $summary,
-                        $sourcesJson
+                    insertAIPartsCacheRecord($db, [
+                        'make_name' => $makeName,
+                        'model_name' => $modelName,
+                        'year' => $year,
+                        'part_name' => $partName,
+                        'part_number' => $partNumber,
+                        'oem_number' => $oemNumber,
+                        'price_usd' => $priceUsd,
+                        'description' => $description,
+                        'compatibility' => $compatibility,
+                        'specifications' => $specifications,
+                        'cross_reference' => $crossReference,
+                        'query_hash' => $queryHash,
+                        'summary' => $summary,
+                        'sources_json' => $sourcesJson,
+                        'learning_provider' => $providerUsedForBatch,
+                        'learning_model' => $modelUsedForRow,
+                        'learning_status' => 'learned'
                     ]);
 
                     $learned++;
@@ -1627,15 +1931,18 @@ function learnPartsCacheTopics($db, $count = 500, $provider = 'openai') {
 /**
  * Learn a single parts topic
  */
-function learnSinglePartTopic($db, $query, $provider = 'openai') {
+function learnSinglePartTopic($db, $query, $provider = 'openai', $model = null) {
     try {
+        $settings = getAILearningSettings($db);
+        $requestedProvider = strtolower(trim((string)$provider));
+        $provider = resolveEffectiveAILearningProvider($settings, $provider);
+        $resolvedModel = resolveEffectiveAILearningModel($settings, $provider, $model);
+
         $queryHash = hash('sha256', strtolower(trim($query)));
-        
-        // Check if already exists
         if (queryExistsInCache($db, 'ai_parts_cache', $queryHash)) {
             return ['success' => false, 'message' => 'Part query already exists in cache'];
         }
-        
+
         $vehicleContext = extractLearningVehicleContextFromQuery($db, $query);
         $makeName = $vehicleContext['make'] ?? null;
         $modelName = $vehicleContext['model'] ?? null;
@@ -1643,45 +1950,38 @@ function learnSinglePartTopic($db, $query, $provider = 'openai') {
         $fallbackPartName = buildLearningPartNameFromQuery($query, $vehicleContext);
 
         $messages = buildSinglePartLearningMessages($query);
-        
-        $response = callAILearningAPI($db, $provider, $messages);
+        $response = callAILearningAPIWithFallback($db, $settings, $provider, $messages, $resolvedModel, $requestedProvider);
         if (isset($response['error'])) {
             return ['success' => false, 'message' => $response['error']];
         }
-        
+
         $partPayload = parseStructuredPartLearningResponse($response['content'], $fallbackPartName);
         $summary = $partPayload['summary'];
-        $sourcesJson = json_encode([['title' => 'AI Research - ' . ucfirst($provider), 'link' => null, 'snippet' => 'AI-generated parts research']]);
-        
-        // Insert into database
-        $stmt = $db->prepare("
-            INSERT INTO ai_parts_cache (
-                make_name, model_name, year, part_name, part_number, oem_number, price_usd,
-                description, compatibility, specifications, cross_reference,
-                query_hash, summary, sources_json,
-                created_at, updated_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-        ");
-        $stmt->execute([
-            $makeName,
-            $modelName,
-            $year,
-            $partPayload['part_name'],
-            $partPayload['part_number'],
-            $partPayload['oem_number'],
-            $partPayload['price_usd'],
-            $partPayload['description'],
-            $partPayload['compatibility'],
-            $partPayload['specifications'],
-            $partPayload['cross_reference'],
-            $queryHash,
-            $summary,
-            $sourcesJson
+        $providerUsed = $response['provider_used'] ?? $provider;
+        $modelUsed = $response['model_used'] ?? $resolvedModel;
+        $sourcesJson = buildAILearningSourcesJson($providerUsed, $modelUsed, 'AI-generated parts research');
+
+        insertAIPartsCacheRecord($db, [
+            'make_name' => $makeName,
+            'model_name' => $modelName,
+            'year' => $year,
+            'part_name' => $partPayload['part_name'],
+            'part_number' => $partPayload['part_number'],
+            'oem_number' => $partPayload['oem_number'],
+            'price_usd' => $partPayload['price_usd'],
+            'description' => $partPayload['description'],
+            'compatibility' => $partPayload['compatibility'],
+            'specifications' => $partPayload['specifications'],
+            'cross_reference' => $partPayload['cross_reference'],
+            'query_hash' => $queryHash,
+            'summary' => $summary,
+            'sources_json' => $sourcesJson,
+            'learning_provider' => $providerUsed,
+            'learning_model' => $modelUsed,
+            'learning_status' => 'learned'
         ]);
-        
-        return ['success' => true, 'id' => $db->lastInsertId()];
-        
+
+        return ['success' => true, 'id' => $db->lastInsertId(), 'provider_used' => $providerUsed, 'model_used' => $modelUsed];
     } catch (Exception $e) {
         error_log("Error learning single part topic: " . $e->getMessage());
         return ['success' => false, 'message' => $e->getMessage()];
@@ -1691,7 +1991,7 @@ function learnSinglePartTopic($db, $query, $provider = 'openai') {
 /**
  * Learn from user query (called from ai-car-chat-api.php)
  */
-function learnFromUserQuery($db, $query, $isPartsQuery = false, $provider = 'auto') {
+function learnFromUserQuery($db, $query, $isPartsQuery = false, $provider = 'auto', $model = null) {
     try {
         incrementLearningTelemetry($db, 'attempts');
 
@@ -1709,7 +2009,7 @@ function learnFromUserQuery($db, $query, $isPartsQuery = false, $provider = 'aut
                 return ['success' => false, 'message' => 'Daily parts learning limit reached'];
             }
 
-            $result = learnSinglePartTopic($db, $query, $provider);
+            $result = learnSinglePartTopic($db, $query, $provider, $model);
             if (!empty($result['success'])) {
                 incrementLearningTelemetry($db, 'success');
             }
@@ -1722,7 +2022,7 @@ function learnFromUserQuery($db, $query, $isPartsQuery = false, $provider = 'aut
                 return ['success' => false, 'message' => 'Daily web learning limit reached'];
             }
 
-            $result = learnSingleWebTopic($db, $query, $provider);
+            $result = learnSingleWebTopic($db, $query, $provider, $model);
             if (!empty($result['success'])) {
                 incrementLearningTelemetry($db, 'success');
             }

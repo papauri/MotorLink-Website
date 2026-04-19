@@ -7636,6 +7636,31 @@ async function loadAILearningSettings() {
             if (document.getElementById('ai-provider')) {
                 document.getElementById('ai-provider').value = settings.ai_provider || 'openai';
             }
+            if (document.getElementById('ai-learning-model-name')) {
+                const learningModelSelect = document.getElementById('ai-learning-model-name');
+                const learningCustomModelInput = document.getElementById('ai-learning-custom-model-name');
+                const savedLearningModel = String(settings.learning_model_name || '').trim();
+
+                if (!savedLearningModel) {
+                    learningModelSelect.value = '__auto__';
+                    if (learningCustomModelInput) {
+                        learningCustomModelInput.value = '';
+                    }
+                } else if (Array.from(learningModelSelect.options).some(option => option.value === savedLearningModel)) {
+                    learningModelSelect.value = savedLearningModel;
+                    if (learningCustomModelInput) {
+                        learningCustomModelInput.value = '';
+                    }
+                } else {
+                    learningModelSelect.value = '__custom__';
+                    if (learningCustomModelInput) {
+                        learningCustomModelInput.value = savedLearningModel;
+                    }
+                }
+
+                syncAILearningModelInputState(savedLearningModel);
+                updateLearningModelBadge();
+            }
             if (document.getElementById('web-cache-limit-input')) {
                 document.getElementById('web-cache-limit-input').value = settings.web_cache_limit || 20;
             }
@@ -7707,6 +7732,102 @@ function getSelectedLearningProvider() {
     return providerElement.value;
 }
 
+function getProviderDefaultLearningModel(provider) {
+    const providerDefaultModels = {
+        openai: 'gpt-4o-mini',
+        deepseek: 'deepseek-chat',
+        qwen: 'qwen-plus',
+        glm: 'glm-4.7-flash'
+    };
+
+    return providerDefaultModels[provider] || 'gpt-4o-mini';
+}
+
+function syncAILearningModelInputState(prefillValue = '') {
+    const provider = getSelectedLearningProvider();
+    const modelSelect = document.getElementById('ai-learning-model-name');
+    const customModelInput = document.getElementById('ai-learning-custom-model-name');
+
+    if (!modelSelect || !customModelInput) {
+        return;
+    }
+
+    if (provider === 'auto') {
+        modelSelect.value = '__auto__';
+        modelSelect.disabled = true;
+        customModelInput.style.display = 'none';
+        customModelInput.disabled = true;
+        customModelInput.required = false;
+        customModelInput.value = '';
+        customModelInput.placeholder = 'Learning uses the resolved provider default model';
+        return;
+    }
+
+    modelSelect.disabled = false;
+    const useCustomModel = modelSelect.value === '__custom__';
+    customModelInput.style.display = useCustomModel ? 'block' : 'none';
+    customModelInput.disabled = !useCustomModel;
+    customModelInput.required = useCustomModel;
+    customModelInput.placeholder = `e.g. ${getProviderDefaultLearningModel(provider)} or another ${provider} model ID`;
+
+    if (useCustomModel && prefillValue && !customModelInput.value.trim()) {
+        customModelInput.value = prefillValue;
+    }
+
+    if (!useCustomModel) {
+        customModelInput.value = '';
+    }
+}
+
+function getSelectedLearningModelName() {
+    const provider = getSelectedLearningProvider();
+    const modelSelect = document.getElementById('ai-learning-model-name');
+    const customModelInput = document.getElementById('ai-learning-custom-model-name');
+
+    if (provider === 'auto' || !modelSelect) {
+        return '';
+    }
+
+    if (modelSelect.value === '__auto__') {
+        return '';
+    }
+
+    if (modelSelect.value === '__custom__') {
+        return customModelInput ? customModelInput.value.trim() : '';
+    }
+
+    return modelSelect.value.trim();
+}
+
+function updateLearningModelBadge() {
+    const provider = getSelectedLearningProvider();
+    const modelSelect = document.getElementById('ai-learning-model-name');
+    const badge = document.getElementById('current-learning-model-badge');
+
+    if (!modelSelect || !badge) {
+        return;
+    }
+
+    if (provider === 'auto') {
+        badge.textContent = 'Active: provider default';
+        badge.style.display = 'inline-block';
+        badge.title = 'Learning uses the resolved provider default model when AI Provider is set to Auto.';
+        return;
+    }
+
+    const selectedModel = getSelectedLearningModelName() || getProviderDefaultLearningModel(provider);
+    const selectedOption = modelSelect.options[modelSelect.selectedIndex];
+    const optionText = modelSelect.value === '__custom__'
+        ? `Custom model: ${selectedModel || 'Not set'}`
+        : (modelSelect.value === '__auto__'
+            ? `Provider default: ${getProviderDefaultLearningModel(provider)}`
+            : (selectedOption ? selectedOption.text : selectedModel));
+
+    badge.textContent = `Active: ${selectedModel || 'Not set'}`;
+    badge.style.display = 'inline-block';
+    badge.title = `Current learning model: ${optionText}`;
+}
+
 /**
  * Save AI Learning Settings
  */
@@ -7717,8 +7838,18 @@ async function saveAILearningSettings() {
         const qwenEnabled = document.getElementById('qwen-enabled').checked ? 1 : 0;
         const glmEnabled = document.getElementById('glm-enabled').checked ? 1 : 0;
         const aiProvider = getSelectedLearningProvider();
+        const learningModelName = getSelectedLearningModelName();
         const webCacheLimit = parseInt(document.getElementById('web-cache-limit-input').value);
         const partsCacheLimit = parseInt(document.getElementById('parts-cache-limit-input').value);
+
+        if (learningModelName && learningModelName.length > 120) {
+            admin.showAlert('error', 'Learning model name must be 120 characters or fewer');
+            return;
+        }
+        if (learningModelName && !/^[a-zA-Z0-9._:-]+$/.test(learningModelName)) {
+            admin.showAlert('error', 'Learning model name can use only letters, numbers, dot, underscore, dash, and colon');
+            return;
+        }
         
         // Validate
         if (isNaN(webCacheLimit) || webCacheLimit < 1 || webCacheLimit > 1000) {
@@ -7736,6 +7867,7 @@ async function saveAILearningSettings() {
             qwen_enabled: qwenEnabled,
             glm_enabled: glmEnabled,
             ai_provider: aiProvider,
+            learning_model_name: learningModelName,
             web_cache_limit: webCacheLimit,
             parts_cache_limit: partsCacheLimit
         };
@@ -7776,6 +7908,7 @@ async function triggerWebLearning() {
     const statusDiv = document.getElementById('web-learning-status');
     const count = parseInt(document.getElementById('web-learning-count').value) || 20;
     const provider = getSelectedLearningProvider();
+    const model = getSelectedLearningModelName();
     
     if (isNaN(count) || count < 1 || count > 1000) {
         admin.showAlert('error', 'Number of topics must be between 1 and 1000');
@@ -7795,17 +7928,23 @@ async function triggerWebLearning() {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({
                 count: count,
-                provider: provider
+                provider: provider,
+                model: model
             })
         });
-        
+
+        const data = await response.json().catch(() => null);
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(data?.message || `HTTP error! status: ${response.status}`);
         }
-        
-        const data = await response.json();
+
+        if (!data || typeof data !== 'object') {
+            throw new Error('Invalid response from web learning endpoint');
+        }
         
         if (data.success) {
             let learnedList = '';
@@ -7869,6 +8008,7 @@ async function triggerPartsLearning() {
     const statusDiv = document.getElementById('parts-learning-status');
     const count = parseInt(document.getElementById('parts-learning-count').value) || 500;
     const provider = getSelectedLearningProvider();
+    const model = getSelectedLearningModelName();
     
     if (isNaN(count) || count < 1 || count > 5000) {
         admin.showAlert('error', 'Number of parts must be between 1 and 5000');
@@ -7888,17 +8028,23 @@ async function triggerPartsLearning() {
             headers: {
                 'Content-Type': 'application/json'
             },
+            credentials: 'include',
             body: JSON.stringify({
                 count: count,
-                provider: provider
+                provider: provider,
+                model: model
             })
         });
-        
+
+        const data = await response.json().catch(() => null);
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(data?.message || `HTTP error! status: ${response.status}`);
         }
-        
-        const data = await response.json();
+
+        if (!data || typeof data !== 'object') {
+            throw new Error('Invalid response from parts learning endpoint');
+        }
         
         if (data.success) {
             let learnedList = '';
