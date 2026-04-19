@@ -460,6 +460,41 @@ function getAIChatProviderRetryOrder($db, $settings, $preferredProvider) {
     return !empty($retryOrder) ? $retryOrder : [$preferredProvider];
 }
 
+function getAIChatDynamicMaxTokensForMainChat(array $messages, $configuredMaxTokens) {
+    $configuredMaxTokens = (int)$configuredMaxTokens;
+    if ($configuredMaxTokens <= 0) {
+        $configuredMaxTokens = 600;
+    }
+
+    $configuredMaxTokens = min($configuredMaxTokens, 700);
+
+    $lastUserMessage = '';
+    for ($i = count($messages) - 1; $i >= 0; $i--) {
+        if (($messages[$i]['role'] ?? '') === 'user') {
+            $lastUserMessage = trim((string)($messages[$i]['content'] ?? ''));
+            break;
+        }
+    }
+
+    $normalized = strtolower($lastUserMessage);
+    $messageLength = function_exists('mb_strlen') ? mb_strlen($normalized, 'UTF-8') : strlen($normalized);
+    $isGreeting = preg_match('/^(hi|hello|hey|yo|sup|good\s+(morning|afternoon|evening)|how are you\??)$/i', $normalized) === 1;
+
+    if ($isGreeting || $messageLength <= 20) {
+        return min($configuredMaxTokens, 180);
+    }
+
+    if ($messageLength <= 120) {
+        return min($configuredMaxTokens, 320);
+    }
+
+    if ($messageLength <= 260) {
+        return min($configuredMaxTokens, 480);
+    }
+
+    return min($configuredMaxTokens, 700);
+}
+
 function callAIChatProviderForMainChat($db, $user, $messages, $settings, $preferredProvider, $configuredModelName = '') {
     if (!function_exists('curl_init')) {
         return [
@@ -471,8 +506,14 @@ function callAIChatProviderForMainChat($db, $user, $messages, $settings, $prefer
 
     $preferredProvider = normalizeAIChatProvider($preferredProvider);
     $maxTokens = (int)($settings['max_tokens_per_request'] ?? 1200);
+    if ($maxTokens <= 0) {
+        $maxTokens = 600;
+    }
+
+    $maxTokens = min($maxTokens, 700);
     $temperature = (float)($settings['temperature'] ?? 0.7);
     $providerOrder = getAIChatProviderRetryOrder($db, $settings, $preferredProvider);
+    $dynamicMaxTokens = getAIChatDynamicMaxTokensForMainChat($messages, $maxTokens);
 
     $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
     $serverAddr = $_SERVER['SERVER_ADDR'] ?? '';
@@ -511,7 +552,7 @@ function callAIChatProviderForMainChat($db, $user, $messages, $settings, $prefer
 
         $requestedModel = $provider === $preferredProvider ? trim((string)$configuredModelName) : '';
         $modelName = normalizeAIChatModelName($provider, $requestedModel, $providerConfig['default_model']);
-        $requestMaxTokens = $maxTokens;
+        $requestMaxTokens = $dynamicMaxTokens;
 
         $attempt = 0;
         while ($attempt < 2) {
@@ -537,8 +578,10 @@ function callAIChatProviderForMainChat($db, $user, $messages, $settings, $prefer
                 'Authorization: Bearer ' . $providerApiKey
             ]);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 20);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 14);
+            curl_setopt($ch, CURLOPT_LOW_SPEED_LIMIT, 1);
+            curl_setopt($ch, CURLOPT_LOW_SPEED_TIME, 12);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$disableSSL);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $disableSSL ? 0 : 2);
 
@@ -580,6 +623,18 @@ function callAIChatProviderForMainChat($db, $user, $messages, $settings, $prefer
 
                 if ($isModelError && $attempt === 1 && $modelName !== $defaultModel) {
                     error_log(getAIChatProviderLabel($provider) . " model '" . $modelName . "' failed in main chat. Retrying with default '" . $defaultModel . "'.");
+
+                    // Auto-heal misconfigured provider model to avoid repeated first-attempt failures.
+                    if ($provider === $preferredProvider && $defaultModel !== '') {
+                        try {
+                            $persistModelStmt = $db->prepare("UPDATE ai_chat_settings SET model_name = ? WHERE ai_provider = ? LIMIT 1");
+                            $persistModelStmt->execute([$defaultModel, $provider]);
+                            error_log(getAIChatProviderLabel($provider) . " model configuration auto-corrected to default '" . $defaultModel . "'.");
+                        } catch (Exception $persistEx) {
+                            error_log('Failed to auto-correct AI model setting: ' . $persistEx->getMessage());
+                        }
+                    }
+
                     $modelName = $defaultModel;
                     continue;
                 }
@@ -2209,7 +2264,7 @@ function handleAICarChat($db) {
         }
 
         $message = trim($input['message']);
-        $conversationHistory = sanitizeAIChatConversationHistory($input['conversation_history'] ?? []);
+        $conversationHistory = sanitizeAIChatConversationHistory($input['conversation_history'] ?? [], 10);
         $originalMessage = $message;
 
         ensureAIChatMemoryTables($db);
@@ -2852,16 +2907,29 @@ REMEMBER (MANDATORY WORKFLOW):
 7. **FORMAT WITH MARKDOWN**: Use **bold** for emphasis, bullet points (- item) for lists, ### for section headers. This makes responses scannable and professional.
 8. I'm always learning and improving to serve you better";
 
-        // —— Inject proven high-quality Q&A pairs from user feedback ——
-        $feedbackExamples = loadPositiveFeedbackExamples($db, 4);
-        if ($feedbackExamples) {
-            $examplesText = "\n\nLEARNED EXAMPLES (from users who found these responses helpful — study the style and accuracy):\n";
-            foreach ($feedbackExamples as $i => $ex) {
-                $n = $i + 1;
-                $examplesText .= "\nExample {$n}:\n  User asked: " . $ex['user_message'] . "\n  Good response style: " . substr($ex['ai_response'], 0, 320) . (strlen($ex['ai_response']) > 320 ? '...' : '') . "\n";
-            }
-            $systemPrompt .= $examplesText;
-        }
+        // Fast-response override: keep runtime prompt/context compact for quick replies.
+        $longTermMemoryCompact = $longTermMemoryContext !== ''
+            ? "\nUSER LONG-TERM MEMORY:\n" . substr($userMemorySummary, 0, 700)
+            : '';
+        $conversationBriefCompact = $conversationBriefContext !== ''
+            ? "\nRECENT CONVERSATION SNAPSHOT:\n" . substr($conversationBrief, 0, 600)
+            : '';
+        $recentEntityCompact = $recentEntityPromptContext !== ''
+            ? "\nRECENT MARKETPLACE ENTITIES:\n" . substr($recentEntityContext, 0, 700)
+            : '';
+        $databaseContextCompact = substr((string)$databaseContext, 0, 1600);
+        $retrievalContextCompact = substr((string)$retrievalContext, 0, 1600);
+
+        $systemPrompt = "You are {$siteName} AI Assistant for {$marketContextLabel}. Provide accurate and prompt responses.\n\n"
+            . "PRIORITIES:\n"
+            . "1. For automotive/listing/dealer/garage/hire queries, prioritize MotorLink database and retrieval context.\n"
+            . "2. If exact data is unavailable, say so briefly and provide best-effort guidance.\n"
+            . "3. Keep responses concise by default (max ~120 words) unless user asks for details.\n"
+            . "4. For greetings/short prompts, reply in 1-2 short sentences.\n"
+            . "5. Use simple markdown bullets when helpful.\n"
+            . "6. Non-automotive questions are allowed; answer briefly and clearly.\n\n"
+            . "USER CONTEXT: {$contextInfo}{$locationContext}{$longTermMemoryCompact}{$conversationBriefCompact}{$recentEntityCompact}\n"
+            . "BASE URL: {$baseUrl}{$databaseContextCompact}{$retrievalContextCompact}";
 
         // Build messages array for OpenAI API
         $messages = [
@@ -11474,6 +11542,7 @@ function getUserAIChatUsageRemaining($db, $userId) {
 
         $settings = getAIChatSettings($db);
         $requestsPerDay = (int)($settings['requests_per_day'] ?? 50);
+        $requestsPerHour = (int)($settings['requests_per_hour'] ?? 10);
         
         // Get today's usage count
         $stmt = $db->prepare("
@@ -11485,14 +11554,37 @@ function getUserAIChatUsageRemaining($db, $userId) {
         $stmt->execute([$userId]);
         $dailyUsage = $stmt->fetch(PDO::FETCH_ASSOC);
         $usedToday = (int)($dailyUsage['count'] ?? 0);
+
+        // Get usage in the last rolling hour
+        $stmt = $db->prepare("\n            SELECT COUNT(*) as count\n            FROM ai_chat_usage\n            WHERE user_id = ?\n            AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)\n        ");
+        $stmt->execute([$userId]);
+        $hourlyUsage = $stmt->fetch(PDO::FETCH_ASSOC);
+        $usedLastHour = (int)($hourlyUsage['count'] ?? 0);
+
+        $hourlyResetMinutes = null;
+        if ($usedLastHour > 0) {
+            $stmt = $db->prepare("\n                SELECT GREATEST(1, CEIL(TIMESTAMPDIFF(SECOND, NOW(), DATE_ADD(MIN(created_at), INTERVAL 1 HOUR)) / 60)) as minutes_until_reset\n                FROM ai_chat_usage\n                WHERE user_id = ?\n                AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)\n            ");
+            $stmt->execute([$userId]);
+            $resetInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!empty($resetInfo['minutes_until_reset'])) {
+                $hourlyResetMinutes = max(1, (int)$resetInfo['minutes_until_reset']);
+            }
+        }
         
         $remaining = max(0, $requestsPerDay - $usedToday);
+        $hourlyRemaining = max(0, $requestsPerHour - $usedLastHour);
         
         return [
             'used_today' => $usedToday,
             'daily_limit' => $requestsPerDay,
             'remaining' => $remaining,
-            'percentage_used' => $requestsPerDay > 0 ? round(($usedToday / $requestsPerDay) * 100, 1) : 0
+            'percentage_used' => $requestsPerDay > 0 ? round(($usedToday / $requestsPerDay) * 100, 1) : 0,
+            'used_last_hour' => $usedLastHour,
+            'hourly_limit' => $requestsPerHour,
+            'hourly_remaining' => $hourlyRemaining,
+            'hourly_percentage_used' => $requestsPerHour > 0 ? round(($usedLastHour / $requestsPerHour) * 100, 1) : 0,
+            'hourly_resets_in_minutes' => $hourlyResetMinutes
         ];
     } catch (Exception $e) {
         error_log("Error getting user AI chat usage: " . $e->getMessage());
@@ -11500,7 +11592,12 @@ function getUserAIChatUsageRemaining($db, $userId) {
             'used_today' => 0,
             'daily_limit' => 50,
             'remaining' => 50,
-            'percentage_used' => 0
+            'percentage_used' => 0,
+            'used_last_hour' => 0,
+            'hourly_limit' => 10,
+            'hourly_remaining' => 10,
+            'hourly_percentage_used' => 0,
+            'hourly_resets_in_minutes' => null
         ];
     }
 }

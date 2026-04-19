@@ -4942,7 +4942,7 @@ async function loadAIChatbot() {
                         <textarea 
                             id="aiChatInput" 
                             placeholder="Ask me anything..." 
-                            rows="1"
+                            rows="2"
                             maxlength="1500"
                         ></textarea>
                         <button class="ai-chat-send-btn" id="aiChatSendBtn">

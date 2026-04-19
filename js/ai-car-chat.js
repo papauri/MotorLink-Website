@@ -12,10 +12,11 @@ class AICarChat {
         this.currentUser = null;
         this.isSending = false;
         this.retryCount = 0;
-        this.maxRetries = 2; // Keep retries short to avoid long waits on mobile connections
-        this.baseRetryDelay = 1200; // Start with ~1.2 seconds
-        this.maxRetryDelay = 6000; // Cap delay at 6 seconds
+        this.maxRetries = 1; // Prefer fast failure over long retry loops
+        this.baseRetryDelay = 800;
+        this.maxRetryDelay = 1800;
         this.currentRetryTimeout = null;
+        this.currentSendFailsafeTimeout = null;
         this.pendingMessage = null;
         this._lastDragWasMove = false;
         this.storagePrefix = 'ai_chat';
@@ -440,6 +441,9 @@ class AICarChat {
                 this.autoResizeTextarea(e.target);
                 this.queueConversationSave();
             });
+
+            this.autoResizeTextarea(chatInput);
+            this.updateCharCount(chatInput.value.length);
         }
 
         this.ensureInputStatusElement();
@@ -742,8 +746,16 @@ class AICarChat {
     }
 
     autoResizeTextarea(textarea) {
+        if (!textarea) return;
+
+        const computedStyles = window.getComputedStyle(textarea);
+        const minHeight = parseFloat(computedStyles.minHeight) || 52;
+        const maxHeight = parseFloat(computedStyles.maxHeight) || 140;
+
         textarea.style.height = 'auto';
-        textarea.style.height = Math.min(textarea.scrollHeight, 100) + 'px';
+        const nextHeight = Math.min(Math.max(textarea.scrollHeight, minHeight), maxHeight);
+        textarea.style.height = nextHeight + 'px';
+        textarea.style.overflowY = textarea.scrollHeight > maxHeight ? 'auto' : 'hidden';
     }
 
     ensureInputStatusElement() {
@@ -800,7 +812,30 @@ class AICarChat {
         status.hidden = true;
     }
 
+    clearSendFailsafe() {
+        if (this.currentSendFailsafeTimeout) {
+            clearTimeout(this.currentSendFailsafeTimeout);
+            this.currentSendFailsafeTimeout = null;
+        }
+    }
+
+    startSendFailsafe(input, sendBtn, timeoutMs = 22000) {
+        this.clearSendFailsafe();
+        this.currentSendFailsafeTimeout = setTimeout(() => {
+            if (!this.isSending || this.currentRetryTimeout) {
+                return;
+            }
+
+            this.hideTypingIndicator();
+            this.resetInputSendState(input, sendBtn);
+            this.pendingMessage = null;
+            this.retryCount = 0;
+            this.showError('The request took too long and was stopped. Please try again.');
+        }, timeoutMs);
+    }
+
     resetInputSendState(input, sendBtn) {
+        this.clearSendFailsafe();
         this.isSending = false;
         input.disabled = false;
         if (sendBtn) sendBtn.disabled = false;
@@ -859,14 +894,15 @@ class AICarChat {
         if (sendBtn) sendBtn.disabled = true;
         this.isSending = true;
         this.setInputSendingState(true, retryAttempt);
+        this.startSendFailsafe(input, sendBtn, retryAttempt > 0 ? 24000 : 20000);
 
         // Show compact in-chat typing indicator
         this.showTypingIndicator();
 
         try {
             const controller = new AbortController();
-            // Increase timeout for retries to give more time
-            const timeoutDuration = retryAttempt > 0 ? 90000 : 60000; // 90s for retries, 60s for initial
+            // Keep timeout aligned with backend provider timeouts to avoid long hanging sends.
+            const timeoutDuration = retryAttempt > 0 ? 18000 : 14000;
             const timeoutId = setTimeout(() => controller.abort('Request timeout'), timeoutDuration);
 
             const response = await fetch(`${CONFIG.API_URL}?action=ai_car_chat`, {
@@ -880,13 +916,26 @@ class AICarChat {
                 signal: controller.signal,
                 body: JSON.stringify({
                     message: message,
-                    conversation_history: this.conversationHistory.slice(-20) // Last 20 messages for context
+                    conversation_history: this.conversationHistory.slice(-10) // Keep payload lean for faster replies
                 })
             });
 
             clearTimeout(timeoutId);
 
-            const data = await response.json();
+            const rawResponse = await response.text();
+            let data = {};
+            if (rawResponse) {
+                try {
+                    data = JSON.parse(rawResponse);
+                } catch (parseError) {
+                    data = {
+                        success: false,
+                        message: response.ok
+                            ? 'AI service returned an invalid response. Please try again.'
+                            : rawResponse.slice(0, 220)
+                    };
+                }
+            }
 
             this.hideTypingIndicator();
 
@@ -961,7 +1010,7 @@ class AICarChat {
                         return;
                     }
 
-                    const isRetryableError = response.status === 503 || response.status >= 500;
+                    const isRetryableError = response.status === 503;
                     
                     if (isRetryableError) {
                         // For retryable errors, keep retrying with exponential backoff
@@ -1014,6 +1063,7 @@ class AICarChat {
         } catch (error) {
             this.hideTypingIndicator();
             console.error('AI Chat Error:', error);
+            const errorMessageText = typeof error?.message === 'string' ? error.message : '';
 
             // Check if it's a timeout
             if (error.name === 'AbortError') {
@@ -1041,10 +1091,12 @@ class AICarChat {
                     this.retryCount = 0;
                     this.showError('Request timed out. Please check your connection and try again.');
                 }
+
+                return;
             }
 
             // Check if it's a network error
-            if (error.name === 'TypeError' || error.name === 'NetworkError' || error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+            if (error.name === 'TypeError' || error.name === 'NetworkError' || errorMessageText.includes('fetch') || errorMessageText.includes('Failed to fetch')) {
                 if (retryAttempt < this.maxRetries) {
                     // Retry network errors with exponential backoff
                     const exponentialDelay = this.baseRetryDelay * Math.pow(2, Math.min(retryAttempt, 5));
@@ -1070,6 +1122,8 @@ class AICarChat {
                     this.retryCount = 0;
                     this.showError('Network error. Please check your connection and try again.');
                 }
+
+                return;
             }
 
             // Other errors - don't retry, just show error
@@ -1094,6 +1148,7 @@ class AICarChat {
             clearTimeout(this.currentRetryTimeout);
             this.currentRetryTimeout = null;
         }
+        this.clearSendFailsafe();
         this.retryCount = 0;
     }
 
@@ -1694,27 +1749,36 @@ class AICarChat {
                     const usageText = document.getElementById('aiUsageText');
                     
                     if (usageIndicator && usageText) {
-                        const remaining = usage.remaining;
-                        const limit = usage.daily_limit;
-                        const percentage = usage.percentage_used;
+                        const remaining = Number(usage.remaining ?? 0);
+                        const limit = Number(usage.daily_limit ?? 0);
+                        const percentage = Number(usage.percentage_used ?? 0);
+                        const hourlyRemaining = Number(usage.hourly_remaining ?? 0);
+                        const hourlyLimit = Number(usage.hourly_limit ?? 0);
+                        const hourlyPercentage = Number(usage.hourly_percentage_used ?? 0);
+                        const hourlyResetsInMinutes = Number(usage.hourly_resets_in_minutes ?? 0);
+                        const highestUsagePercent = Math.max(percentage, hourlyPercentage);
                         
                         // Color coding: green (>50% left), orange (25-50%), red (<25%)
                         let color = '#4caf50'; // Green
                         let bgColor = '#e8f5e9'; // Light green background
                         let icon = '✓';
                         
-                        if (percentage >= 75) {
+                        if (highestUsagePercent >= 75) {
                             color = '#f44336'; // Red
                             bgColor = '#ffebee'; // Light red background
                             icon = '⚠';
-                        } else if (percentage >= 50) {
+                        } else if (highestUsagePercent >= 50) {
                             color = '#ff9800'; // Orange
                             bgColor = '#fff3e0'; // Light orange background
                             icon = '⚠';
                         }
+
+                        const resetHint = (hourlyResetsInMinutes > 0)
+                            ? `<span style="color:#777; margin-left: 4px;">(hour resets in ~${hourlyResetsInMinutes}m)</span>`
+                            : '';
                         
-                        // Update text with icon
-                        usageText.innerHTML = `<span style="font-weight: 600; color: ${color};">${icon}</span> <span style="color: ${color};">${remaining}</span> / <span style="color: #666;">${limit}</span> requests left`;
+                        // Show both limits so users can see when hourly limits block requests.
+                        usageText.innerHTML = `<span style="font-weight: 600; color: ${color};">${icon}</span> Daily: <span style="color: ${color}; font-weight: 600;">${remaining}</span>/<span style="color: #666;">${limit}</span> left • Hourly: <span style="color: ${color}; font-weight: 600;">${hourlyRemaining}</span>/<span style="color: #666;">${hourlyLimit}</span> left ${resetHint}`;
                         
                         // Apply styling to the indicator container
                         usageIndicator.style.cssText = `
@@ -1723,9 +1787,13 @@ class AICarChat {
                             padding: 4px 8px;
                             background: ${bgColor};
                             border-radius: 12px;
-                            display: inline-block;
+                            display: inline-flex;
+                            align-items: center;
+                            flex-wrap: wrap;
+                            gap: 4px;
                             border: 1px solid ${color}40;
                             font-weight: 500;
+                            line-height: 1.35;
                         `;
                         
                         // Update after each message is sent

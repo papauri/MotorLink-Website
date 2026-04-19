@@ -1216,10 +1216,13 @@
     border: 2px solid #e5e5e5;
     border-radius: 24px;
     padding: 12px 18px;
+    min-height: 52px;
     font-size: 14.5px;
+    color: #1a1a1a;
+    caret-color: #00a843;
     font-family: inherit;
     resize: none;
-    max-height: 120px;
+    max-height: 140px;
     overflow-y: auto;
     outline: none;
     transition: all 0.2s ease;
@@ -1632,6 +1635,7 @@
     .ai-chat-input-wrapper textarea {
         font-size: 16px; /* Prevent zoom on iOS */
         padding: 14px 18px;
+        min-height: 56px;
         border-radius: 24px;
         border: 2px solid #e5e5e5;
         background: #fafafa;
@@ -1797,6 +1801,7 @@
     
     .ai-chat-input-wrapper textarea {
         padding: 14px 18px;
+        min-height: 56px;
         font-size: 16px;
     }
     
