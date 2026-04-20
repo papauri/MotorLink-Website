@@ -456,6 +456,10 @@ try {
             handleGetAIChatSettings($db);
             break;
 
+        case 'get_ai_provider_health':
+            handleGetAIProviderHealth($db);
+            break;
+
         case 'save_ai_chat_settings':
             handleSaveAIChatSettings($db);
             break;
@@ -6306,6 +6310,438 @@ function buildAIProviderKeySettingsPayload(array $inputKeys) {
     ];
 }
 
+function getAIProviderRuntimeDefinitions() {
+    $definitions = getAIProviderSiteSettingDefinitions();
+
+    $definitions['openai']['url'] = 'https://api.openai.com/v1/chat/completions';
+    $definitions['openai']['default_model'] = 'gpt-4o-mini';
+
+    $definitions['deepseek']['url'] = 'https://api.deepseek.com/v1/chat/completions';
+    $definitions['deepseek']['default_model'] = 'deepseek-chat';
+
+    $definitions['qwen']['url'] = 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions';
+    $definitions['qwen']['default_model'] = 'qwen-plus';
+
+    $definitions['glm']['url'] = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    $definitions['glm']['default_model'] = 'glm-4.7-flash';
+
+    return $definitions;
+}
+
+function getAIProviderSecretValues($db) {
+    ensureAIProviderSiteSettingsRows($db);
+
+    $definitions = getAIProviderSiteSettingDefinitions();
+    $settingKeys = array_values(array_map(function ($meta) {
+        return $meta['setting_key'];
+    }, $definitions));
+    $placeholders = implode(',', array_fill(0, count($settingKeys), '?'));
+    $stmt = $db->prepare("SELECT setting_key, setting_value FROM site_settings WHERE setting_key IN ($placeholders)");
+    $stmt->execute($settingKeys);
+
+    $values = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $values[$row['setting_key']] = (string)($row['setting_value'] ?? '');
+    }
+
+    $secrets = [];
+    foreach ($definitions as $provider => $meta) {
+        $secrets[$provider] = trim((string)($values[$meta['setting_key']] ?? ''));
+    }
+
+    return $secrets;
+}
+
+function getAIProviderRetryOrderSettingValue($db) {
+    try {
+        $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'ai_provider_retry_order' LIMIT 1");
+        $stmt->execute();
+        return trim((string)$stmt->fetchColumn());
+    } catch (Exception $e) {
+        error_log('getAIProviderRetryOrderSettingValue error: ' . $e->getMessage());
+        return '';
+    }
+}
+
+function parseAIProviderRetryOrderValue($rawValue, $preferredProvider) {
+    $preferredProvider = strtolower(trim((string)$preferredProvider));
+    $supportedProviders = array_keys(getAIProviderSiteSettingDefinitions());
+    $fallbackOrder = ['deepseek', 'glm', 'openai', 'qwen'];
+
+    if ($rawValue !== '') {
+        $parsedValues = preg_split('/[\s,|>]+/', strtolower($rawValue));
+        $parsedOrder = [];
+
+        foreach ((array)$parsedValues as $provider) {
+            $provider = trim((string)$provider);
+            if ($provider === '' || !in_array($provider, $supportedProviders, true)) {
+                continue;
+            }
+            $parsedOrder[] = $provider;
+        }
+
+        if (!empty($parsedOrder)) {
+            $fallbackOrder = $parsedOrder;
+        }
+    }
+
+    $ordered = [];
+    foreach (array_values(array_unique(array_merge([$preferredProvider], $fallbackOrder))) as $provider) {
+        if (in_array($provider, $supportedProviders, true)) {
+            $ordered[] = $provider;
+        }
+    }
+
+    return $ordered;
+}
+
+function getAdminApiLogTailLines($filePath, $maxBytes = 262144, $maxLines = 400) {
+    if (!is_file($filePath) || !is_readable($filePath)) {
+        return [];
+    }
+
+    $size = filesize($filePath);
+    if ($size === false) {
+        return [];
+    }
+
+    $handle = fopen($filePath, 'rb');
+    if (!$handle) {
+        return [];
+    }
+
+    $start = max(0, $size - $maxBytes);
+    if (fseek($handle, $start) !== 0) {
+        fclose($handle);
+        return [];
+    }
+
+    if ($start > 0) {
+        fgets($handle);
+    }
+
+    $lines = [];
+    while (($line = fgets($handle)) !== false) {
+        $line = trim($line);
+        if ($line !== '') {
+            $lines[] = $line;
+        }
+    }
+
+    fclose($handle);
+
+    if (count($lines) > $maxLines) {
+        $lines = array_slice($lines, -$maxLines);
+    }
+
+    return $lines;
+}
+
+function getAIProviderLogMatchPattern($provider) {
+    switch ($provider) {
+        case 'openai':
+            return '/(ChatGPT \(OpenAI\)|OpenAI)/i';
+        case 'deepseek':
+            return '/DeepSeek/i';
+        case 'qwen':
+            return '/Qwen/i';
+        case 'glm':
+            return '/GLM/i';
+        default:
+            return null;
+    }
+}
+
+function classifyAIProviderHealthState($httpCode = null, $errorMessage = '', $errorType = '', $errorCode = '', $fallbackText = '') {
+    $haystack = strtolower(trim((string)$errorMessage . ' ' . (string)$errorType . ' ' . (string)$errorCode . ' ' . (string)$fallbackText));
+    $httpCode = $httpCode !== null ? (int)$httpCode : null;
+
+    if (strpos($haystack, 'not configured') !== false) {
+        return ['status' => 'not_configured', 'message' => 'API key is not configured for this provider.'];
+    }
+
+    if ($httpCode === 402
+        || strpos($haystack, 'insufficient balance') !== false
+        || strpos($haystack, 'insufficient_quota') !== false
+        || strpos($haystack, 'insufficient credit') !== false
+        || strpos($haystack, 'insufficient funds') !== false
+        || strpos($haystack, 'exceeded your current quota') !== false
+        || strpos($haystack, 'payment required') !== false) {
+        return ['status' => 'out_of_credit', 'message' => 'Provider credits are exhausted or billing is insufficient.'];
+    }
+
+    if ($httpCode === 429
+        || strpos($haystack, 'rate limit') !== false
+        || strpos($haystack, 'too many requests') !== false
+        || strpos($haystack, 'requests per minute') !== false
+        || strpos($haystack, 'requests per day') !== false
+        || strpos($haystack, '速率限制') !== false) {
+        return ['status' => 'rate_limited', 'message' => 'Provider is rate-limiting requests right now.'];
+    }
+
+    if ($httpCode === 401
+        || strpos($haystack, 'authentication failed') !== false
+        || strpos($haystack, 'invalid api key') !== false
+        || strpos($haystack, 'incorrect api key') !== false
+        || strpos($haystack, 'unauthorized') !== false) {
+        return ['status' => 'auth_error', 'message' => 'Provider authentication failed. Check the stored API key.'];
+    }
+
+    if (($httpCode === 400 && strpos($haystack, 'model') !== false)
+        || strpos($haystack, 'not exist') !== false
+        || strpos($haystack, 'does not exist') !== false
+        || strpos($haystack, 'unknown model') !== false
+        || strpos($haystack, 'invalid model') !== false
+        || strpos($haystack, '1211') !== false) {
+        return ['status' => 'model_error', 'message' => 'The configured model is invalid or unavailable for this provider.'];
+    }
+
+    if (strpos($haystack, 'empty response content') !== false) {
+        return ['status' => 'degraded', 'message' => 'Provider responded, but returned empty content.'];
+    }
+
+    if (strpos($haystack, 'curl error') !== false
+        || strpos($haystack, 'connection error') !== false
+        || strpos($haystack, 'timed out') !== false
+        || strpos($haystack, 'timeout') !== false
+        || strpos($haystack, 'could not resolve host') !== false) {
+        return ['status' => 'connection_error', 'message' => 'Connection to the provider failed or timed out.'];
+    }
+
+    if ($httpCode !== null && $httpCode >= 500) {
+        return ['status' => 'provider_error', 'message' => 'Provider is returning server-side errors.'];
+    }
+
+    if ($httpCode !== null && $httpCode >= 400) {
+        return ['status' => 'provider_error', 'message' => 'Provider returned an API error.'];
+    }
+
+    return ['status' => 'ready', 'message' => 'Configured and enabled. No recent provider errors were detected.'];
+}
+
+function getRecentAIProviderLogHealth($provider, array $lines) {
+    $pattern = getAIProviderLogMatchPattern($provider);
+    if (!$pattern) {
+        return null;
+    }
+
+    for ($index = count($lines) - 1; $index >= 0; $index--) {
+        $line = (string)$lines[$index];
+        if (!preg_match($pattern, $line)) {
+            continue;
+        }
+
+        if (stripos($line, 'AI Chat Settings loaded') !== false) {
+            continue;
+        }
+
+        $timestamp = null;
+        $body = $line;
+        if (preg_match('/^\[([^\]]+)\]\s*(.*)$/', $line, $matches)) {
+            $timestamp = trim((string)$matches[1]);
+            $body = trim((string)$matches[2]);
+        }
+
+        $httpCode = null;
+        if (preg_match('/API HTTP\s+(\d+)/i', $body, $httpMatch)) {
+            $httpCode = (int)$httpMatch[1];
+        }
+
+        $errorType = '';
+        if (preg_match('/Type:\s*([^,\)]*)/i', $body, $typeMatch)) {
+            $errorType = trim((string)$typeMatch[1]);
+        }
+
+        $errorCode = '';
+        if (preg_match('/Code:\s*([^\)]*)/i', $body, $codeMatch)) {
+            $errorCode = trim((string)$codeMatch[1]);
+        }
+
+        $errorMessage = $body;
+        if (preg_match('/\):\s*(.+)$/', $body, $messageMatch)) {
+            $errorMessage = trim((string)$messageMatch[1]);
+        }
+
+        $classified = classifyAIProviderHealthState($httpCode, $errorMessage, $errorType, $errorCode, $body);
+
+        return [
+            'status' => $classified['status'],
+            'message' => $classified['message'],
+            'timestamp' => $timestamp,
+            'raw_line' => $line,
+            'http_code' => $httpCode,
+            'error_type' => $errorType,
+            'error_code' => $errorCode
+        ];
+    }
+
+    return null;
+}
+
+function isAdminOpenAIReasoningCapableModel($modelName) {
+    $model = strtolower(trim((string)$modelName));
+    return $model !== '' && preg_match('/^(o\d|gpt-5(?:$|[-._:]))/', $model) === 1;
+}
+
+function isAdminOpenAIGPT5ReasoningModel($modelName) {
+    $model = strtolower(trim((string)$modelName));
+    return $model !== '' && preg_match('/^gpt-5(?:$|[-._:])/', $model) === 1;
+}
+
+function isAdminDeepSeekReasonerModel($modelName) {
+    $model = strtolower(trim((string)$modelName));
+    return $model !== '' && preg_match('/^deepseek-reasoner(?:$|[-._:])/', $model) === 1;
+}
+
+function isAdminGLMFlashFamilyModel($modelName) {
+    $model = strtolower(trim((string)$modelName));
+    return $model !== '' && preg_match('/^glm-(?:4(?:\.7)?-)?flash(?:x)?(?:$|[-._:])/', $model) === 1;
+}
+
+function isAdminGLMThinkingCapableModel($modelName) {
+    $model = strtolower(trim((string)$modelName));
+    if ($model === '' || isAdminGLMFlashFamilyModel($model)) {
+        return false;
+    }
+
+    return preg_match('/^glm-(4\.5|4\.6|4\.7|5\.1)(?:$|[-._:])/', $model) === 1;
+}
+
+function buildAIProviderHealthProbePayload($provider, $modelName) {
+    $payload = [
+        'model' => $modelName,
+        'messages' => [
+            ['role' => 'system', 'content' => 'Reply with OK only.'],
+            ['role' => 'user', 'content' => 'OK?']
+        ],
+        'max_tokens' => 8,
+        'temperature' => 0
+    ];
+
+    if ($provider === 'openai' && isAdminOpenAIReasoningCapableModel($modelName)) {
+        $payload['max_completion_tokens'] = 8;
+        $payload['reasoning_effort'] = isAdminOpenAIGPT5ReasoningModel($modelName) ? 'minimal' : 'low';
+        unset($payload['max_tokens'], $payload['temperature']);
+    }
+
+    if ($provider === 'deepseek' && isAdminDeepSeekReasonerModel($modelName)) {
+        unset($payload['temperature']);
+    }
+
+    if ($provider === 'glm' && isAdminGLMThinkingCapableModel($modelName)) {
+        $payload['thinking'] = ['type' => 'disabled'];
+    }
+
+    return $payload;
+}
+
+function runAIProviderLiveHealthCheck($provider, $apiKey, $modelName, array $providerMeta) {
+    if (!function_exists('curl_init')) {
+        return [
+            'status' => 'connection_error',
+            'message' => 'cURL extension is required for live provider health checks.',
+            'http_code' => null,
+            'latency_ms' => null,
+            'checked_at' => date('c')
+        ];
+    }
+
+    $requestBody = buildAIProviderHealthProbePayload($provider, $modelName);
+    $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+    $serverAddr = $_SERVER['SERVER_ADDR'] ?? '';
+    $isLocalDev = (
+        strpos($serverHost, 'localhost') !== false
+        || strpos($serverHost, '127.0.0.1') !== false
+        || strpos($serverHost, '192.168.') !== false
+        || strpos($serverHost, '10.') !== false
+        || strpos($serverAddr, '127.0.0.1') !== false
+        || strpos($serverAddr, '::1') !== false
+        || (isset($_SERVER['REMOTE_ADDR']) && in_array($_SERVER['REMOTE_ADDR'], ['127.0.0.1', '::1'], true))
+    );
+    $disableSSL = (PHP_OS_FAMILY === 'Windows') || $isLocalDev;
+
+    $start = microtime(true);
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $providerMeta['url']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json',
+        'Authorization: Bearer ' . $apiKey
+    ]);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 4);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_LOW_SPEED_LIMIT, 1);
+    curl_setopt($ch, CURLOPT_LOW_SPEED_TIME, 8);
+    curl_setopt($ch, CURLOPT_ENCODING, '');
+    curl_setopt($ch, CURLOPT_TCP_NODELAY, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$disableSSL);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $disableSSL ? 0 : 2);
+
+    $response = curl_exec($ch);
+    $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    $curlErrno = (int)curl_errno($ch);
+    curl_close($ch);
+
+    $latencyMs = (int)round((microtime(true) - $start) * 1000);
+    $checkedAt = date('c');
+
+    if ($error || $curlErrno) {
+        $classified = classifyAIProviderHealthState(null, $error ?: curl_strerror($curlErrno), '', '', 'curl error');
+        return [
+            'status' => $classified['status'],
+            'message' => $classified['message'],
+            'http_code' => null,
+            'latency_ms' => $latencyMs,
+            'checked_at' => $checkedAt
+        ];
+    }
+
+    if ($httpCode !== 200) {
+        $errorMessage = substr((string)$response, 0, 300);
+        $errorType = '';
+        $errorCode = '';
+        $decoded = json_decode((string)$response, true);
+        if (isset($decoded['error'])) {
+            $errorMessage = trim((string)($decoded['error']['message'] ?? $errorMessage));
+            $errorType = trim((string)($decoded['error']['type'] ?? ''));
+            $errorCode = trim((string)($decoded['error']['code'] ?? ''));
+        }
+
+        $classified = classifyAIProviderHealthState($httpCode, $errorMessage, $errorType, $errorCode, (string)$response);
+        return [
+            'status' => $classified['status'],
+            'message' => $classified['message'],
+            'http_code' => $httpCode,
+            'latency_ms' => $latencyMs,
+            'checked_at' => $checkedAt
+        ];
+    }
+
+    $decoded = json_decode((string)$response, true);
+    $content = trim((string)($decoded['choices'][0]['message']['content'] ?? ''));
+
+    if ($content === '') {
+        return [
+            'status' => 'degraded',
+            'message' => 'Live check reached the provider, but the response content was empty.',
+            'http_code' => $httpCode,
+            'latency_ms' => $latencyMs,
+            'checked_at' => $checkedAt
+        ];
+    }
+
+    return [
+        'status' => 'healthy',
+        'message' => 'Live provider check succeeded.',
+        'http_code' => $httpCode,
+        'latency_ms' => $latencyMs,
+        'checked_at' => $checkedAt
+    ];
+}
+
 /**
  * Get AI Chat Settings
  */
@@ -6428,6 +6864,126 @@ function handleGetAIChatSettings($db) {
     } catch (Exception $e) {
         error_log("handleGetAIChatSettings error: " . $e->getMessage());
         echo json_encode(['success' => false, 'message' => 'Failed to get AI chat settings']);
+    }
+}
+
+function handleGetAIProviderHealth($db) {
+    requireAdmin();
+
+    try {
+        $liveCheckRequested = isset($_GET['live_check']) && (string)$_GET['live_check'] === '1';
+        $providerMeta = getAIProviderRuntimeDefinitions();
+        $providerSecrets = getAIProviderSecretValues($db);
+        $providerKeyMetadata = getAIProviderKeyMetadata($db);
+        $logLines = getAdminApiLogTailLines(__DIR__ . '/../logs/api_errors.log');
+
+        $settings = [];
+        try {
+            $stmt = $db->prepare("SELECT * FROM ai_chat_settings WHERE id = 1 LIMIT 1");
+            $stmt->execute();
+            $settings = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (Exception $e) {
+            $settings = [];
+        }
+
+        $preferredProvider = trim((string)($settings['ai_provider'] ?? 'glm'));
+        if (!isset($providerMeta[$preferredProvider])) {
+            $preferredProvider = 'glm';
+        }
+
+        $retryOrderRaw = getAIProviderRetryOrderSettingValue($db);
+        $effectiveRetryOrder = parseAIProviderRetryOrderValue($retryOrderRaw, $preferredProvider);
+        $providers = [];
+
+        foreach ($providerMeta as $provider => $meta) {
+            $enabled = (int)($settings[$provider . '_enabled'] ?? 1) === 1;
+            $configured = trim((string)($providerSecrets[$provider] ?? '')) !== '';
+            $modelName = $provider === $preferredProvider
+                ? trim((string)($settings['model_name'] ?? $meta['default_model']))
+                : $meta['default_model'];
+            if ($modelName === '') {
+                $modelName = $meta['default_model'];
+            }
+
+            $status = 'ready';
+            $statusSource = 'configuration';
+            $statusMessage = 'Configured and enabled. No recent provider errors were found in the latest API log window.';
+            $lastEvent = null;
+            $lastEventTime = null;
+            $httpCode = null;
+            $latencyMs = null;
+            $checkedAt = null;
+
+            $recentLogHealth = getRecentAIProviderLogHealth($provider, $logLines);
+            if (!$enabled) {
+                $status = 'disabled';
+                $statusMessage = 'This provider is disabled in AI chat settings.';
+            } elseif (!$configured) {
+                $status = 'not_configured';
+                $statusMessage = 'No API key is stored for this provider.';
+            } elseif ($liveCheckRequested) {
+                $liveResult = runAIProviderLiveHealthCheck($provider, $providerSecrets[$provider], $modelName, $meta);
+                $status = $liveResult['status'];
+                $statusSource = 'live_check';
+                $statusMessage = $liveResult['message'];
+                $httpCode = $liveResult['http_code'];
+                $latencyMs = $liveResult['latency_ms'];
+                $checkedAt = $liveResult['checked_at'];
+            } elseif (is_array($recentLogHealth)) {
+                $status = $recentLogHealth['status'];
+                $statusSource = 'recent_log';
+                $statusMessage = $recentLogHealth['message'];
+                $lastEvent = $recentLogHealth['raw_line'];
+                $lastEventTime = $recentLogHealth['timestamp'];
+                $httpCode = $recentLogHealth['http_code'];
+            }
+
+            if ($lastEvent === null && is_array($recentLogHealth)) {
+                $lastEvent = $recentLogHealth['raw_line'];
+                $lastEventTime = $recentLogHealth['timestamp'];
+            }
+
+            $providers[$provider] = [
+                'label' => $meta['label'],
+                'enabled' => $enabled,
+                'configured' => $configured,
+                'active_provider' => $provider === $preferredProvider,
+                'model_name' => $modelName,
+                'default_model' => $meta['default_model'],
+                'masked_key' => (string)($providerKeyMetadata[$provider]['masked'] ?? ''),
+                'status' => $status,
+                'status_source' => $statusSource,
+                'status_message' => $statusMessage,
+                'last_event' => $lastEvent,
+                'last_event_time' => $lastEventTime,
+                'http_code' => $httpCode,
+                'latency_ms' => $latencyMs,
+                'checked_at' => $checkedAt
+            ];
+        }
+
+        $usableRetryOrder = [];
+        foreach ($effectiveRetryOrder as $provider) {
+            if (!empty($providers[$provider]['enabled']) && !empty($providers[$provider]['configured'])) {
+                $usableRetryOrder[] = $provider;
+            }
+        }
+
+        echo json_encode([
+            'success' => true,
+            'checked_live' => $liveCheckRequested,
+            'current_provider' => $preferredProvider,
+            'retry_order_raw' => $retryOrderRaw,
+            'effective_retry_order' => $effectiveRetryOrder,
+            'usable_retry_order' => $usableRetryOrder,
+            'providers' => $providers
+        ]);
+    } catch (Exception $e) {
+        error_log('handleGetAIProviderHealth error: ' . $e->getMessage());
+        echo json_encode([
+            'success' => false,
+            'message' => 'Failed to load AI provider health: ' . $e->getMessage()
+        ]);
     }
 }
 

@@ -434,7 +434,30 @@ function isAIChatTokenLimitErrorResponse($httpCode, $errorMessage = '', $errorTy
 function getAIChatProviderRetryOrder($db, $settings, $preferredProvider) {
     $preferredProvider = normalizeAIChatProvider($preferredProvider);
 
-    $ordered = [$preferredProvider, 'openai', 'deepseek', 'qwen', 'glm'];
+    // Allow an operator-defined retry order via site_settings while keeping a
+    // safer default that does not jump straight from GLM into exhausted OpenAI.
+    $configuredOrder = '';
+    try {
+        $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = 'ai_provider_retry_order' LIMIT 1");
+        $stmt->execute();
+        $configuredOrder = trim((string)$stmt->fetchColumn());
+    } catch (Exception $e) {
+        $configuredOrder = '';
+    }
+
+    $fallbackOrder = ['deepseek', 'glm', 'openai', 'qwen'];
+    if ($configuredOrder !== '') {
+        $parsedOrder = preg_split('/[\s,|>]+/', strtolower($configuredOrder));
+        $parsedOrder = array_values(array_filter(array_map(static function ($provider) {
+            return in_array($provider, getSupportedAIChatProviders(), true) ? $provider : null;
+        }, (array)$parsedOrder)));
+
+        if (!empty($parsedOrder)) {
+            $fallbackOrder = $parsedOrder;
+        }
+    }
+
+    $ordered = array_values(array_unique(array_merge([$preferredProvider], $fallbackOrder)));
     $retryOrder = [];
 
     foreach (array_values(array_unique($ordered)) as $provider) {
@@ -448,10 +471,10 @@ function getAIChatProviderRetryOrder($db, $settings, $preferredProvider) {
         }
 
         $retryOrder[] = $provider;
-        // Cap at 2 providers: preferred + one safety-net fallback.
-        // Keeps happy-path fast (no extra latency) while giving resilience
-        // when the preferred provider returns empty/invalid content.
-        if (count($retryOrder) >= 2) {
+        // Cap at 3 providers: preferred + up to two safety-net fallbacks.
+        // This still respects the overall wall-clock budget but avoids a
+        // dead-end when the first fallback is out of quota or disabled.
+        if (count($retryOrder) >= 3) {
             break;
         }
     }

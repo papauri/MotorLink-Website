@@ -7073,6 +7073,204 @@ function getAIProviderKeyPayload() {
     return payload;
 }
 
+function getAIProviderHealthBadgeMeta(status) {
+    switch (status) {
+        case 'healthy':
+            return { label: 'Healthy', color: '#1b5e20', background: '#e8f5e9' };
+        case 'ready':
+            return { label: 'Ready', color: '#1565c0', background: '#e3f2fd' };
+        case 'rate_limited':
+            return { label: 'Rate limited', color: '#ef6c00', background: '#fff3e0' };
+        case 'out_of_credit':
+            return { label: 'Out of credit', color: '#c62828', background: '#ffebee' };
+        case 'auth_error':
+            return { label: 'Auth error', color: '#ad1457', background: '#fce4ec' };
+        case 'model_error':
+            return { label: 'Model error', color: '#6a1b9a', background: '#f3e5f5' };
+        case 'connection_error':
+            return { label: 'Connection issue', color: '#4e342e', background: '#efebe9' };
+        case 'provider_error':
+            return { label: 'Provider error', color: '#8d6e63', background: '#f5f5f5' };
+        case 'degraded':
+            return { label: 'Degraded', color: '#f9a825', background: '#fffde7' };
+        case 'disabled':
+            return { label: 'Disabled', color: '#616161', background: '#eeeeee' };
+        case 'not_configured':
+            return { label: 'Not configured', color: '#c62828', background: '#ffebee' };
+        default:
+            return { label: 'Unknown', color: '#455a64', background: '#eceff1' };
+    }
+}
+
+function escapeAIProviderHealthHtml(value) {
+    const text = String(value ?? '');
+    if (admin && typeof admin.escapeHtml === 'function') {
+        return admin.escapeHtml(text);
+    }
+
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function renderAIProviderHealth(data = {}) {
+    const summaryEl = document.getElementById('ai-provider-health-summary');
+    const gridEl = document.getElementById('ai-provider-health-grid');
+    if (!summaryEl || !gridEl) {
+        return;
+    }
+
+    const providers = data.providers || {};
+    const providerKeys = Object.keys(providers);
+    if (providerKeys.length === 0) {
+        summaryEl.className = 'alert alert-warning';
+        summaryEl.textContent = 'No AI provider health data is available yet.';
+        gridEl.innerHTML = '';
+        return;
+    }
+
+    const currentProviderLabel = formatAIProviderLabel(data.current_provider || '');
+    const effectiveRetryOrder = Array.isArray(data.effective_retry_order) ? data.effective_retry_order : [];
+    const usableRetryOrder = Array.isArray(data.usable_retry_order) ? data.usable_retry_order : [];
+    const checkedLive = data.checked_live === true;
+    const summaryClass = checkedLive ? 'alert alert-warning' : 'alert alert-info';
+    const effectiveOrderText = effectiveRetryOrder.length
+        ? effectiveRetryOrder.map(formatAIProviderLabel).join(' -> ')
+        : 'Not set';
+    const usableOrderText = usableRetryOrder.length
+        ? usableRetryOrder.map(formatAIProviderLabel).join(' -> ')
+        : 'No enabled and configured providers';
+    const summarySource = checkedLive
+        ? 'Source: Live provider probe'
+        : 'Source: Configuration plus recent API log events';
+
+    summaryEl.className = summaryClass;
+    summaryEl.innerHTML = `
+        <strong>Active provider:</strong> ${escapeAIProviderHealthHtml(currentProviderLabel || 'Not set')}<br>
+        <strong>Runtime retry order:</strong> ${escapeAIProviderHealthHtml(effectiveOrderText)}<br>
+        <strong>Enabled + configured now:</strong> ${escapeAIProviderHealthHtml(usableOrderText)}<br>
+        <strong>${escapeAIProviderHealthHtml(summarySource)}</strong>
+    `;
+
+    const orderedProviders = effectiveRetryOrder.length
+        ? effectiveRetryOrder.filter((provider) => providers[provider])
+        : providerKeys;
+    const unorderedProviders = providerKeys.filter((provider) => !orderedProviders.includes(provider));
+    const renderOrder = [...orderedProviders, ...unorderedProviders];
+
+    gridEl.innerHTML = renderOrder.map((provider) => {
+        const info = providers[provider] || {};
+        const badgeMeta = getAIProviderHealthBadgeMeta(info.status);
+        const sourceLabel = info.status_source === 'live_check'
+            ? 'Live check'
+            : (info.status_source === 'recent_log' ? 'Recent log' : 'Configuration');
+        const modelText = escapeAIProviderHealthHtml(info.model_name || info.default_model || 'Unknown');
+        const detailText = escapeAIProviderHealthHtml(info.status_message || 'No detail available');
+        const lastEventText = info.last_event
+            ? escapeAIProviderHealthHtml(info.last_event)
+            : 'No recent API log event found in the latest window.';
+        const checkedAtText = info.checked_at ? new Date(info.checked_at).toLocaleString() : '';
+        const metaBadges = [];
+
+        if (info.active_provider) {
+            metaBadges.push('<span style="display:inline-block;padding:4px 8px;border-radius:999px;background:#e3f2fd;color:#0d47a1;font-size:12px;font-weight:600;">Active</span>');
+        }
+        metaBadges.push(`<span style="display:inline-block;padding:4px 8px;border-radius:999px;background:${info.enabled ? '#e8f5e9' : '#eeeeee'};color:${info.enabled ? '#1b5e20' : '#616161'};font-size:12px;font-weight:600;">${info.enabled ? 'Enabled' : 'Disabled'}</span>`);
+        metaBadges.push(`<span style="display:inline-block;padding:4px 8px;border-radius:999px;background:${info.configured ? '#e8f5e9' : '#ffebee'};color:${info.configured ? '#1b5e20' : '#c62828'};font-size:12px;font-weight:600;">${info.configured ? 'Key set' : 'No key'}</span>`);
+        if (info.latency_ms !== null && info.latency_ms !== undefined) {
+            metaBadges.push(`<span style="display:inline-block;padding:4px 8px;border-radius:999px;background:#f3e5f5;color:#6a1b9a;font-size:12px;font-weight:600;">${escapeAIProviderHealthHtml(`${info.latency_ms} ms`)}</span>`);
+        }
+
+        return `
+            <div style="border:1px solid #dfe3e8;border-left:4px solid ${badgeMeta.color};border-radius:12px;padding:16px;background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:10px;">
+                    <div>
+                        <h5 style="margin:0 0 6px 0;color:#1f2933;">${escapeAIProviderHealthHtml(info.label || formatAIProviderLabel(provider))}</h5>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;">${metaBadges.join('')}</div>
+                    </div>
+                    <span style="display:inline-block;padding:6px 10px;border-radius:999px;background:${badgeMeta.background};color:${badgeMeta.color};font-size:12px;font-weight:700;white-space:nowrap;">${escapeAIProviderHealthHtml(badgeMeta.label)}</span>
+                </div>
+                <p style="margin:0 0 8px 0;color:#334e68;"><strong>Model:</strong> ${modelText}</p>
+                <p style="margin:0 0 8px 0;color:#334e68;"><strong>Health:</strong> ${detailText}</p>
+                <p style="margin:0 0 8px 0;color:#486581;"><strong>Status source:</strong> ${escapeAIProviderHealthHtml(sourceLabel)}</p>
+                <p style="margin:0 0 8px 0;color:#486581;"><strong>Stored key:</strong> ${escapeAIProviderHealthHtml(info.masked_key || 'Not configured')}</p>
+                ${checkedAtText ? `<p style="margin:0 0 8px 0;color:#486581;"><strong>Checked:</strong> ${escapeAIProviderHealthHtml(checkedAtText)}</p>` : ''}
+                <div style="margin-top:10px;padding:10px 12px;border-radius:8px;background:#f8fafc;color:#52606d;font-size:12px;line-height:1.45;word-break:break-word;">
+                    <strong>Last event:</strong><br>${lastEventText}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+async function loadAIProviderHealth(runLiveCheck = false) {
+    const summaryEl = document.getElementById('ai-provider-health-summary');
+    const refreshBtn = document.getElementById('refresh-ai-provider-health-btn');
+    const liveBtn = document.getElementById('run-ai-provider-live-check-btn');
+    const originalRefreshLabel = refreshBtn ? refreshBtn.innerHTML : '';
+    const originalLiveLabel = liveBtn ? liveBtn.innerHTML : '';
+
+    try {
+        if (refreshBtn) {
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = runLiveCheck
+                ? originalRefreshLabel
+                : '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+        }
+        if (liveBtn) {
+            liveBtn.disabled = true;
+            liveBtn.innerHTML = runLiveCheck
+                ? '<i class="fas fa-spinner fa-spin"></i> Running Live Check...'
+                : originalLiveLabel;
+        }
+        if (summaryEl) {
+            summaryEl.className = 'alert alert-info';
+            summaryEl.textContent = runLiveCheck
+                ? 'Running live provider health checks...'
+                : 'Refreshing AI provider health from configuration and recent logs...';
+        }
+
+        const apiUrl = getAdminAPIUrl();
+        const separator = apiUrl.includes('?') ? '&' : '?';
+        const liveQuery = runLiveCheck ? '&live_check=1' : '';
+        const response = await fetch(`${apiUrl}${separator}action=get_ai_provider_health${liveQuery}&_t=${Date.now()}`, {
+            credentials: 'include',
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || `Failed to load AI provider health (HTTP ${response.status})`);
+        }
+
+        renderAIProviderHealth(data);
+    } catch (error) {
+        console.error('Error loading AI provider health:', error);
+        if (summaryEl) {
+            summaryEl.className = 'alert alert-danger';
+            summaryEl.textContent = `Failed to load AI provider health: ${error.message}`;
+        }
+        if (runLiveCheck) {
+            admin.showAlert('error', 'Live AI provider check failed: ' + error.message);
+        }
+    } finally {
+        if (refreshBtn) {
+            refreshBtn.disabled = false;
+            refreshBtn.innerHTML = originalRefreshLabel;
+        }
+        if (liveBtn) {
+            liveBtn.disabled = false;
+            liveBtn.innerHTML = originalLiveLabel;
+        }
+    }
+}
+
 async function loadAIChatSettings() {
     try {
         const apiUrl = getAdminAPIUrl();
@@ -7143,7 +7341,9 @@ async function loadAIChatSettings() {
             document.getElementById('ai-requests-per-day').value = data.settings.requests_per_day || 50;
             document.getElementById('ai-requests-per-hour').value = data.settings.requests_per_hour || 10;
         }
-        
+
+        await loadAIProviderHealth(false);
+
         // Also load AI Learning settings
         await loadAILearningSettings();
     } catch (error) {
