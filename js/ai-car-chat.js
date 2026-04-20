@@ -434,6 +434,15 @@ class AICarChat {
             });
         }
 
+        // Save transcript button
+        const saveTranscriptBtn = document.getElementById('aiChatSaveTranscriptBtn');
+        if (saveTranscriptBtn) {
+            saveTranscriptBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.saveTranscript();
+            });
+        }
+
         // FAB bubble → open chat
         if (chatMinimized) {
             chatMinimized.addEventListener('click', (e) => {
@@ -876,6 +885,50 @@ class AICarChat {
         this._blockHeaderToggle = false;
     }
 
+    /**
+     * Save the current chat transcript as a text file download.
+     */
+    saveTranscript() {
+        if (!this.conversationHistory || this.conversationHistory.length === 0) {
+            this.showError('No conversation to save yet.');
+            return;
+        }
+
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10);
+        const timeStr = now.toTimeString().slice(0, 5).replace(':', '-');
+        const filename = `MotorLink-Chat-${dateStr}_${timeStr}.txt`;
+
+        let transcript = `MotorLink AI Chat Transcript\n`;
+        transcript += `Date: ${now.toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}\n`;
+        transcript += `Time: ${now.toLocaleTimeString()}\n`;
+        transcript += `${'─'.repeat(50)}\n\n`;
+
+        for (const entry of this.conversationHistory) {
+            const role = entry.role === 'user' ? 'You' : 'MotorLink AI';
+            // Strip markdown formatting for cleaner text export
+            let content = (entry.content || '').replace(/\*\*(.*?)\*\*/g, '$1')
+                .replace(/\*(.*?)\*/g, '$1')
+                .replace(/#{1,3}\s*/g, '')
+                .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+                .replace(/```[\s\S]*?```/g, (m) => m.replace(/```\w*\n?/g, '').trim());
+            transcript += `[${role}]\n${content}\n\n`;
+        }
+
+        transcript += `${'─'.repeat(50)}\n`;
+        transcript += `End of transcript — MotorLink Malawi (motorlinkmalawi.com)\n`;
+
+        const blob = new Blob([transcript], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
     async sendMessage(retryAttempt = 0, triggerSource = 'button') {
         // Check authentication before sending
         if (!this.currentUser) {
@@ -935,7 +988,7 @@ class AICarChat {
         clearTimeout(this._blockHeaderToggleTimeout);
         this._blockHeaderToggleTimeout = setTimeout(() => { this._blockHeaderToggle = false; }, 600);
         this.setInputSendingState(true, retryAttempt);
-        this.startSendFailsafe(input, sendBtn, retryAttempt > 0 ? 95000 : 65000);
+        this.startSendFailsafe(input, sendBtn, retryAttempt > 0 ? 115000 : 95000);
 
         // Show compact in-chat typing indicator
         this.showTypingIndicator();
@@ -945,8 +998,8 @@ class AICarChat {
             // Generous timeouts: complex marketplace queries (car hire, dealers with
             // multiple joins) can legitimately take 8-15s on production. Retry has
             // more headroom so we only abort truly stuck requests.
-            const base = 60000; // Increased base timeout to 60s
-            const timeoutDuration = retryAttempt > 0 ? 90000 : base; // 90s for retries
+            const base = 80000; // 80s base timeout
+            const timeoutDuration = retryAttempt > 0 ? 100000 : base; // 100s for retries
             const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
 
             const response = await fetch(`${CONFIG.API_URL}?action=ai_car_chat`, {

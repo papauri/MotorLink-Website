@@ -74,6 +74,9 @@
                     </div>
                 </div>
                 <div class="ai-chat-header-actions">
+                    <button class="ai-chat-header-btn" id="aiChatSaveTranscriptBtn" title="Save transcript" aria-label="Save chat transcript">
+                        <i class="fas fa-download"></i>
+                    </button>
                     <button class="ai-chat-header-btn ai-chat-header-minimise" id="aiChatMinimizeBtn" title="Minimise" aria-label="Minimise chat">
                         <i class="fas fa-chevron-down"></i>
                     </button>
