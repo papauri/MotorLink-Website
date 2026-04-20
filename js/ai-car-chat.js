@@ -670,6 +670,14 @@ class AICarChat {
             this.isMinimized = false;
             this.isOpen = true;
 
+            // Always snap the open widget back to the CSS default position (bottom-left).
+            // Drag is only for repositioning the minimised FAB bubble; the open widget
+            // should not inherit a dragged coordinate.
+            widget.style.left   = '';
+            widget.style.top    = '';
+            widget.style.bottom = '';
+            widget.style.right  = '';
+
             const chatInput = document.getElementById('aiChatInput');
             if (chatInput && focus) setTimeout(() => chatInput.focus(), 100);
             setTimeout(() => this.scrollToBottom(), 80);
@@ -695,6 +703,27 @@ class AICarChat {
             if (minimizedBtn) minimizedBtn.style.display = 'flex';
             this.isMinimized = true;
             this.isOpen = false;
+
+            // Restore the FAB to where the user last dragged it (if any)
+            const savedPos = (() => {
+                try { return JSON.parse(sessionStorage.getItem(this.getStorageKey('widget_pos')) || 'null'); } catch(_) { return null; }
+            })();
+            if (savedPos && typeof savedPos.left === 'number' && typeof savedPos.top === 'number') {
+                const vw = window.innerWidth;
+                const vh = window.innerHeight;
+                const safeLeft = Math.max(0, Math.min(savedPos.left, vw - 64));
+                const safeTop  = Math.max(0, Math.min(savedPos.top,  vh - 64));
+                widget.style.left   = safeLeft + 'px';
+                widget.style.top    = safeTop  + 'px';
+                widget.style.bottom = 'auto';
+                widget.style.right  = 'auto';
+            } else {
+                // No saved drag position — clear inline styles so CSS default applies
+                widget.style.left   = '';
+                widget.style.top    = '';
+                widget.style.bottom = '';
+                widget.style.right  = '';
+            }
 
             if (saveState) {
                 this.saveConversation();
