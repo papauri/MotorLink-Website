@@ -715,6 +715,7 @@ function initHeaderOverflowWatcher() {
     let releaseThreshold = 0;
     let rafId = null;
     let wasForcedMobile = false;
+    let shouldReevaluateForced = false;
 
     /* ── Ensure mobile clones exist inside nav when entering force-mobile ── */
     const ensureMobileClones = () => {
@@ -770,6 +771,7 @@ function initHeaderOverflowWatcher() {
         if (window.innerWidth <= MOBILE_MAX_WIDTH) {
             document.body.classList.remove(FORCE_CLASS);
             wasForcedMobile = false;
+            shouldReevaluateForced = false;
             return;
         }
 
@@ -779,34 +781,40 @@ function initHeaderOverflowWatcher() {
             const requiredWidth = getRequiredWidth();
             const availableWidth = header.clientWidth;
 
+            releaseThreshold = requiredWidth + RELEASE_BUFFER;
+
             if (requiredWidth > availableWidth) {
-                releaseThreshold = requiredWidth + RELEASE_BUFFER;
                 document.body.classList.add(FORCE_CLASS);
                 ensureMobileClones();
                 wasForcedMobile = true;
             }
 
+            shouldReevaluateForced = false;
+
+            return;
+        }
+
+        if (!shouldReevaluateForced && header.clientWidth < releaseThreshold) {
             return;
         }
 
         /* ── Release check ──
            Force-mobile hides nav + user-menu so we can't measure them while
-           the class is active.  Temporarily remove it, trigger a synchronous
-           reflow to measure the real desktop/tablet layout, then re-add if
-           items still overflow.  Because this all happens within a single JS
-           turn (inside a rAF callback), the browser will NOT paint the
-           intermediate state — no visual flicker.                          */
+           the class is active. Only perform the expensive remove/measure pass
+           when the header has grown enough to potentially fit again, or when a
+           DOM mutation changed the header content. This avoids reflow churn
+           that can visually flash the header.                                */
+        shouldReevaluateForced = false;
         document.body.classList.remove(FORCE_CLASS);
-        // Force synchronous reflow so getRequiredWidth reads the true layout
         const requiredWidth = getRequiredWidth();
         const availableWidth = header.clientWidth;
 
         if (requiredWidth > availableWidth) {
-            // Still overflows — stay in force-mobile (re-add same frame)
             releaseThreshold = requiredWidth + RELEASE_BUFFER;
             document.body.classList.add(FORCE_CLASS);
+            ensureMobileClones();
+            wasForcedMobile = true;
         } else {
-            // Items fit — release force-mobile for good
             if (wasForcedMobile) {
                 removeForceMobileClones();
                 wasForcedMobile = false;
@@ -814,7 +822,11 @@ function initHeaderOverflowWatcher() {
         }
     };
 
-    const scheduleUpdate = () => {
+    const scheduleUpdate = ({ forceReleaseCheck = false } = {}) => {
+        if (forceReleaseCheck) {
+            shouldReevaluateForced = true;
+        }
+
         if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => requestAnimationFrame(updateHeaderMode));
     };
@@ -830,7 +842,7 @@ function initHeaderOverflowWatcher() {
     }
 
     if (typeof MutationObserver === 'function') {
-        const mo = new MutationObserver(scheduleUpdate);
+        const mo = new MutationObserver(() => scheduleUpdate({ forceReleaseCheck: true }));
         mo.observe(header, {
             childList: true,
             subtree: true,
