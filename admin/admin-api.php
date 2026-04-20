@@ -412,6 +412,10 @@ try {
             handleSaveFuelPriceSettings($db);
             break;
 
+        case 'fetch_live_fuel_prices':
+            handleFetchLiveFuelPrices($db);
+            break;
+
         case 'get_admin_db_credentials':
             handleGetAdminDbCredentials($db);
             break;
@@ -5281,6 +5285,46 @@ function fetchAdminFuelPriceSnapshot($db, $requestedDate) {
         'source' => !empty($sources) ? implode(', ', array_values(array_unique($sources))) : '',
         'last_updated' => $mostRecentUpdated ? date('Y-m-d H:i:s', $mostRecentUpdated) : null
     ];
+}
+
+function handleFetchLiveFuelPrices($db) {
+    requireAdmin();
+
+    require_once __DIR__ . '/../includes/fuel-price-runtime.php';
+
+    try {
+        $snapshot = motorlink_resolve_fuel_price_snapshot($db, ['force_refresh' => true]);
+
+        if (($snapshot['meta']['source_key'] ?? 'none') === 'none') {
+            echo json_encode([
+                'success' => false,
+                'message' => 'Could not retrieve live fuel prices. Check that the country slug is configured in Site Settings.'
+            ]);
+            return;
+        }
+
+        $prices = [];
+        foreach (($snapshot['prices'] ?? []) as $row) {
+            $fuelType = strtolower((string)($row['fuel_type'] ?? ''));
+            if ($fuelType === '') continue;
+            $prices[$fuelType] = [
+                'mwk' => isset($row['price_per_liter_mwk']) && $row['price_per_liter_mwk'] !== '' ? (float)$row['price_per_liter_mwk'] : null,
+                'usd' => isset($row['price_per_liter_usd']) && $row['price_per_liter_usd'] !== '' && $row['price_per_liter_usd'] !== null ? (float)$row['price_per_liter_usd'] : null
+            ];
+        }
+
+        echo json_encode([
+            'success'      => true,
+            'prices'       => $prices,
+            'source_label' => $snapshot['meta']['source_label'] ?? 'Live feed',
+            'source_key'   => $snapshot['meta']['source_key'] ?? 'live',
+            'is_live'      => (bool)($snapshot['is_live'] ?? false),
+            'last_updated' => $snapshot['meta']['last_updated'] ?? null
+        ]);
+    } catch (Exception $e) {
+        error_log('handleFetchLiveFuelPrices error: ' . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Failed to fetch live fuel prices: ' . $e->getMessage()]);
+    }
 }
 
 function handleGetFuelPriceSettings($db) {

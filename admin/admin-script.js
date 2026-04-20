@@ -6991,6 +6991,52 @@ async function saveFuelSourceSettings() {
     }
 }
 
+async function fetchLiveFuelPrices() {
+    const btn = document.querySelector('[onclick="fetchLiveFuelPrices()"]');
+    const origHTML = btn ? btn.innerHTML : null;
+
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Fetching...';
+        }
+
+        const response = await admin.apiCall('fetch_live_fuel_prices', 'POST', {});
+        if (!response.success) {
+            throw new Error(response.message || 'Failed to fetch live fuel prices');
+        }
+
+        const prices = response.prices || {};
+
+        const petrolMwk = document.getElementById('fuel-price-petrol-mwk');
+        const dieselMwk = document.getElementById('fuel-price-diesel-mwk');
+        const petrolUsd = document.getElementById('fuel-price-petrol-usd');
+        const dieselUsd = document.getElementById('fuel-price-diesel-usd');
+
+        if (petrolMwk && prices.petrol?.mwk != null) petrolMwk.value = prices.petrol.mwk;
+        if (dieselMwk && prices.diesel?.mwk != null) dieselMwk.value = prices.diesel.mwk;
+        if (petrolUsd && prices.petrol?.usd != null) petrolUsd.value = prices.petrol.usd;
+        if (dieselUsd && prices.diesel?.usd != null) dieselUsd.value = prices.diesel.usd;
+
+        const sourceLabel = response.source_label || 'live feed';
+        const when = response.last_updated ? ` (${new Date(response.last_updated).toLocaleString()})` : '';
+        const summaryEl = document.getElementById('fuel-price-current-summary');
+        if (summaryEl) {
+            summaryEl.textContent = `Prices fetched from ${sourceLabel}${when}. Review and click Save Fuel Prices to confirm.`;
+        }
+
+        admin.showAlert('success', `Live prices loaded from ${sourceLabel}. Review then save.`);
+    } catch (err) {
+        console.error('Error fetching live fuel prices:', err);
+        admin.showAlert('error', err.message || 'Failed to fetch live fuel prices');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHTML || '<i class="fas fa-cloud-download-alt"></i> Fetch Live Prices';
+        }
+    }
+}
+
 async function loadSystemInfo() {
     try {
         const response = await admin.apiCall('get_system_info', 'GET', null);
