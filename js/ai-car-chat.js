@@ -363,7 +363,9 @@ class AICarChat {
             widget.classList.remove('loaded');
         } else {
             // Show widget for logged-in users
-            widget.style.display = 'block';
+            // Use '' (not 'block') so the CSS display: grid can take effect when the
+            // widget opens. An inline 'block' would override the grid rule.
+            widget.style.display = '';
             // Check if dismissed this session
             if (this.isChatDismissed()) {
                 widget.classList.add('dismissed');
@@ -670,9 +672,12 @@ class AICarChat {
             this.isMinimized = false;
             this.isOpen = true;
 
-            // Always snap the open widget back to the CSS default position (bottom-left).
+            // Snap the open widget back to the CSS default position (bottom-left).
             // Drag is only for repositioning the minimised FAB bubble; the open widget
             // should not inherit a dragged coordinate.
+            // Also clear any inline display override so CSS display:grid takes effect
+            // (setupWidgetVisibility may have set display:block for the minimised state).
+            widget.style.display = '';
             widget.style.left   = '';
             widget.style.top    = '';
             widget.style.bottom = '';
