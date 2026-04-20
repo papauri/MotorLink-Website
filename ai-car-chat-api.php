@@ -533,7 +533,15 @@ function callAIChatProviderForMainChat($db, $user, $messages, $settings, $prefer
         'message' => 'AI service is temporarily unavailable. Please try again later.'
     ];
 
+    // Wall-clock budget so we always return before the 60s client abort.
+    $overallStart = microtime(true);
+    $overallBudgetSeconds = 45;
+
     foreach ($providerOrder as $provider) {
+        if ((microtime(true) - $overallStart) >= $overallBudgetSeconds) {
+            error_log('AI main chat: overall time budget exhausted, stopping provider cascade.');
+            break;
+        }
         if (!isAIChatProviderEnabled($settings, $provider)) {
             continue;
         }
@@ -556,6 +564,12 @@ function callAIChatProviderForMainChat($db, $user, $messages, $settings, $prefer
         $attempt = 0;
         while ($attempt < 2) {
             $attempt++;
+
+            // Respect overall wall-clock budget between attempts too.
+            if ((microtime(true) - $overallStart) >= $overallBudgetSeconds) {
+                error_log('AI main chat: budget hit mid-provider, aborting ' . $provider . ' attempt ' . $attempt);
+                break 2;
+            }
 
             $requestBody = [
                 'model' => $modelName,
@@ -909,6 +923,65 @@ function loadPositiveFeedbackExamples($db, $limit = 4) {
         // Table may not exist yet — silently return empty
         return [];
     }
+}
+
+/**
+ * Load recent "not-helpful" rated responses so the model can avoid the same
+ * failure modes. Used as a lightweight self-healing signal in the system prompt.
+ */
+function loadNegativeFeedbackExamples($db, $limit = 3) {
+    try {
+        $stmt = $db->prepare(
+            "SELECT user_message, ai_response
+             FROM ai_chat_feedback
+             WHERE feedback = 'not-helpful'
+               AND LENGTH(user_message) BETWEEN 6 AND 300
+               AND LENGTH(ai_response)  BETWEEN 20 AND 1200
+             ORDER BY created_at DESC
+             LIMIT ?"
+        );
+        $stmt->execute([(int)$limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Exception $e) {
+        return [];
+    }
+}
+
+/**
+ * Build a compact self-improvement instruction block to inject into the system
+ * prompt. Summarises recent positive and negative feedback so the model learns
+ * what to do and what to avoid.
+ */
+function buildFeedbackSelfImprovementBlock($db) {
+    $positives = loadPositiveFeedbackExamples($db, 2);
+    $negatives = loadNegativeFeedbackExamples($db, 2);
+    if (empty($positives) && empty($negatives)) {
+        return '';
+    }
+
+    $out = "\nSELF-IMPROVEMENT SIGNALS (from recent user feedback):\n";
+    if (!empty($positives)) {
+        $out .= "GOOD PATTERNS (users rated these helpful — replicate this style):\n";
+        foreach ($positives as $p) {
+            $q = substr(trim((string)($p['user_message'] ?? '')), 0, 120);
+            $a = substr(trim((string)($p['ai_response']  ?? '')), 0, 200);
+            if ($q !== '' && $a !== '') {
+                $out .= "  • Q: \"{$q}\" → A: \"{$a}\"\n";
+            }
+        }
+    }
+    if (!empty($negatives)) {
+        $out .= "AVOID PATTERNS (users rated these unhelpful — do NOT answer like this):\n";
+        foreach ($negatives as $n) {
+            $q = substr(trim((string)($n['user_message'] ?? '')), 0, 120);
+            $a = substr(trim((string)($n['ai_response']  ?? '')), 0, 160);
+            if ($q !== '' && $a !== '') {
+                $out .= "  • Q: \"{$q}\" → WEAK ANSWER: \"{$a}\"\n";
+            }
+        }
+        $out .= "When faced with similar questions, produce a clearly better, more specific, and more actionable answer than the weak examples above.\n";
+    }
+    return $out;
 }
 
 function aiChatTruncateText($text, $limit = 2000) {
@@ -2975,6 +3048,29 @@ REMEMBER (MANDATORY WORKFLOW):
             . "6. Non-automotive questions are allowed; answer briefly and clearly.\n\n"
             . "USER CONTEXT: {$contextInfo}{$locationContext}{$longTermMemoryCompact}{$conversationBriefCompact}{$recentEntityCompact}\n"
             . "BASE URL: {$baseUrl}{$databaseContextCompact}{$retrievalContextCompact}";
+
+        // Append self-improvement signals from user feedback (last helpful / unhelpful patterns).
+        $feedbackBlock = buildFeedbackSelfImprovementBlock($db);
+        if ($feedbackBlock !== '') {
+            $systemPrompt .= $feedbackBlock;
+        }
+
+        // Self-healing retry: when the user rated the previous answer unhelpful,
+        // inject a critique-and-improve directive so the model avoids the rejected response.
+        $retryInput = isset($input) && is_array($input) ? $input : [];
+        $isRetryWithImprovement = !empty($retryInput['retry_with_improvement']);
+        $rejectedResponse = trim((string)($retryInput['rejected_response'] ?? ''));
+        if ($isRetryWithImprovement && $rejectedResponse !== '') {
+            $rejectedSnippet = substr($rejectedResponse, 0, 800);
+            $systemPrompt .= "\n\nSELF-HEALING MODE: The user rated your previous answer as NOT HELPFUL and asked for another attempt. "
+                . "Below is the rejected response — you MUST produce a clearly improved answer that is more specific, more useful, and takes a different angle.\n"
+                . "REJECTED ANSWER (do not repeat):\n\"" . $rejectedSnippet . "\"\n"
+                . "Rules for this retry:\n"
+                . "- Identify the likely reason the user was unhappy (too vague? missing steps? wrong scope? too generic?).\n"
+                . "- Give a concrete, step-by-step or data-backed answer.\n"
+                . "- Use MotorLink database context where relevant.\n"
+                . "- Do NOT apologize at length; deliver the improved answer directly.";
+        }
 
         // Build messages array for OpenAI API
         $messages = [
@@ -6249,7 +6345,10 @@ function callOpenAIAPIForSpecs($db, $user, $messages) {
                 'Authorization: Bearer ' . $providerApiKey
             ]);
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($requestBody));
-            curl_setopt($ch, CURLOPT_TIMEOUT, 60);
+            // Tighter provider timeout so we return a clean error to the client
+            // before its 60s abort window. First try 35s, retry gets 45s.
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_TIMEOUT, $attempt === 1 ? 35 : 45);
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$disableSSL);
             curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $disableSSL ? 0 : 2);
 

@@ -413,6 +413,18 @@ class AICarChat {
             });
         }
 
+        // Usage refresh button → reload indicator on demand
+        const usageRefreshBtn = document.getElementById('aiUsageRefreshBtn');
+        if (usageRefreshBtn) {
+            usageRefreshBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const icon = usageRefreshBtn.querySelector('i');
+                if (icon) icon.style.animation = 'spin 0.8s linear';
+                await this.loadUsageIndicator();
+                setTimeout(() => { if (icon) icon.style.animation = ''; }, 900);
+            });
+        }
+
         // FAB bubble → open chat
         if (chatMinimized) {
             chatMinimized.addEventListener('click', (e) => {
@@ -909,9 +921,16 @@ class AICarChat {
                 signal: controller.signal,
                 body: JSON.stringify({
                     message: message,
-                    conversation_history: this.conversationHistory.slice(-10) // Keep payload lean for faster replies
+                    conversation_history: this.conversationHistory.slice(-6), // Lean payload for faster replies
+                    retry_with_improvement: !!this._pendingRetryWithImprovement,
+                    rejected_response: this._pendingRejectedResponse || ''
                 })
             });
+
+            // Clear one-shot self-healing flags immediately so subsequent messages
+            // don't inherit them.
+            this._pendingRetryWithImprovement = false;
+            this._pendingRejectedResponse = '';
 
             clearTimeout(timeoutId);
 
@@ -1577,7 +1596,8 @@ class AICarChat {
             </div>
             <div class="ai-chat-message-content">
                 <div class="ai-chat-message-bubble ai-chat-typing-indicator">
-                    <span class="ai-chat-typing-label">MotorLink AI is typing</span>
+                    <span class="ai-chat-typing-label">MotorLink AI is thinking</span>
+                    <span class="ai-chat-typing-timer" id="aiChatTypingTimer" style="margin-left:6px; font-size:11px; color:#64748b; font-weight:600;">0s</span>
                     <div class="ai-chat-typing-dots">
                         <span></span>
                         <span></span>
@@ -1590,13 +1610,29 @@ class AICarChat {
         
         messagesContainer.appendChild(typingDiv);
         this.scrollToBottom();
-        
+
+        // Start an elapsed-time counter so users get perceived-speed feedback
+        // on slow provider calls.
+        if (this._typingTimerInterval) clearInterval(this._typingTimerInterval);
+        const startedAt = Date.now();
+        this._typingTimerInterval = setInterval(() => {
+            const timerEl = document.getElementById('aiChatTypingTimer');
+            if (!timerEl) { clearInterval(this._typingTimerInterval); this._typingTimerInterval = null; return; }
+            const secs = Math.floor((Date.now() - startedAt) / 1000);
+            timerEl.textContent = `${secs}s`;
+            if (secs >= 15) timerEl.style.color = '#b45309';
+            if (secs >= 30) timerEl.style.color = '#dc2626';
+        }, 1000);
     }
     
     /**
      * Hide typing indicator
      */
     hideTypingIndicator() {
+        if (this._typingTimerInterval) {
+            clearInterval(this._typingTimerInterval);
+            this._typingTimerInterval = null;
+        }
         const typing = document.getElementById('aiChatTypingIndicator');
         if (typing) {
             typing.remove();
@@ -1671,9 +1707,11 @@ class AICarChat {
             thankYou.className = 'ai-chat-feedback-thanks';
             thankYou.textContent = feedback === 'helpful'
                 ? '✓ Thanks! I\'ll remember this.'
-                : '✓ Got it — I\'ll do better.';
+                : '✓ Got it — let me try again with a better answer…';
             feedbackContainer.appendChild(thankYou);
-            setTimeout(() => thankYou.remove(), 3500);
+            if (feedback === 'helpful') {
+                setTimeout(() => thankYou.remove(), 3500);
+            }
         }
 
         // Extract AI response text from this message element
@@ -1711,7 +1749,7 @@ class AICarChat {
             }
         }
 
-        // Send to backend for learning — fire-and-forget
+        // Send feedback to backend for learning — fire-and-forget
         try {
             await fetch(`${CONFIG.API_URL}?action=ai_chat_feedback`, {
                 method: 'POST',
@@ -1727,6 +1765,34 @@ class AICarChat {
                 })
             });
         } catch (_) { /* Silently fail — feedback must never block the user */ }
+
+        // Self-healing: on "not-helpful", automatically regenerate a better answer.
+        if (feedback === 'not-helpful' && userMessageText) {
+            this.triggerSelfHealingRetry(userMessageText, aiResponseText);
+        }
+    }
+
+    /**
+     * Self-healing retry: re-send the original question with the rejected answer
+     * flagged so the backend injects a critique-and-improve directive into the
+     * system prompt. This is the user-facing "rewire and patch itself" behaviour.
+     */
+    triggerSelfHealingRetry(userMessageText, rejectedResponse) {
+        if (!userMessageText || this.isSending) return;
+
+        const input = document.getElementById('aiChatInput');
+        if (!input) return;
+
+        // Flag the next sendMessage call to include the self-healing payload.
+        this._pendingRetryWithImprovement = true;
+        this._pendingRejectedResponse = rejectedResponse || '';
+
+        // Add a subtle "self-healing" notice into the chat as a user-visible signal.
+        this.addMessage('ai', '🔧 _Let me try that again with a sharper answer…_', null, null, null, null, { includeFeedback: false });
+
+        // Queue the message and dispatch.
+        input.value = userMessageText;
+        this.sendMessage(0, 'self_healing_retry');
     }
 
     async loadUsageIndicator() {
@@ -1775,27 +1841,24 @@ class AICarChat {
                         }
 
                         const resetHint = (hourlyResetsInMinutes > 0)
-                            ? `<span style="color:#777; margin-left: 4px;">(hour resets in ~${hourlyResetsInMinutes}m)</span>`
+                            ? `<span style="color:#777; margin-left: 4px;">(resets in ~${hourlyResetsInMinutes}m)</span>`
                             : '';
-                        
-                        // Show both limits so users can see when hourly limits block requests.
-                        usageText.innerHTML = `<span style="font-weight: 600; color: ${color};">${icon}</span> Daily: <span style="color: ${color}; font-weight: 600;">${remaining}</span>/<span style="color: #666;">${limit}</span> left • Hourly: <span style="color: ${color}; font-weight: 600;">${hourlyRemaining}</span>/<span style="color: #666;">${hourlyLimit}</span> left ${resetHint}`;
-                        
-                        // Apply styling to the indicator container
-                        usageIndicator.style.cssText = `
-                            font-size: 11px;
-                            margin-top: 6px;
-                            padding: 4px 8px;
-                            background: ${bgColor};
-                            border-radius: 12px;
-                            display: inline-flex;
-                            align-items: center;
-                            flex-wrap: wrap;
-                            gap: 4px;
-                            border: 1px solid ${color}40;
-                            font-weight: 500;
-                            line-height: 1.35;
-                        `;
+
+                        // Prominent, always-visible usage bar rendering.
+                        usageText.innerHTML = `<span style="color:${color}; font-weight:700;">${icon}</span>&nbsp;<span style="color:#0f172a;">Daily</span> <span style="color:${color}; font-weight:700;">${remaining}</span><span style="color:#94a3b8;">/${limit}</span> · <span style="color:#0f172a;">Hour</span> <span style="color:${color}; font-weight:700;">${hourlyRemaining}</span><span style="color:#94a3b8;">/${hourlyLimit}</span> ${resetHint}`;
+
+                        const usageBar = document.getElementById('aiUsageBar');
+                        if (usageBar) {
+                            usageBar.style.background = highestUsagePercent >= 75
+                                ? 'linear-gradient(90deg,#fff1f2,#ffe4e6)'
+                                : highestUsagePercent >= 50
+                                    ? 'linear-gradient(90deg,#fff7ed,#ffedd5)'
+                                    : 'linear-gradient(90deg,#eef4ff,#f7faff)';
+                            usageBar.style.borderBottom = `1px solid ${color}33`;
+                        }
+
+                        // Reset the old inline-flex pill styling — the new bar handles layout.
+                        usageIndicator.style.cssText = 'flex:1; min-width:0; font-size:12px; font-weight:600; letter-spacing:0.1px;';
                         
                         // Update after each message is sent
                         this.updateUsageAfterMessage = true;

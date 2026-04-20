@@ -71,9 +71,6 @@
                     <div class="ai-chat-title">
                         <h3>MotorLink AI Assistant</h3>
                         <p>Your personal assistant</p>
-                        <div class="ai-usage-indicator" id="aiUsageIndicator" style="font-size: 11px; margin-top: 6px; padding: 4px 8px; background: #f5f5f5; border-radius: 12px; display: inline-block;">
-                            <span id="aiUsageText">Loading usage...</span>
-                        </div>
                     </div>
                 </div>
                 <div class="ai-chat-header-actions">
@@ -81,6 +78,14 @@
                         <i class="fas fa-chevron-down"></i>
                     </button>
                 </div>
+            </div>
+            <div class="ai-usage-bar" id="aiUsageBar" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:8px 14px; background:linear-gradient(90deg,#eef4ff,#f7faff); border-bottom:1px solid #e2e8f0; font-size:12px; font-weight:600; color:#334155;">
+                <div class="ai-usage-indicator" id="aiUsageIndicator" style="flex:1; min-width:0;">
+                    <span id="aiUsageText">Loading usage limits…</span>
+                </div>
+                <button type="button" id="aiUsageRefreshBtn" title="Refresh usage" aria-label="Refresh usage" style="border:none; background:rgba(255,255,255,0.7); color:#475569; cursor:pointer; border-radius:50%; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; font-size:12px;">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
             </div>
             <div class="ai-chat-body" id="aiChatBody" style="display: none;">
                 <div class="ai-chat-messages" id="aiChatMessages">

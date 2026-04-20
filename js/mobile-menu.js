@@ -248,7 +248,7 @@ function initMobileMenu() {
     cleanupMobileMenuClones(nav);
 
     // Clone user menu items into nav for mobile drawer only
-    if (userMenu && isMobileViewport()) {
+    if (userMenu && (isMobileViewport() || document.body.classList.contains('header-force-mobile'))) {
         const userInfo = userMenu.querySelector('#userInfo');
         const guestMenu = userMenu.querySelector('#guestMenu');
 
@@ -706,11 +706,48 @@ function initHeaderOverflowWatcher() {
     const header = document.querySelector('.header-container');
     if (!header) return;
 
+    const nav = document.getElementById('mainNav');
+    const userMenu = document.getElementById('userMenu');
+
     const FORCE_CLASS = 'header-force-mobile';
     const MOBILE_MAX_WIDTH = 768;
     const RELEASE_BUFFER = 48;
     let releaseThreshold = 0;
     let rafId = null;
+    let wasForcedMobile = false;
+
+    /* ── Ensure mobile clones exist inside nav when entering force-mobile ── */
+    const ensureMobileClones = () => {
+        if (!nav || !userMenu) return;
+        if (nav.querySelector('#guestMenuMobile') || nav.querySelector('#userInfoMobile')) return;
+
+        const isLoggedIn = localStorage.getItem('motorlink_authenticated') === 'true' &&
+                          localStorage.getItem('motorlink_user');
+
+        if (isLoggedIn) {
+            const userInfo = userMenu.querySelector('#userInfo');
+            if (userInfo) {
+                const clone = userInfo.cloneNode(true);
+                clone.id = 'userInfoMobile';
+                nav.appendChild(clone);
+            }
+        } else {
+            const guestMenu = userMenu.querySelector('#guestMenu');
+            if (guestMenu) {
+                const clone = guestMenu.cloneNode(true);
+                clone.id = 'guestMenuMobile';
+                nav.appendChild(clone);
+            }
+        }
+    };
+
+    /* ── Remove force-mobile clones when returning to normal layout ── */
+    const removeForceMobileClones = () => {
+        if (!nav) return;
+        // Only remove if we're NOT in actual mobile viewport (mobile init owns its clones)
+        if (window.innerWidth <= MOBILE_MAX_WIDTH) return;
+        cleanupMobileMenuClones(nav);
+    };
 
     const getVisibleChildren = () => Array.from(header.children).filter((child) => {
         const styles = window.getComputedStyle(child);
@@ -732,6 +769,7 @@ function initHeaderOverflowWatcher() {
 
         if (window.innerWidth <= MOBILE_MAX_WIDTH) {
             document.body.classList.remove(FORCE_CLASS);
+            wasForcedMobile = false;
             return;
         }
 
@@ -744,9 +782,15 @@ function initHeaderOverflowWatcher() {
             if (requiredWidth > availableWidth) {
                 releaseThreshold = Math.max(requiredWidth + RELEASE_BUFFER, window.innerWidth + 24);
                 document.body.classList.add(FORCE_CLASS);
+                ensureMobileClones();
+                wasForcedMobile = true;
             } else {
                 releaseThreshold = requiredWidth + RELEASE_BUFFER;
                 document.body.classList.remove(FORCE_CLASS);
+                if (wasForcedMobile) {
+                    removeForceMobileClones();
+                    wasForcedMobile = false;
+                }
             }
 
             return;
@@ -754,12 +798,18 @@ function initHeaderOverflowWatcher() {
 
         if (window.innerWidth >= releaseThreshold) {
             document.body.classList.remove(FORCE_CLASS);
+            if (wasForcedMobile) {
+                removeForceMobileClones();
+                wasForcedMobile = false;
+            }
 
             requestAnimationFrame(() => {
                 const requiredWidth = getRequiredWidth();
                 if (requiredWidth > header.clientWidth) {
                     releaseThreshold = Math.max(requiredWidth + RELEASE_BUFFER, window.innerWidth + 24);
                     document.body.classList.add(FORCE_CLASS);
+                    ensureMobileClones();
+                    wasForcedMobile = true;
                 }
             });
         }
