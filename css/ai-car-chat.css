@@ -112,6 +112,7 @@
     color: white;
     cursor: grab;
     user-select: none;
+    touch-action: none;    /* allow JS pointer-drag on touch screens */
     position: relative;
     overflow: hidden;
     flex-shrink: 0;
@@ -270,7 +271,7 @@
     display: flex;
     flex-direction: column;
     min-height: 0;          /* crucial for grid child to shrink */
-    height: 100%;
+    /* height: 100% removed — grid minmax(0,1fr) already sizes this correctly */
     background: linear-gradient(180deg, #f8faf9 0%, #f0f4f2 100%);
     overflow: hidden;
     position: relative;
@@ -451,6 +452,7 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    touch-action: none;    /* allow JS pointer-drag on touch screens */
     width: 56px;
     height: 56px;
     border-radius: 50%;

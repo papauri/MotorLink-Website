@@ -98,9 +98,11 @@ class AICarChat {
     }
 
     getPositionStorageKeys(preferFabPosition = false) {
+        // widget_pos is the unified key written by the new drag code.
+        // The legacy fab_pos / chat_pos keys are kept for backwards compatibility.
         return preferFabPosition
-            ? [this.getStorageKey('fab_pos'), this.getStorageKey('chat_pos'), 'ai_fab_pos', 'ai_chat_pos']
-            : [this.getStorageKey('chat_pos'), this.getStorageKey('fab_pos'), 'ai_chat_pos', 'ai_fab_pos'];
+            ? [this.getStorageKey('widget_pos'), this.getStorageKey('fab_pos'), this.getStorageKey('chat_pos'), 'ai_fab_pos', 'ai_chat_pos']
+            : [this.getStorageKey('widget_pos'), this.getStorageKey('chat_pos'), this.getStorageKey('fab_pos'), 'ai_chat_pos', 'ai_fab_pos'];
     }
 
     serializeMessagesHtml(messagesContainer) {
@@ -402,6 +404,10 @@ class AICarChat {
             chatHeader.addEventListener('click', (e) => {
                 if (this._lastDragWasMove) return;
                 if (e.target.closest('.ai-chat-header-actions')) return;
+                // Guard: skip toggle while a message is being sent (prevents phantom-tap
+                // dismiss on mobile after the virtual keyboard send key is pressed)
+                if (this.isSending) return;
+                if (this._blockHeaderToggle) return;
                 this.toggleChat();
             });
         }
@@ -568,88 +574,79 @@ class AICarChat {
         const fabBtn = document.getElementById('aiChatMinimized');
         if (!widget || !header) return;
 
-        let dragging  = false;
-        let hasMoved  = false;
-        let fromFab   = false;
+        let dragging = false;
+        let hasMoved = false;
         let startX, startY, startLeft, startTop;
 
-        const begin = (e, isFab) => {
+        const beginDrag = (e, el) => {
             if (e.button !== undefined && e.button !== 0) return;
-            if (!isFab && e.target.closest('.ai-chat-header-actions')) return;
-            // FAB drag only on mobile/tablet (≤1024px)
-            if (isFab && window.innerWidth > 1024) return;
-
-            dragging = true;
-            hasMoved = false;
-            fromFab  = isFab;
+            if (el === header && e.target.closest('.ai-chat-header-actions')) return;
 
             const rect = widget.getBoundingClientRect();
             startLeft = rect.left;
             startTop  = rect.top;
             startX    = e.clientX;
             startY    = e.clientY;
+            dragging  = true;
+            hasMoved  = false;
 
             widget.style.bottom = 'auto';
             widget.style.right  = 'auto';
             widget.style.left   = startLeft + 'px';
             widget.style.top    = startTop  + 'px';
             widget.classList.add('dragging');
-            e.currentTarget.setPointerCapture(e.pointerId);
+
+            // Capture so events keep coming even when pointer leaves the element
+            try { el.setPointerCapture(e.pointerId); } catch(_) {}
+
+            // Also attach document-level handlers as a reliable fallback
+            document.addEventListener('pointermove', onDocMove);
+            document.addEventListener('pointerup',   onDocUp);
+            document.addEventListener('pointercancel', onDocUp);
         };
 
-        const move = (e) => {
+        const onDocMove = (e) => {
             if (!dragging) return;
             const dx = e.clientX - startX;
             const dy = e.clientY - startY;
-
-            if (Math.abs(dx) > 4 || Math.abs(dy) > 4) hasMoved = true;
+            if (Math.abs(dx) > 3 || Math.abs(dy) > 3) hasMoved = true;
             if (!hasMoved) return;
 
             const vw = window.innerWidth;
             const vh = window.innerHeight;
-            let newLeft = Math.max(0, Math.min(startLeft + dx, vw - widget.offsetWidth));
-            let newTop  = Math.max(0, Math.min(startTop  + dy, vh - widget.offsetHeight));
-
-            widget.style.left = newLeft + 'px';
-            widget.style.top  = newTop  + 'px';
+            widget.style.left = Math.max(0, Math.min(startLeft + dx, vw - widget.offsetWidth))  + 'px';
+            widget.style.top  = Math.max(0, Math.min(startTop  + dy, vh - widget.offsetHeight)) + 'px';
         };
 
-        const end = () => {
+        const onDocUp = () => {
             if (!dragging) return;
             dragging = false;
             widget.classList.remove('dragging');
+            document.removeEventListener('pointermove',   onDocMove);
+            document.removeEventListener('pointerup',     onDocUp);
+            document.removeEventListener('pointercancel', onDocUp);
 
             if (hasMoved) {
-                const key = this.getStorageKey(fromFab ? 'fab_pos' : 'chat_pos');
+                // Persist position so it survives open/close and page reloads
+                const key = this.getStorageKey('widget_pos');
                 sessionStorage.setItem(key, JSON.stringify({
-                    left: parseInt(widget.style.left),
-                    top:  parseInt(widget.style.top)
+                    left: parseInt(widget.style.left, 10),
+                    top:  parseInt(widget.style.top,  10)
                 }));
-                if (fromFab) {
-                    this._fabDragWasMove = true;
-                    setTimeout(() => { this._fabDragWasMove = false; }, 150);
-                } else {
-                    this._lastDragWasMove = true;
-                    setTimeout(() => { this._lastDragWasMove = false; }, 100);
-                }
+                this._lastDragWasMove = true;
+                setTimeout(() => { this._lastDragWasMove = false; }, 200);
+                this._fabDragWasMove = true;
+                setTimeout(() => { this._fabDragWasMove = false; }, 200);
             }
-            fromFab = false;
         };
 
         // Header drag (all screen sizes)
-        header.addEventListener('pointerdown',   (e) => begin(e, false));
-        header.addEventListener('pointermove',   move);
-        header.addEventListener('pointerup',     end);
-        header.addEventListener('pointercancel', end);
+        header.addEventListener('pointerdown', (e) => beginDrag(e, header));
 
-        // FAB drag (mobile/tablet only — guarded inside begin)
+        // FAB drag (all screen sizes — user expects to reposition the bubble too)
         if (fabBtn) {
-            fabBtn.addEventListener('pointerdown',   (e) => begin(e, true));
-            fabBtn.addEventListener('pointermove',   move);
-            fabBtn.addEventListener('pointerup',     end);
-            fabBtn.addEventListener('pointercancel', end);
+            fabBtn.addEventListener('pointerdown', (e) => beginDrag(e, fabBtn));
         }
-
     }
 
     toggleChat() {
@@ -667,12 +664,6 @@ class AICarChat {
         const minimizedBtn = document.getElementById('aiChatMinimized');
 
         if (chatBody && widget) {
-            // Always open at CSS default position (bottom-left)
-            widget.style.left   = '';
-            widget.style.top    = '';
-            widget.style.bottom = '';
-            widget.style.right  = '';
-
             chatBody.style.display = 'flex';
             widget.classList.remove('minimized');
             if (minimizedBtn) minimizedBtn.style.display = 'none';
@@ -846,6 +837,9 @@ class AICarChat {
         input.disabled = false;
         if (sendBtn) sendBtn.disabled = false;
         this.setInputSendingState(false);
+        // Release header-toggle block (if response arrived before the 600ms timer)
+        clearTimeout(this._blockHeaderToggleTimeout);
+        this._blockHeaderToggle = false;
     }
 
     async sendMessage(retryAttempt = 0, triggerSource = 'button') {
@@ -899,6 +893,13 @@ class AICarChat {
         input.disabled = true;
         if (sendBtn) sendBtn.disabled = true;
         this.isSending = true;
+        // Block header toggle for a brief window to prevent the phantom-tap that
+        // occurs on mobile when the virtual keyboard dismisses after the Enter key
+        // is pressed — the delayed touch fires at the old keyboard position which
+        // may now be over the chat header, incorrectly minimising the widget.
+        this._blockHeaderToggle = true;
+        clearTimeout(this._blockHeaderToggleTimeout);
+        this._blockHeaderToggleTimeout = setTimeout(() => { this._blockHeaderToggle = false; }, 600);
         this.setInputSendingState(true, retryAttempt);
         this.startSendFailsafe(input, sendBtn, retryAttempt > 0 ? 95000 : 65000);
 
