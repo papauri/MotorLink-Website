@@ -682,6 +682,9 @@ class AICarChat {
             if (chatInput && focus) setTimeout(() => chatInput.focus(), 100);
             setTimeout(() => this.scrollToBottom(), 80);
 
+            // Refresh usage limits every time the widget opens so the counter is always current.
+            this.loadUsageIndicator();
+
             if (saveState) {
                 this.saveConversation();
             }

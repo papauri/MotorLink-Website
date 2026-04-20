@@ -1,0 +1,229 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e4]:
+      - link " MotorLink" [ref=e5] [cursor=pointer]:
+        - /url: index.html
+        - generic [ref=e6]: 
+        - generic [ref=e7]: MotorLink
+      - navigation "Main navigation" [ref=e8]:
+        - link "Know Your Car" [ref=e9] [cursor=pointer]:
+          - /url: car-database.html
+        - link "Garages" [ref=e10] [cursor=pointer]:
+          - /url: garages.html
+        - link "Dealers" [ref=e11] [cursor=pointer]:
+          - /url: dealers.html
+        - link "Car Hire" [ref=e12] [cursor=pointer]:
+          - /url: car-hire.html
+        - link "Sell Car" [ref=e13] [cursor=pointer]:
+          - /url: sell.html
+        - link "Manage Guest Listing" [ref=e14] [cursor=pointer]:
+          - /url: guest-manage.html
+      - text:    
+      - button "Toggle account menu" [ref=e15]:
+        - generic [ref=e16]: 
+      - text: 
+  - text: +            
+  - generic [ref=e18]:
+    - heading "Your trusted vehicle marketplace" [level=1] [ref=e19]
+    - paragraph [ref=e20]: MotorLink helps people buy, sell, hire, and manage vehicles in one place.
+    - generic [ref=e21]:
+      - link "Cars Available" [ref=e22] [cursor=pointer]:
+        - /url: index.html
+        - generic [ref=e23]: Cars Available
+      - link "Trusted Dealers" [ref=e24] [cursor=pointer]:
+        - /url: dealers.html
+        - generic [ref=e25]: Trusted Dealers
+      - link "Service Centers" [ref=e26] [cursor=pointer]:
+        - /url: garages.html
+        - generic [ref=e27]: Service Centers
+      - link "Car Hire Services" [ref=e28] [cursor=pointer]:
+        - /url: car-hire.html
+        - generic [ref=e29]: Car Hire Services
+  - generic [ref=e32]:
+    - link " Car Garages Professional automotive repair and maintenance services " [ref=e33] [cursor=pointer]:
+      - /url: garages.html
+      - generic [ref=e35]: 
+      - heading "Car Garages" [level=3] [ref=e36]
+      - paragraph [ref=e37]: Professional automotive repair and maintenance services
+      - generic [ref=e39]: 
+    - link " Car Dealers Certified dealers and trusted showrooms across " [ref=e40] [cursor=pointer]:
+      - /url: dealers.html
+      - generic [ref=e42]: 
+      - heading "Car Dealers" [level=3] [ref=e43]
+      - paragraph [ref=e44]: Certified dealers and trusted showrooms across
+      - generic [ref=e46]: 
+    - link " Car Hire Rent quality vehicles for business or leisure trips " [ref=e47] [cursor=pointer]:
+      - /url: car-hire.html
+      - generic [ref=e49]: 
+      - heading "Car Hire" [level=3] [ref=e50]
+      - paragraph [ref=e51]: Rent quality vehicles for business or leisure trips
+      - generic [ref=e53]: 
+    - link " Know Your Car Explore comprehensive car specifications and details " [ref=e54] [cursor=pointer]:
+      - /url: car-database.html
+      - generic [ref=e56]: 
+      - heading "Know Your Car" [level=3] [ref=e57]
+      - paragraph [ref=e58]: Explore comprehensive car specifications and details
+      - generic [ref=e60]: 
+    - link " Sell Your Car List your car and reach thousands of potential buyers " [ref=e61] [cursor=pointer]:
+      - /url: sell.html
+      - generic [ref=e63]: 
+      - heading "Sell Your Car" [level=3] [ref=e64]
+      - paragraph [ref=e65]: List your car and reach thousands of potential buyers
+      - generic [ref=e67]: 
+  - generic [ref=e70]:
+    - link "All cars" [ref=e71] [cursor=pointer]:
+      - /url: "#"
+      - generic [ref=e72]: 
+      - text: All Cars
+    - link "SUV cars" [ref=e73] [cursor=pointer]:
+      - /url: "#"
+      - generic [ref=e74]: 
+      - text: SUVs
+    - link "Sedan cars" [ref=e75] [cursor=pointer]:
+      - /url: "#"
+      - generic [ref=e76]: 
+      - text: Sedans
+    - link "Pickup trucks" [ref=e77] [cursor=pointer]:
+      - /url: "#"
+      - generic [ref=e78]: 
+      - text: Trucks
+    - link "Hatchback cars" [ref=e79] [cursor=pointer]:
+      - /url: "#"
+      - generic [ref=e80]: 
+      - text: Hatchbacks
+    - link "Commercial vehicles" [ref=e81] [cursor=pointer]:
+      - /url: "#"
+      - generic [ref=e82]: 
+      - text: Commercial
+  - text:     
+  - main [ref=e84]:
+    - text:             
+    - main "Car listings" [ref=e85]:
+      - search "Search cars" [ref=e87]:
+        - textbox "Search cars by make, model or keyword" [ref=e88] [cursor=pointer]:
+          - /placeholder: Search by make, model, or keyword...
+        - button " Search" [ref=e89] [cursor=pointer]:
+          - generic [ref=e90]: 
+          - text: Search
+      - generic [ref=e91]:
+        - generic [ref=e92]:
+          - heading "Latest Cars for Sale in" [level=2] [ref=e93]
+          - paragraph [ref=e94]: Loading cars...
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]: 
+            - text: "Sort by:"
+          - combobox "Sort results" [ref=e98]:
+            - option "Newest First" [selected]
+            - option "Oldest First"
+            - 'option "Price: Low to High"'
+            - 'option "Price: High to Low"'
+            - 'option "Year: Newest First"'
+            - 'option "Year: Oldest First"'
+            - option "Most Viewed"
+            - option "Nearest First"
+          - text: 
+      - region "Car listings results" [ref=e99]:
+        - generic [ref=e106]: Loading awesome cars...
+      - text:  
+  - contentinfo [ref=e107]:
+    - generic [ref=e108]:
+      - generic [ref=e109]:
+        - generic [ref=e110]:
+          - heading " MotorLink" [level=4] [ref=e111]:
+            - generic [ref=e112]: 
+            - text: MotorLink
+          - paragraph [ref=e113]: Your trusted partner for buying and selling cars. We connect buyers and sellers in a safe, secure environment with the latest cars from trusted dealers.
+          - generic [ref=e114]:
+            - link "Follow us on Facebook" [ref=e115] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e116]: 
+            - link "Follow us on Twitter" [ref=e117] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e118]: 
+            - link "Follow us on Instagram" [ref=e119] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e120]: 
+            - link "Contact us on WhatsApp" [ref=e121] [cursor=pointer]:
+              - /url: "#"
+              - generic [ref=e122]: 
+        - generic [ref=e123]:
+          - heading " Quick Links" [level=4] [ref=e124]:
+            - generic [ref=e125]: 
+            - text: Quick Links
+          - list [ref=e126]:
+            - listitem [ref=e127]:
+              - link "Browse Cars" [ref=e128] [cursor=pointer]:
+                - /url: index.html
+            - listitem [ref=e129]:
+              - link "Sell Your Car" [ref=e130] [cursor=pointer]:
+                - /url: sell.html
+            - listitem [ref=e131]:
+              - link "Find Garages" [ref=e132] [cursor=pointer]:
+                - /url: garages.html
+            - listitem [ref=e133]:
+              - link "Car Dealers" [ref=e134] [cursor=pointer]:
+                - /url: dealers.html
+            - listitem [ref=e135]:
+              - link "Car Hire" [ref=e136] [cursor=pointer]:
+                - /url: car-hire.html
+            - listitem [ref=e137]:
+              - link "Know Your Car" [ref=e138] [cursor=pointer]:
+                - /url: car-database.html
+        - generic [ref=e139]:
+          - heading " Support & Help" [level=4] [ref=e140]:
+            - generic [ref=e141]: 
+            - text: Support & Help
+          - list [ref=e142]:
+            - listitem [ref=e143]:
+              - link "Help Center" [ref=e144] [cursor=pointer]:
+                - /url: help.html
+            - listitem [ref=e145]:
+              - link "Safety Tips" [ref=e146] [cursor=pointer]:
+                - /url: safety.html
+            - listitem [ref=e147]:
+              - link "Contact Us" [ref=e148] [cursor=pointer]:
+                - /url: contact.html
+            - listitem [ref=e149]:
+              - link "Terms of Service" [ref=e150] [cursor=pointer]:
+                - /url: terms.html
+            - listitem [ref=e151]:
+              - link "Cookie Policy" [ref=e152] [cursor=pointer]:
+                - /url: cookie-policy.html
+        - generic [ref=e153]:
+          - heading " Contact Us" [level=4] [ref=e154]:
+            - generic [ref=e155]: 
+            - text: Contact Us
+          - paragraph [ref=e156]:
+            - link " Contact Us" [ref=e157] [cursor=pointer]:
+              - /url: contact.html
+              - generic [ref=e158]: 
+              - text: Contact Us
+      - generic [ref=e159]:
+        - paragraph [ref=e160]: © 2025 MotorLink. All rights reserved.
+        - paragraph [ref=e161]:
+          - generic [ref=e162]: 
+          - text: Safe Trading •
+          - generic [ref=e163]: 
+          - text: Mobile Friendly •
+          - generic [ref=e164]: 
+          - text: Hosted by
+          - link "ProManaged IT" [ref=e165] [cursor=pointer]:
+            - /url: https://promanaged-it.com
+  - text:     
+  - generic [ref=e167]:
+    - generic [ref=e168]:
+      - heading " We Value Your Privacy" [level=3] [ref=e169]:
+        - generic [ref=e170]: 
+        - text: We Value Your Privacy
+      - paragraph [ref=e171]: We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic. By clicking "Accept All", you consent to our use of cookies. You can manage your preferences at any time.
+    - generic [ref=e172]:
+      - button " Reject All" [ref=e173] [cursor=pointer]:
+        - generic [ref=e174]: 
+        - text: Reject All
+      - button " Customize" [ref=e175] [cursor=pointer]:
+        - generic [ref=e176]: 
+        - text: Customize
+      - button " Accept All" [ref=e177] [cursor=pointer]:
+        - generic [ref=e178]: 
+        - text: Accept All

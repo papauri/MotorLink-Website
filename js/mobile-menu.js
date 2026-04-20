@@ -711,13 +711,16 @@ function initHeaderOverflowWatcher() {
 
     const FORCE_CLASS = 'header-force-mobile';
     const MOBILE_MAX_WIDTH = 768;
-    const RELEASE_BUFFER = 48;
-    let releaseThreshold = 0;
-    let rafId = null;
-    let wasForcedMobile = false;
-    let shouldReevaluateForced = false;
+    const RELEASE_BUFFER = 32;
 
-    /* ── Ensure mobile clones exist inside nav when entering force-mobile ── */
+    /* containerWidthAtForce = the header container clientWidth recorded the
+       moment we decided to enter force-mobile.  We only release when the
+       container has grown past this width + buffer.  This avoids toggling
+       the class just to re-measure (which used to cause the flashing).     */
+    let containerWidthAtForce = 0;
+    let wasForcedMobile = false;
+    let rafId = null;
+
     const ensureMobileClones = () => {
         if (!nav || !userMenu) return;
         if (nav.querySelector('#guestMenuMobile') || nav.querySelector('#userInfoMobile')) return;
@@ -742,113 +745,145 @@ function initHeaderOverflowWatcher() {
         }
     };
 
-    /* ── Remove force-mobile clones when returning to normal layout ── */
     const removeForceMobileClones = () => {
         if (!nav) return;
-        // Only remove if we're NOT in actual mobile viewport (mobile init owns its clones)
         if (window.innerWidth <= MOBILE_MAX_WIDTH) return;
         cleanupMobileMenuClones(nav);
     };
 
-    const getVisibleChildren = () => Array.from(header.children).filter((child) => {
-        const styles = window.getComputedStyle(child);
-        return styles.display !== 'none' && styles.visibility !== 'hidden';
-    });
-
-    const getRequiredWidth = () => {
-        const styles = window.getComputedStyle(header);
-        const gap = parseFloat(styles.columnGap || styles.gap || '0') || 0;
-        const children = getVisibleChildren();
-
-        return children.reduce((total, child) => {
-            return total + Math.ceil(child.getBoundingClientRect().width);
-        }, 0) + (Math.max(0, children.length - 1) * gap) + 12;
+    /* True overflow detection: compare scrollWidth (intrinsic content size)
+       against clientWidth (available space).  No summing of flex/grid child
+       widths (which returns column sizes, not content widths).              */
+    const hasOverflow = () => {
+        if (!nav) return header.scrollWidth > header.clientWidth + 1;
+        /* Nav content is the only variable piece — check its overflow plus a
+           general header overflow guard.                                    */
+        return (nav.scrollWidth > nav.clientWidth + 1) ||
+               (header.scrollWidth > header.clientWidth + 1);
     };
 
-    const updateHeaderMode = () => {
+    const update = () => {
         if (document.body.classList.contains('mobile-menu-open')) return;
 
+        /* True mobile viewport — rely on CSS, clear the force class. */
         if (window.innerWidth <= MOBILE_MAX_WIDTH) {
-            document.body.classList.remove(FORCE_CLASS);
-            wasForcedMobile = false;
-            shouldReevaluateForced = false;
+            if (document.body.classList.contains(FORCE_CLASS)) {
+                document.body.classList.remove(FORCE_CLASS);
+                wasForcedMobile = false;
+            }
+            containerWidthAtForce = 0;
             return;
         }
 
         const isForced = document.body.classList.contains(FORCE_CLASS);
+        const available = header.clientWidth;
 
         if (!isForced) {
-            const requiredWidth = getRequiredWidth();
-            const availableWidth = header.clientWidth;
-
-            releaseThreshold = requiredWidth + RELEASE_BUFFER;
-
-            if (requiredWidth > availableWidth) {
+            if (hasOverflow()) {
+                containerWidthAtForce = available;
                 document.body.classList.add(FORCE_CLASS);
                 ensureMobileClones();
                 wasForcedMobile = true;
             }
-
-            shouldReevaluateForced = false;
-
             return;
         }
 
-        if (!shouldReevaluateForced && header.clientWidth < releaseThreshold) {
-            return;
-        }
-
-        /* ── Release check ──
-           Force-mobile hides nav + user-menu so we can't measure them while
-           the class is active. Only perform the expensive remove/measure pass
-           when the header has grown enough to potentially fit again, or when a
-           DOM mutation changed the header content. This avoids reflow churn
-           that can visually flash the header.                                */
-        shouldReevaluateForced = false;
-        document.body.classList.remove(FORCE_CLASS);
-        const requiredWidth = getRequiredWidth();
-        const availableWidth = header.clientWidth;
-
-        if (requiredWidth > availableWidth) {
-            releaseThreshold = requiredWidth + RELEASE_BUFFER;
-            document.body.classList.add(FORCE_CLASS);
-            ensureMobileClones();
-            wasForcedMobile = true;
-        } else {
+        /* Forced — release only when container clearly has more space than
+           when we first forced.  Never toggle the class to re-measure.     */
+        if (containerWidthAtForce > 0 && available >= containerWidthAtForce + RELEASE_BUFFER) {
+            document.body.classList.remove(FORCE_CLASS);
             if (wasForcedMobile) {
                 removeForceMobileClones();
                 wasForcedMobile = false;
             }
+            containerWidthAtForce = 0;
+            /* Next scheduled update will re-check in the non-forced state
+               and re-force if needed.                                     */
         }
     };
 
-    const scheduleUpdate = ({ forceReleaseCheck = false } = {}) => {
-        if (forceReleaseCheck) {
-            shouldReevaluateForced = true;
+    /* Synchronous re-evaluation used when DOM mutations change what actually
+       fits inside the header (dashboard link added after login, etc).
+       Runs inside the mutation callback (a microtask) so any intermediate
+       class toggle is layout-measured but never painted — no flash.        */
+    const reevaluateSync = () => {
+        if (document.body.classList.contains('mobile-menu-open')) return;
+
+        if (window.innerWidth <= MOBILE_MAX_WIDTH) {
+            if (document.body.classList.contains(FORCE_CLASS)) {
+                document.body.classList.remove(FORCE_CLASS);
+                wasForcedMobile = false;
+            }
+            containerWidthAtForce = 0;
+            return;
         }
 
+        const body = document.body;
+        const wasForced = body.classList.contains(FORCE_CLASS);
+
+        if (wasForced) {
+            /* Temporarily drop force to check if the non-forced layout still
+               overflows.  Reading scrollWidth forces synchronous layout; we
+               reinstate the class (if needed) before the microtask returns,
+               so the browser never paints an intermediate state.          */
+            body.classList.remove(FORCE_CLASS);
+            const overflows = hasOverflow();
+            if (overflows) {
+                containerWidthAtForce = header.clientWidth;
+                body.classList.add(FORCE_CLASS);
+                /* wasForcedMobile remains true */
+            } else {
+                if (wasForcedMobile) {
+                    removeForceMobileClones();
+                    wasForcedMobile = false;
+                }
+                containerWidthAtForce = 0;
+            }
+        } else {
+            if (hasOverflow()) {
+                containerWidthAtForce = header.clientWidth;
+                body.classList.add(FORCE_CLASS);
+                ensureMobileClones();
+                wasForcedMobile = true;
+            }
+        }
+    };
+
+    const schedule = () => {
         if (rafId) cancelAnimationFrame(rafId);
-        rafId = requestAnimationFrame(() => requestAnimationFrame(updateHeaderMode));
+        rafId = requestAnimationFrame(update);
     };
 
-    scheduleUpdate();
-    window.addEventListener('load', scheduleUpdate);
-    window.addEventListener('resize', scheduleUpdate, { passive: true });
+    /* Invalidate recorded width when nav/user-menu children change (dashboard
+       link added on login, clones added/removed).  Run the synchronous
+       re-evaluation inside the mutation microtask so any class change is
+       applied before the browser paints — no flashing.                    */
+    const onNavMutation = () => {
+        containerWidthAtForce = 0;
+        reevaluateSync();
+    };
 
+    schedule();
+    window.addEventListener('load', schedule);
+    window.addEventListener('resize', schedule, { passive: true });
+
+    /* ResizeObserver on the header container only — NOT its children.
+       Observing children fires on every inline style mutation (e.g.
+       userInfo.style.display = 'flex' during auth refresh) and caused the
+       flash loop previously.                                               */
     if (typeof ResizeObserver === 'function') {
-        const ro = new ResizeObserver(scheduleUpdate);
+        const ro = new ResizeObserver(schedule);
         ro.observe(header);
-        getVisibleChildren().forEach(child => ro.observe(child));
     }
 
+    /* MutationObserver limited to childList on nav + userMenu.  No subtree
+       on nav (avoids storms from inline-style flips on descendants);
+       userMenu subtree is OK — it's small and changes drive real re-checks
+       (login shows #userInfo, etc).                                        */
     if (typeof MutationObserver === 'function') {
-        const mo = new MutationObserver(() => scheduleUpdate({ forceReleaseCheck: true }));
-        mo.observe(header, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-            attributes: true
-        });
+        const mo = new MutationObserver(onNavMutation);
+        if (nav) mo.observe(nav, { childList: true });
+        if (userMenu) mo.observe(userMenu, { childList: true, subtree: true });
     }
 }
 

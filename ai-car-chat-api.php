@@ -3756,7 +3756,14 @@ function detectSearchQuery($message) {
     if (!$hasBuyingIntent) {
         return false;
     }
-    
+
+    // Direct "for sale" / "for purchase" queries that mention a vehicle type are listing searches.
+    // Example: "What cars are for sale", "any vehicles for sale", "cars for sale in Blantyre"
+    if (preg_match('/\b(?:for\s+sale|for\s+purchase)\b/i', $messageLower) &&
+        preg_match('/\b(?:cars?|vehicles?|trucks?|suvs?|sedans?|pickups?|4x4s?|vans?|hatchbacks?|saloons?)\b/i', $messageLower)) {
+        return true;
+    }
+
     $searchKeywords = [
         'find', 'search', 'show me', 'look for', 'looking for', 'need', 'want',
         'available', 'list', 'display', 'get me', 'help me find', 'do you have',
@@ -5391,8 +5398,78 @@ function handleCarSpecQuery($db, $message, $conversationHistory, $userContext) {
         }
 
         error_log('handleCarSpecQuery provider unavailable for user ' . (int)$user['id']);
+
+        // Build a structured offline response from the data already collected —
+        // DB specs and learned cache are available without any provider call.
+        $offlineLines = [];
+        $hasOfflineData = !empty($dbSpecs) || (!empty($cacheResult['found']) && !empty($cacheResult['summary']));
+
+        if (!empty($dbSpecs)) {
+            $heading = $vehicleLabel !== '' ? $vehicleLabel : 'Vehicle';
+            $offlineLines[] = "### {$heading}";
+            $offlineLines[] = '';
+            foreach ($dbSpecs as $spec) {
+                $specHead = "**{$spec['make_name']} {$spec['name']}**";
+                if (!empty($spec['year_start'])) {
+                    $specHead .= " ({$spec['year_start']}–" . ($spec['year_end'] ?? 'present') . ")";
+                }
+                $offlineLines[] = $specHead;
+                $details = [];
+                if (!empty($spec['engine_size_liters'])) $details[] = "Engine: {$spec['engine_size_liters']}L";
+                if (!empty($spec['fuel_type']))           $details[] = "Fuel: " . ucfirst((string)$spec['fuel_type']);
+                if (!empty($spec['transmission_type']))   $details[] = "Transmission: " . ucfirst((string)$spec['transmission_type']);
+                if (!empty($spec['drive_type']))          $details[] = "Drivetrain: " . strtoupper((string)$spec['drive_type']);
+                if (!empty($spec['horsepower_hp']))       $details[] = "Power: {$spec['horsepower_hp']} HP";
+                if (!empty($spec['torque_nm']))           $details[] = "Torque: {$spec['torque_nm']} Nm";
+                if (!empty($spec['fuel_tank_capacity_liters'])) $details[] = "Tank: {$spec['fuel_tank_capacity_liters']}L";
+                if (!empty($spec['fuel_consumption_liters_per_100km'])) $details[] = "Consumption: {$spec['fuel_consumption_liters_per_100km']} L/100km";
+                if (!empty($details)) {
+                    $offlineLines[] = implode(' · ', $details);
+                }
+                $offlineLines[] = '';
+            }
+        }
+
+        if (!empty($cacheResult['found']) && !empty($cacheResult['summary'])) {
+            if (!empty($dbSpecs)) {
+                $offlineLines[] = '**Additional Learned Data:**';
+            } else {
+                $label = $vehicleLabel !== '' ? $vehicleLabel : 'Vehicle';
+                $offlineLines[] = "### {$label} — Learned Research Cache";
+                $offlineLines[] = '';
+            }
+            $offlineLines[] = trim((string)$cacheResult['summary']);
+            $offlineLines[] = '';
+        }
+
+        if (!$hasOfflineData) {
+            $label = $vehicleLabel !== '' ? "the {$vehicleLabel}" : 'this vehicle';
+            $offlineLines[] = "I don't currently have specification data for {$label} in the MotorLink database.";
+            if (!empty($alternatives)) {
+                $offlineLines[] = '';
+                $offlineLines[] = '**Similar vehicles available on MotorLink:**';
+                foreach ($alternatives as $alt) {
+                    $offlineLines[] = "- {$alt['make_name']} {$alt['model_name']} ({$alt['variant_count']} listing" . ($alt['variant_count'] > 1 ? 's' : '') . ")";
+                }
+            }
+        } elseif (!empty($alternatives) && empty($dbSpecs)) {
+            $offlineLines[] = '**Similar vehicles on MotorLink:**';
+            foreach ($alternatives as $alt) {
+                $offlineLines[] = "- {$alt['make_name']} {$alt['model_name']} ({$alt['variant_count']} listing" . ($alt['variant_count'] > 1 ? 's' : '') . ")";
+            }
+            $offlineLines[] = '';
+        }
+
+        $offlineLines[] = '_Note: Live AI assistant temporarily unavailable. Data sourced from MotorLink database and learning cache._';
+        $offlineResponse = implode("\n", $offlineLines);
+
+        // Last resort: use the generic fallback only if we have truly nothing
+        if (!$hasOfflineData && empty($alternatives)) {
+            $offlineResponse = buildProviderTemporaryFallbackResponse($effectiveMessage, $baseUrl);
+        }
+
         sendSuccess([
-            'response' => buildProviderTemporaryFallbackResponse($effectiveMessage, $baseUrl),
+            'response' => $offlineResponse,
             'provider_fallback' => true
         ]);
         return;

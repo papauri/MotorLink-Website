@@ -1351,3 +1351,19 @@
         pointer-events: none !important;
     }
 }
+
+/* ── Keyboard-open guard (viewport height < 380px) ─────────────────────── */
+/* When the mobile keyboard is open, dvh shrinks. Hide the usage bar so the  */
+/* textarea and messages remain visible and the input doesn't disappear.     */
+@media (max-height: 380px) {
+    .ai-usage-bar {
+        display: none !important;
+    }
+    .ai-car-chat-widget:not(.minimized) {
+        min-height: 220px;
+        grid-template-rows: auto minmax(0, 1fr);
+        grid-template-areas:
+            "header"
+            "body";
+    }
+}
