@@ -86,6 +86,34 @@
         syncRuntimeBranding(event && event.detail ? event.detail : getRuntimeSiteConfig());
     });
 
+    // Exposed for the SPA-style page router: call after a cross-document view
+    // transition or BFCache restore to re-sync breadcrumbs and body classes
+    // for the now-current URL without re-injecting the whole header.
+    window.navLoaderSync = function () {
+        var page = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
+        var hero = findHeroSurface();
+        var crumb = buildBreadcrumbMarkup(page);
+        var heroNow = !!hero && !crumb;
+
+        if (heroNow) {
+            body.classList.add('has-hero');
+        } else {
+            body.classList.remove('has-hero');
+        }
+
+        injectBreadcrumbs(header, crumb, heroNow);
+
+        // Re-sync active nav link
+        if (typeof window.motorLink !== 'undefined' && typeof window.motorLink.syncActiveNavLink === 'function') {
+            window.motorLink.syncActiveNavLink();
+        }
+    };
+
+    // Auto-refresh breadcrumbs on browser back/forward (popstate + pageshow)
+    window.addEventListener('popstate', function () {
+        if (typeof window.navLoaderSync === 'function') window.navLoaderSync();
+    });
+
     function injectBreadcrumbs(headerElement, markup, heroMode) {
         var existingWrap = document.querySelector('.page-breadcrumbs-wrap');
         if (existingWrap) {

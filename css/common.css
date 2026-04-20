@@ -1764,7 +1764,7 @@ a.car-hire-stat:hover {
     .header-container {
         height: 84px;
         display: grid;
-        grid-template-columns: auto 1fr auto;
+        grid-template-columns: auto minmax(0, 1fr) auto;
         align-items: center;
         gap: 20px;
     }
@@ -1802,11 +1802,13 @@ a.car-hire-stat:hover {
     .nav {
         justify-self: center;
         display: flex !important;
+        flex-wrap: nowrap;
         align-items: center;
         justify-content: center;
         gap: 2px;
         width: auto;
         max-width: 100%;
+        min-width: 0;
         padding: 0;
         border: none;
         border-radius: 0;
@@ -3787,5 +3789,49 @@ body.has-hero.has-breadcrumbs .page-breadcrumbs__sep {
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+}
+
+/* ============================================================
+ * Cross-Document View Transitions — Persistent Header & Footer
+ * Requires Chrome/Edge 126+ · Safari 18.2+ (graceful fallback)
+ * ============================================================ */
+@view-transition {
+    navigation: auto;
+}
+
+/* Header is a named shared element — treated as persistent */
+.header {
+    view-transition-name: site-header;
+    contain: layout;
+}
+
+/* Footer is a named shared element — treated as persistent */
+footer.footer {
+    view-transition-name: site-footer;
+    contain: layout;
+}
+
+/* Named elements don't animate — they appear to stay in place */
+::view-transition-old(site-header),
+::view-transition-new(site-header),
+::view-transition-old(site-footer),
+::view-transition-new(site-footer) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+/* Page body content fades cleanly between pages */
+::view-transition-old(root) {
+    animation: 180ms ease-out vt-page-out;
+}
+::view-transition-new(root) {
+    animation: 220ms ease-in vt-page-in;
+}
+
+@keyframes vt-page-out {
+    to { opacity: 0; }
+}
+@keyframes vt-page-in {
+    from { opacity: 0; }
 }
 

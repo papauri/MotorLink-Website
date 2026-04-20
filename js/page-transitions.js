@@ -462,16 +462,11 @@ class PageTransitionManager {
         }
         
         this.isTransitioning = true;
-        this.showPageLoader('Loading page...');
-        
-        // Add fade out animation to body
-        document.body.style.opacity = '0.7';
-        document.body.style.transition = 'opacity 0.2s ease-out';
-        
-        // Navigate after short delay
-        setTimeout(() => {
-            window.location.href = href;
-        }, 200);
+
+        // The CSS @view-transition rule handles the visual transition natively
+        // (persistent header/footer, page content cross-fade). Navigate directly
+        // with no artificial delay or body dim so the browser transition runs clean.
+        window.location.href = href;
     }
 
     // Manual navigation trigger (for programmatic navigation)
