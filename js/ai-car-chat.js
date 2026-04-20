@@ -580,6 +580,11 @@ class AICarChat {
     }
 
     initDrag() {
+        // Drag is desktop-only — on mobile/tablet the widget is full-screen when open
+        // so there is nothing to drag. FAB reposition is also disabled on touch to
+        // keep the bubble anchored in its CSS bottom-left position.
+        if (window.innerWidth <= 1024) return;
+
         const widget = document.getElementById('aiCarChatWidget');
         const header = document.getElementById('aiChatHeader');
         const fabBtn = document.getElementById('aiChatMinimized');
