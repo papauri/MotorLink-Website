@@ -711,6 +711,7 @@ function initHeaderOverflowWatcher() {
 
     const FORCE_CLASS = 'header-force-mobile';
     const MOBILE_MAX_WIDTH = 768;
+    const FORCE_MAX_WIDTH = 1024;
     const RELEASE_BUFFER = 32;
 
     /* containerWidthAtForce = the header container clientWidth recorded the
@@ -751,6 +752,17 @@ function initHeaderOverflowWatcher() {
         cleanupMobileMenuClones(nav);
     };
 
+    const clearForcedMobileState = () => {
+        if (document.body.classList.contains(FORCE_CLASS)) {
+            document.body.classList.remove(FORCE_CLASS);
+        }
+        if (wasForcedMobile) {
+            removeForceMobileClones();
+            wasForcedMobile = false;
+        }
+        containerWidthAtForce = 0;
+    };
+
     /* True overflow detection: compare scrollWidth (intrinsic content size)
        against clientWidth (available space).  No summing of flex/grid child
        widths (which returns column sizes, not content widths).              */
@@ -767,11 +779,13 @@ function initHeaderOverflowWatcher() {
 
         /* True mobile viewport — rely on CSS, clear the force class. */
         if (window.innerWidth <= MOBILE_MAX_WIDTH) {
-            if (document.body.classList.contains(FORCE_CLASS)) {
-                document.body.classList.remove(FORCE_CLASS);
-                wasForcedMobile = false;
-            }
-            containerWidthAtForce = 0;
+            clearForcedMobileState();
+            return;
+        }
+
+        /* The hamburger fallback is only allowed on tablet widths. */
+        if (window.innerWidth > FORCE_MAX_WIDTH) {
+            clearForcedMobileState();
             return;
         }
 
@@ -810,11 +824,12 @@ function initHeaderOverflowWatcher() {
         if (document.body.classList.contains('mobile-menu-open')) return;
 
         if (window.innerWidth <= MOBILE_MAX_WIDTH) {
-            if (document.body.classList.contains(FORCE_CLASS)) {
-                document.body.classList.remove(FORCE_CLASS);
-                wasForcedMobile = false;
-            }
-            containerWidthAtForce = 0;
+            clearForcedMobileState();
+            return;
+        }
+
+        if (window.innerWidth > FORCE_MAX_WIDTH) {
+            clearForcedMobileState();
             return;
         }
 

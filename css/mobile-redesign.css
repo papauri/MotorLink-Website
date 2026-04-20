@@ -1214,11 +1214,11 @@ footer.footer .container {
 
 /* ============================================================================
    FORCE-MOBILE OVERRIDES — FINAL AUTHORITY
-   When JS (initHeaderOverflowWatcher) detects header children overflow, it
-   adds body.header-force-mobile.  These rules MUST live at the very end of the
-   last-loaded header stylesheet so they win the cascade against ALL tablet &
-   desktop rules that use the same specificity + !important earlier.
+   When JS (initHeaderOverflowWatcher) detects tablet header overflow, it adds
+   body.header-force-mobile. These rules stay capped at <=1024px so desktop
+   layouts never swap to the hamburger/menu-drawer fallback.
    ============================================================================ */
+@media (max-width: 1024px) {
 body.header-force-mobile .header-container {
     display: flex !important;
     align-items: center !important;
@@ -1318,4 +1318,6 @@ body.header-force-mobile .logo {
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
+}
+
 }

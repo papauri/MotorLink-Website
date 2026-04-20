@@ -253,9 +253,10 @@ class AICarChat {
                 return;
             }
 
-            // Intentionally do not auto-rehydrate persistent server history here.
-            // Active chat continuity is session-based (sessionStorage), which resets
-            // naturally on logout and should not be replayed on a fresh login.
+            // No history, but restore open/close state if it was intentionally open.
+            if (savedState && savedState.isOpen && !savedState.dismissed) {
+                this.openChat({ focus: false, saveState: false });
+            }
         } catch (e) { /* ignore parse errors */ }
     }
 
@@ -1810,71 +1811,77 @@ class AICarChat {
                 },
                 credentials: 'include'
             });
-            
-            if (response.ok) {
-                const data = await response.json();
-                if (data.success && data.usage) {
-                    const usage = data.usage;
-                    const usageIndicator = document.getElementById('aiUsageIndicator');
-                    const usageText = document.getElementById('aiUsageText');
-                    
-                    if (usageIndicator && usageText) {
-                        const remaining = Number(usage.remaining ?? 0);
-                        const limit = Number(usage.daily_limit ?? 0);
-                        const percentage = Number(usage.percentage_used ?? 0);
-                        const hourlyRemaining = Number(usage.hourly_remaining ?? 0);
-                        const hourlyLimit = Number(usage.hourly_limit ?? 0);
-                        const hourlyPercentage = Number(usage.hourly_percentage_used ?? 0);
-                        const hourlyResetsInMinutes = Number(usage.hourly_resets_in_minutes ?? 0);
-                        const highestUsagePercent = Math.max(percentage, hourlyPercentage);
-                        
-                        // Color coding: green (>50% left), orange (25-50%), red (<25%)
-                        let color = '#4caf50'; // Green
-                        let bgColor = '#e8f5e9'; // Light green background
-                        let icon = '✓';
-                        
-                        if (highestUsagePercent >= 75) {
-                            color = '#f44336'; // Red
-                            bgColor = '#ffebee'; // Light red background
-                            icon = '⚠';
-                        } else if (highestUsagePercent >= 50) {
-                            color = '#ff9800'; // Orange
-                            bgColor = '#fff3e0'; // Light orange background
-                            icon = '⚠';
-                        }
 
-                        const resetHint = (hourlyResetsInMinutes > 0)
-                            ? `<span style="color:#777; margin-left: 4px;">(resets in ~${hourlyResetsInMinutes}m)</span>`
-                            : '';
+            if (!response.ok) {
+                this._showUsageError();
+                return;
+            }
 
-                        // Prominent, always-visible usage bar rendering.
-                        usageText.innerHTML = `<span style="color:${color}; font-weight:700;">${icon}</span>&nbsp;<span style="color:#0f172a;">Daily</span> <span style="color:${color}; font-weight:700;">${remaining}</span><span style="color:#94a3b8;">/${limit}</span> · <span style="color:#0f172a;">Hour</span> <span style="color:${color}; font-weight:700;">${hourlyRemaining}</span><span style="color:#94a3b8;">/${hourlyLimit}</span> ${resetHint}`;
+            const data = await response.json();
+            if (!data.success || !data.usage) {
+                this._showUsageError();
+                return;
+            }
 
-                        const usageBar = document.getElementById('aiUsageBar');
-                        if (usageBar) {
-                            usageBar.style.background = highestUsagePercent >= 75
-                                ? 'linear-gradient(90deg,#fff1f2,#ffe4e6)'
-                                : highestUsagePercent >= 50
-                                    ? 'linear-gradient(90deg,#fff7ed,#ffedd5)'
-                                    : 'linear-gradient(90deg,#eef4ff,#f7faff)';
-                            usageBar.style.borderBottom = `1px solid ${color}33`;
-                        }
+            const usage = data.usage;
+            const usageIndicator = document.getElementById('aiUsageIndicator');
+            const usageText = document.getElementById('aiUsageText');
 
-                        // Reset the old inline-flex pill styling — the new bar handles layout.
-                        usageIndicator.style.cssText = 'flex:1; min-width:0; font-size:12px; font-weight:600; letter-spacing:0.1px;';
-                        
-                        // Update after each message is sent
-                        this.updateUsageAfterMessage = true;
-                    }
+            if (usageIndicator && usageText) {
+                const remaining = Number(usage.remaining ?? 0);
+                const limit = Number(usage.daily_limit ?? 0);
+                const percentage = Number(usage.percentage_used ?? 0);
+                const hourlyRemaining = Number(usage.hourly_remaining ?? 0);
+                const hourlyLimit = Number(usage.hourly_limit ?? 0);
+                const hourlyPercentage = Number(usage.hourly_percentage_used ?? 0);
+                const hourlyResetsInMinutes = Number(usage.hourly_resets_in_minutes ?? 0);
+                const highestUsagePercent = Math.max(percentage, hourlyPercentage);
+
+                // Color coding: green (>50% left), orange (25-50%), red (<25%)
+                let color = '#4caf50'; // Green
+                let icon = '✓';
+
+                if (highestUsagePercent >= 75) {
+                    color = '#f44336'; // Red
+                    icon = '⚠';
+                } else if (highestUsagePercent >= 50) {
+                    color = '#ff9800'; // Orange
+                    icon = '⚠';
                 }
+
+                const resetHint = (hourlyResetsInMinutes > 0)
+                    ? `<span style="color:#777; margin-left: 4px;">(resets in ~${hourlyResetsInMinutes}m)</span>`
+                    : '';
+
+                usageText.innerHTML = `<span style="color:${color}; font-weight:700;">${icon}</span>&nbsp;<span style="color:#0f172a;">Daily</span> <span style="color:${color}; font-weight:700;">${remaining}</span><span style="color:#94a3b8;">/${limit}</span> · <span style="color:#0f172a;">Hour</span> <span style="color:${color}; font-weight:700;">${hourlyRemaining}</span><span style="color:#94a3b8;">/${hourlyLimit}</span> ${resetHint}`;
+
+                const usageBar = document.getElementById('aiUsageBar');
+                if (usageBar) {
+                    usageBar.style.background = highestUsagePercent >= 75
+                        ? 'linear-gradient(90deg,#fff1f2,#ffe4e6)'
+                        : highestUsagePercent >= 50
+                            ? 'linear-gradient(90deg,#fff7ed,#ffedd5)'
+                            : 'linear-gradient(90deg,#eef4ff,#f7faff)';
+                    usageBar.style.borderBottom = `1px solid ${color}33`;
+                }
+
+                usageIndicator.style.cssText = 'flex:1; min-width:0; font-size:12px; font-weight:600; letter-spacing:0.1px;';
+                this.updateUsageAfterMessage = true;
             }
         } catch (error) {
             console.error('Error loading usage indicator:', error);
-            // Hide usage indicator on error
-            const usageIndicator = document.getElementById('aiUsageIndicator');
-            if (usageIndicator) {
-                usageIndicator.style.display = 'none';
-            }
+            this._showUsageError();
+        }
+    }
+
+    _showUsageError() {
+        const usageIndicator = document.getElementById('aiUsageIndicator');
+        const usageText = document.getElementById('aiUsageText');
+        if (usageIndicator) {
+            usageIndicator.style.cssText = 'flex:1; min-width:0; font-size:12px; font-weight:600; letter-spacing:0.1px;';
+        }
+        if (usageText) {
+            usageText.innerHTML = '<span style="color:#94a3b8;">Usage unavailable &mdash; tap &#8635; to retry</span>';
         }
     }
 
