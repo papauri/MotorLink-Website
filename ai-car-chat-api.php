@@ -2485,6 +2485,18 @@ function handleAICarChat($db) {
             return;
         }
 
+        // Instant greeting bypass — respond without any AI provider call.
+        // Greetings like "hi", "hello", "hey" have no meaningful intent to classify;
+        // sending them through the AI intent resolver wastes credits and takes ~18s.
+        $normalizedMsg = strtolower(trim((string)$message));
+        if (preg_match('/^(hi+|hello+|hey+|yo|sup|hola|greetings|good\s+(morning|afternoon|evening|day))[\.!?]*$/i', $normalizedMsg)) {
+            $logDeterministicUsage();
+            sendSuccess([
+                'response' => "Hi there! \ud83d\udc4b I'm the MotorLink Malawi AI Assistant. Ask me about cars for sale, car hire, dealers, garages, fuel prices, or any vehicle spec you're curious about."
+            ]);
+            return;
+        }
+
         // Resolve contextual contact follow-ups like
         // "Give me their contact number" after car-hire/dealer/garage results.
         $contactFollowUpMessage = buildContactFollowUpMessage($db, $message, $conversationHistory);
@@ -2511,6 +2523,17 @@ function handleAICarChat($db) {
             updateAIChatPersistenceContext(['resolved_message' => $dealerFollowUpMessage]);
             $logDeterministicUsage();
             handleDealerQuery($db, $dealerFollowUpMessage, $conversationHistory);
+            return;
+        }
+
+        // Resolve contextual car-hire location follow-ups like
+        // previous: "What cars are available for hire"
+        // current: "Only the ones in Lilongwe"
+        $carHireFollowUpMessage = buildLocationFollowUpCarHireMessage($db, $message, $conversationHistory);
+        if ($carHireFollowUpMessage !== false) {
+            updateAIChatPersistenceContext(['resolved_message' => $carHireFollowUpMessage]);
+            $logDeterministicUsage();
+            handleCarHireQuery($db, $carHireFollowUpMessage, $conversationHistory);
             return;
         }
 
@@ -3946,8 +3969,9 @@ function buildLocationFollowUpCarHireMessage($db, $message, $conversationHistory
         return false;
     }
 
-    $isLikelyFollowUp = preg_match('/\b(what about|how about|about|instead|then|and|try)\b/i', $current) === 1
-        || str_word_count($current) <= 4;
+    $isLikelyFollowUp = preg_match('/\b(what about|how about|about|instead|then|and|try|only|just|show|filter|list)\b/i', $current) === 1
+        || preg_match('/^(only|just)\s/i', $current) === 1
+        || str_word_count($current) <= 6;
     if (!$isLikelyFollowUp) {
         return false;
     }
