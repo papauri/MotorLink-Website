@@ -48,7 +48,9 @@ function getDatabase() {
 /**
  * Database Connection Singleton Class
  * Uses the credentials already resolved by api-common.php.
+ * Guard prevents redeclaration when api-common.php has already defined it.
  */
+if (!class_exists('Database')) :
 class Database {
     private static $instance = null;
     private $connection;
@@ -84,6 +86,7 @@ class Database {
         return $this->connection;
     }
 }
+endif; // end class_exists('Database') guard
 
 /**
  * Load platform constants from DB-backed settings with safe runtime fallbacks.
