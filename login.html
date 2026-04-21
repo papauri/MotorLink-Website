@@ -3,134 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - MotorLink</title>
+    <title>Sign In - MotorLink</title>
     <meta name="description" content="Login to your MotorLink account to sell cars, manage listings, and access exclusive features.">
     <script src="js/suppress-extension-errors.js"></script>
 
     <link rel="stylesheet" href="css/login.css">
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/mobile-enhancements.css">
-    <link rel="stylesheet" href="css/mobile-redesign.css">
-    <link rel="stylesheet" href="css/price-redesign.css">
-
-    <link rel="stylesheet" href="css/mobile-footer-optimization.css">
-    <link rel="stylesheet" href="css/mobile-page-indicator.css">
     <link rel="stylesheet" href="css/cookie-consent.css">
-    <link rel="stylesheet" href="css/animations.css">
 </head>
-<body>
-    <!-- Auth Header (no navigation) -->
-    <header class="auth-header">
-        <div class="auth-header-inner">
-            <a href="index.html" class="auth-logo">
-                <i class="fas fa-car"></i> MotorLink
-            </a>
-            <a href="register.html" class="auth-header-link">
-                No account? <strong>Register free</strong>
-            </a>
-        </div>
-    </header>
+<body class="auth-page">
 
-    <!-- Main Auth Container -->
-    <div class="auth-container">
-        <div class="auth-card">
-            <!-- Welcome Message -->
-            <div class="welcome-message">
-                <i class="fas fa-car-side"></i>
-                <h3>Welcome Back!</h3>
-                <p>Login to access your car listings, saved searches, and exclusive features</p>
+    <main class="auth-split">
+
+        <!-- ══ LEFT: BRAND PANEL (desktop) ══ -->
+        <div class="auth-brand-panel" aria-hidden="true">
+            <div class="auth-brand-inner">
+                <a href="index.html" class="auth-brand-logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                <div class="auth-brand-copy">
+                    <h2>Drive Your Next<br>Adventure</h2>
+                    <p>Malawi's premier automotive marketplace — buy, sell, and connect with confidence.</p>
+                    <ul class="auth-brand-features">
+                        <li><i class="fas fa-check-circle"></i> Thousands of verified listings</li>
+                        <li><i class="fas fa-check-circle"></i> Trusted dealers &amp; garages</li>
+                        <li><i class="fas fa-check-circle"></i> Secure, encrypted accounts</li>
+                    </ul>
+                </div>
+                <div class="auth-brand-decoration" aria-hidden="true">
+                    <i class="fas fa-car-side"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- ══ RIGHT: FORM PANEL ══ -->
+        <div class="auth-form-panel">
+
+            <!-- Mobile top bar -->
+            <div class="auth-mobile-bar">
+                <a href="index.html" class="auth-mobile-logo">
+                    <i class="fas fa-car"></i> MotorLink
+                </a>
+                <a href="register.html" class="auth-mobile-link">Register free</a>
             </div>
 
-            <h1>Login to Your Account</h1>
-            <p class="auth-subtitle">Enter your credentials to access your MotorLink dashboard</p>
-            
-            <!-- Login Form -->
-            <form id="loginForm" novalidate>
-                <div class="form-group">
-                    <label class="form-label" for="emailInput">Email Address</label>
-                    <div class="input-wrapper">
-                        <input 
-                            type="email" 
-                            id="emailInput"
-                            name="email" 
-                            class="form-control" 
-                            placeholder="Enter your email address"
-                            required 
-                            autocomplete="email"
-                        >
-                        <i class="fas fa-envelope input-icon"></i>
-                    </div>
-                    <div class="error-message" id="emailError">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span></span>
-                    </div>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label" for="passwordInput">Password</label>
-                    <div class="input-wrapper">
-                        <input 
-                            type="password" 
-                            id="passwordInput"
-                            name="password" 
-                            class="form-control" 
-                            placeholder="Enter your password"
-                            required 
-                            autocomplete="current-password"
-                            minlength="6"
-                        >
-                        <i class="fas fa-lock input-icon"></i>
-                        <button type="button" class="password-toggle" id="passwordToggle">
-                            <i class="fas fa-eye" id="passwordToggleIcon"></i>
-                        </button>
-                    </div>
-                    <div class="error-message" id="passwordError">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span></span>
-                    </div>
+            <div class="auth-form-inner">
+                <div class="auth-form-header">
+                    <h1>Welcome back</h1>
+                    <p class="auth-subtitle">Sign in to your MotorLink account</p>
                 </div>
 
-                <div class="form-options">
-                    <label class="remember-me">
-                        <input type="checkbox" id="rememberMe" name="remember">
-                        <span>Remember me</span>
-                    </label>
-                    <a href="forgot-password.html" class="forgot-password">
-                        Forgot Password?
-                    </a>
-                </div>
-                
-                <button type="submit" class="btn btn-primary btn-lg" id="loginButton">
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span id="buttonText">Login to Account</span>
-                    <div class="loading-spinner" id="loginSpinner" style="display: none;">
-                        <i class="fas fa-spinner fa-spin"></i>
+                <form id="loginForm" novalidate>
+                    <!-- Email -->
+                    <div class="form-group">
+                        <label class="form-label" for="emailInput">Email address</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope input-icon"></i>
+                            <input
+                                type="email"
+                                id="emailInput"
+                                name="email"
+                                class="form-control"
+                                placeholder="you@example.com"
+                                required
+                                autocomplete="email"
+                            >
+                        </div>
+                        <div class="error-message" id="emailError">
+                            <i class="fas fa-exclamation-circle"></i><span></span>
+                        </div>
                     </div>
-                </button>
-            </form>
 
-            <!-- Registration Link -->
-            <div class="auth-links">
-                <p>Don't have an account? <a href="register.html">Create one now</a></p>
-                <p style="margin-top: 12px; font-size: 13px; color: var(--dark-gray);">
-                    <i class="fas fa-shield-alt" style="margin-right: 4px;"></i>
-                    Your data is protected with enterprise-grade security
+                    <!-- Password -->
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label class="form-label" for="passwordInput">Password</label>
+                            <a href="forgot-password.html" class="forgot-password">Forgot password?</a>
+                        </div>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock input-icon"></i>
+                            <input
+                                type="password"
+                                id="passwordInput"
+                                name="password"
+                                class="form-control"
+                                placeholder="••••••••"
+                                required
+                                autocomplete="current-password"
+                                minlength="6"
+                            >
+                            <button type="button" class="password-toggle" id="passwordToggle" aria-label="Toggle password visibility">
+                                <i class="fas fa-eye" id="passwordToggleIcon"></i>
+                            </button>
+                        </div>
+                        <div class="error-message" id="passwordError">
+                            <i class="fas fa-exclamation-circle"></i><span></span>
+                        </div>
+                    </div>
+
+                    <!-- Remember me -->
+                    <div class="form-options">
+                        <label class="remember-me">
+                            <input type="checkbox" id="rememberMe" name="remember">
+                            <span>Remember me</span>
+                        </label>
+                    </div>
+
+                    <!-- Submit -->
+                    <button type="submit" class="btn btn-primary btn-lg" id="loginButton">
+                        <span id="buttonText">Sign in</span>
+                        <i class="fas fa-arrow-right"></i>
+                        <div class="loading-spinner" id="loginSpinner" style="display:none;">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </button>
+                </form>
+
+                <div class="auth-links">
+                    <p>Don't have an account? <a href="register.html">Create one free</a></p>
+                </div>
+
+                <p class="auth-trust">
+                    <i class="fas fa-shield-alt"></i> Your data is protected with enterprise-grade security
                 </p>
             </div>
         </div>
-    </div>
 
-    <!-- Footer -->
-    <footer class="footer" role="contentinfo">
-        <div class="container"></div>
-    </footer>
+    </main>
 
     <script src="config.js"></script>
     <script src="js/footer-loader.js"></script>
     <script src="login.js"></script>
     <script src="js/cookie-consent.js"></script>
-
-    <script src="js/page-transitions.js"></script>
 </body>
 </html>
