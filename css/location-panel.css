@@ -77,6 +77,38 @@
   color: #22c55e;
 }
 
+/* ── Clickable chips (distance → Google Maps directions) ─────── */
+a.loc-chip.clickable-chip {
+  text-decoration: none;
+  cursor: pointer;
+  position: relative;
+}
+
+a.loc-chip.clickable-chip:hover,
+a.loc-chip.clickable-chip:focus-visible {
+  background: #ecfdf5;
+  border-color: #22c55e;
+  color: #166534;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.18);
+  outline: none;
+}
+
+a.loc-chip.clickable-chip:hover i,
+a.loc-chip.clickable-chip:focus-visible i {
+  color: #16a34a;
+}
+
+a.loc-chip.clickable-chip:active {
+  transform: translateY(0);
+}
+
+@media (hover: none) {
+  a.loc-chip.clickable-chip {
+    min-height: 32px; /* larger touch target on mobile */
+  }
+}
+
 /* Stats icons — subtle blue/gray */
 .loc-stats .loc-chip i.fa-history {
   color: #6366f1;

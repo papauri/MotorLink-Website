@@ -280,7 +280,7 @@ function renderCompanies(data) {
             }
         }
 
-        // Calculate distance from user if location available
+        // Calculate distance from user if location available — render as clickable directions link
         let distanceInfo = '';
         if (userLocation && company.latitude && company.longitude) {
             const distance = calculateDistance(
@@ -289,7 +289,8 @@ function renderCompanies(data) {
                 parseFloat(company.latitude),
                 parseFloat(company.longitude)
             );
-            distanceInfo = `<span class="loc-chip distance-info"><i class="fas fa-location-arrow"></i> ${distance.toFixed(1)} km away</span>`;
+            const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${company.latitude},${company.longitude}&travelmode=driving`;
+            distanceInfo = `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="loc-chip distance-info clickable-chip" onclick="event.stopPropagation();" title="Get directions to ${escapeHtml(company.business_name || '')}"><i class="fas fa-location-arrow"></i> ${distance.toFixed(1)} km away</a>`;
         }
 
         return `

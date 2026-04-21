@@ -1295,10 +1295,20 @@ function createGarageCard(garage) {
     const displayDistrict = locationData.district || garage.district || null;
     const fullAddress = garage.address || (isFromGoogle ? garage.vicinity : null);
 
-    // Calculate distance info (same logic as car-hire.js)
+    // Calculate distance info (same logic as car-hire.js) — clickable directions link
     let distanceInfo = '';
     if (hasDistance) {
-        distanceInfo = `<span class="loc-chip distance-info"><i class="fas fa-location-arrow"></i> ${garage.distance.toFixed(1)} km away</span>`;
+        let mapsUrl;
+        if (userLocation && garage.latitude && garage.longitude) {
+            mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${garage.latitude},${garage.longitude}&travelmode=driving`;
+        } else if (userLocation) {
+            const q = encodeURIComponent(`${garage.name || ''} ${garage.address || garage.vicinity || ''}`.trim());
+            mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${q}&travelmode=driving`;
+        } else {
+            const q = encodeURIComponent(`${garage.name || ''} ${garage.address || garage.vicinity || ''}`.trim());
+            mapsUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
+        }
+        distanceInfo = `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="loc-chip distance-info clickable-chip" onclick="event.stopPropagation();" title="Get directions to ${escapeHtml(garage.name || '')}"><i class="fas fa-location-arrow"></i> ${garage.distance.toFixed(1)} km away</a>`;
     }
 
     // Start building card HTML

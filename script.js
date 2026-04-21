@@ -2740,10 +2740,20 @@ class DealersManager {
         const hasDistance = dealer.distance != null;
         const hasAddress = dealer.address && dealer.address.trim() !== '';
 
-        // Calculate distance info (same logic as car-hire.js)
+        // Calculate distance info (same logic as car-hire.js) — clickable directions link
         let distanceInfo = '';
         if (hasDistance) {
-            distanceInfo = `<span class="loc-chip distance-info"><i class="fas fa-location-arrow"></i> ${dealer.distance.toFixed(1)} km away</span>`;
+            let mapsUrl;
+            if (this.userLocation && dealer.latitude && dealer.longitude) {
+                mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${this.userLocation.lat},${this.userLocation.lng}&destination=${dealer.latitude},${dealer.longitude}&travelmode=driving`;
+            } else if (this.userLocation) {
+                const q = encodeURIComponent(`${dealer.business_name || ''} ${dealer.address || dealer.location_name || ''}`.trim());
+                mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${this.userLocation.lat},${this.userLocation.lng}&destination=${q}&travelmode=driving`;
+            } else {
+                const q = encodeURIComponent(`${dealer.business_name || ''} ${dealer.address || dealer.location_name || ''}`.trim());
+                mapsUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
+            }
+            distanceInfo = `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="loc-chip distance-info clickable-chip" onclick="event.stopPropagation();" title="Get directions to ${this.escapeHtml(dealer.business_name || '')}"><i class="fas fa-location-arrow"></i> ${dealer.distance.toFixed(1)} km away</a>`;
         }
 
         // Generate star rating
@@ -3083,18 +3093,28 @@ applyFilters() {
     const sortBy = document.getElementById('sortSelect')?.value || 'featured';
 
     this.filteredDealers = (this.dealers || []).filter(dealer => {
-        // Text search — name, location, description
+        // Text search — name, location, description, address, owner
         if (searchTerm) {
-            const name = (dealer.business_name || '').toLowerCase();
-            const loc  = (dealer.location_name  || '').toLowerCase();
-            const desc = (dealer.description    || '').toLowerCase();
-            if (!name.includes(searchTerm) && !loc.includes(searchTerm) && !desc.includes(searchTerm)) {
+            const name  = (dealer.business_name || '').toLowerCase();
+            const loc   = (dealer.location_name  || '').toLowerCase();
+            const desc  = (dealer.description    || '').toLowerCase();
+            const addr  = (dealer.address        || '').toLowerCase();
+            const owner = (dealer.owner_name     || '').toLowerCase();
+            const dist  = (dealer.district       || '').toLowerCase();
+            if (!name.includes(searchTerm) && !loc.includes(searchTerm) &&
+                !desc.includes(searchTerm) && !addr.includes(searchTerm) &&
+                !owner.includes(searchTerm) && !dist.includes(searchTerm)) {
                 return false;
             }
         }
 
-        // Location
-        if (locationVal && (dealer.location_name || '') !== locationVal) return false;
+        // Location — case-insensitive, trimmed comparison. Accept either location_name or district match.
+        if (locationVal) {
+            const target = String(locationVal).trim().toLowerCase();
+            const dl = String(dealer.location_name || '').trim().toLowerCase();
+            const dd = String(dealer.district || '').trim().toLowerCase();
+            if (dl !== target && dd !== target) return false;
+        }
 
         // Specialization (JSON array field)
         if (specializationVal) {
@@ -3104,7 +3124,7 @@ applyFilters() {
                     ? JSON.parse(dealer.specialization)
                     : (dealer.specialization || []);
             } catch (e) {}
-            if (!Array.isArray(specs) || !specs.some(s => s.trim() === specializationVal)) return false;
+            if (!Array.isArray(specs) || !specs.some(s => String(s).trim() === specializationVal)) return false;
         }
 
         // Verified status (loose comparison — API may return string "1" or number 1)
