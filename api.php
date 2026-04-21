@@ -115,11 +115,31 @@ $isLocalhost = in_array($serverHost, ['localhost', '127.0.0.1']) ||
                preg_match('/^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/', $serverHost);
 $isProduction = !$isLocalhost && !empty($serverHost);
 
-// Database host: localhost on production, remote for UAT/local development
-define('DB_HOST', $isProduction ? 'localhost' : 'promanaged-it.com');
-define('DB_USER', 'p601229');
-define('DB_PASS', '2:p2WpmX[0YTs7');
-define('DB_NAME', 'p601229_motorlinkmalawi_db');
+// ─── DB credentials: loaded from env vars or gitignored admin-secrets.local.php ───
+// Never hardcode credentials here. Fallbacks live in admin/admin-secrets.local.php.
+$__motorlinkDbDefaultHost = $isProduction ? 'localhost' : 'promanaged-it.com';
+$__motorlinkSecrets = [];
+foreach ([__DIR__ . '/admin/admin-secrets.local.php', __DIR__ . '/admin/admin-secrets.example.php'] as $__secretPath) {
+    if (is_file($__secretPath)) {
+        $__loaded = require $__secretPath;
+        if (is_array($__loaded)) { $__motorlinkSecrets = $__loaded; break; }
+    }
+}
+$__dbHost = getenv('MOTORLINK_DB_HOST') ?: ($__motorlinkSecrets['MOTORLINK_DB_HOST'] ?? $__motorlinkDbDefaultHost);
+$__dbUser = getenv('MOTORLINK_DB_USER') ?: ($__motorlinkSecrets['MOTORLINK_DB_USER'] ?? '');
+$__dbPass = getenv('MOTORLINK_DB_PASS') ?: ($__motorlinkSecrets['MOTORLINK_DB_PASS'] ?? '');
+$__dbName = getenv('MOTORLINK_DB_NAME') ?: ($__motorlinkSecrets['MOTORLINK_DB_NAME'] ?? '');
+if ($__dbUser === '' || $__dbPass === '' || $__dbName === '') {
+    http_response_code(500);
+    error_log('api.php: DB bootstrap credentials missing. Configure MOTORLINK_DB_* env vars or admin/admin-secrets.local.php.');
+    echo json_encode(['success' => false, 'error' => 'Server configuration error']);
+    exit;
+}
+define('DB_HOST', $__dbHost);
+define('DB_USER', $__dbUser);
+define('DB_PASS', $__dbPass);
+define('DB_NAME', $__dbName);
+unset($__motorlinkSecrets, $__secretPath, $__loaded, $__dbHost, $__dbUser, $__dbPass, $__dbName, $__motorlinkDbDefaultHost);
 define('SITE_NAME', 'MotorLink');
 define('SITE_URL', motorlink_get_runtime_origin_fallback());
 define('UPLOAD_PATH', 'uploads/');
