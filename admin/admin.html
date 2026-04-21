@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MotorLink Admin - Complete Management Dashboard</title>
+    <link rel="icon" href="../favicon.ico" type="image/x-icon">
     <link rel="stylesheet" href="admin-styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/datatables/1.10.21/css/dataTables.bootstrap4.min.css">
@@ -1979,33 +1980,43 @@
                                 <small class="form-text" style="display: block; margin-bottom: 12px;">
                                     Stored in <strong>site_settings</strong>. Keys are never shown in full here. Leave a field blank to keep the current secret.
                                 </small>
-                                <!-- form wrapper required: browser warns if password inputs have no parent form -->
-                                <form onsubmit="return false;" autocomplete="off" aria-label="Provider API Key entry">
+                                <!-- Each provider key in its own form: fixes "password without username" and "complex form" browser warnings -->
                                 <div class="row">
                                     <div class="col-md-6">
+                                        <form onsubmit="return false;" autocomplete="off" aria-label="OpenAI API Key entry">
+                                        <input type="text" name="username" autocomplete="username" style="display:none" aria-hidden="true">
                                         <label for="ai-openai-api-key">OpenAI API Key</label>
                                         <input type="password" id="ai-openai-api-key" class="form-control" autocomplete="new-password" placeholder="Enter a new OpenAI API key to replace the stored one">
                                         <small id="ai-openai-api-key-status" class="form-text">Status: Not configured</small>
+                                        </form>
                                     </div>
                                     <div class="col-md-6">
+                                        <form onsubmit="return false;" autocomplete="off" aria-label="DeepSeek API Key entry">
+                                        <input type="text" name="username" autocomplete="username" style="display:none" aria-hidden="true">
                                         <label for="ai-deepseek-api-key">DeepSeek API Key</label>
                                         <input type="password" id="ai-deepseek-api-key" class="form-control" autocomplete="new-password" placeholder="Enter a new DeepSeek API key to replace the stored one">
                                         <small id="ai-deepseek-api-key-status" class="form-text">Status: Not configured</small>
+                                        </form>
                                     </div>
                                 </div>
                                 <div class="row" style="margin-top: 12px;">
                                     <div class="col-md-6">
+                                        <form onsubmit="return false;" autocomplete="off" aria-label="Qwen API Key entry">
+                                        <input type="text" name="username" autocomplete="username" style="display:none" aria-hidden="true">
                                         <label for="ai-qwen-api-key">Qwen API Key</label>
                                         <input type="password" id="ai-qwen-api-key" class="form-control" autocomplete="new-password" placeholder="Enter a new Qwen API key to replace the stored one">
                                         <small id="ai-qwen-api-key-status" class="form-text">Status: Not configured</small>
+                                        </form>
                                     </div>
                                     <div class="col-md-6">
+                                        <form onsubmit="return false;" autocomplete="off" aria-label="GLM API Key entry">
+                                        <input type="text" name="username" autocomplete="username" style="display:none" aria-hidden="true">
                                         <label for="ai-glm-api-key">GLM API Key</label>
                                         <input type="password" id="ai-glm-api-key" class="form-control" autocomplete="new-password" placeholder="Enter a new GLM API key to replace the stored one">
                                         <small id="ai-glm-api-key-status" class="form-text">Status: Not configured</small>
+                                        </form>
                                     </div>
                                 </div>
-                                </form>
                                 <small id="ai-provider-keys-permission-status" class="form-text" style="display: block; margin-top: 12px; color: #455a64;">
                                     Only super admins should overwrite provider API keys from this panel.
                                 </small>

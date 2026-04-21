@@ -70,6 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
+// Get action from request
+$action = $_GET['action'] ?? '';
+
 try {
 switch ($action) {
         case 'admin_login':
