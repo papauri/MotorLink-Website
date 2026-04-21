@@ -949,6 +949,41 @@ body {
     font-size: 14px;
 }
 
+/* Maintenance Mode Active Banner */
+.maintenance-active-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fef3c7;
+    border: 1.5px solid #f59e0b;
+    border-radius: 10px;
+    color: #92400e;
+    font-size: 0.93rem;
+    font-weight: 500;
+    padding: 10px 16px;
+    margin: 16px 24px 0;
+    flex-wrap: wrap;
+}
+.maintenance-active-banner strong {
+    color: #78350f;
+}
+.maint-banner-btn {
+    margin-left: auto;
+    background: #f59e0b;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    min-height: 34px;
+    white-space: nowrap;
+}
+.maint-banner-btn:hover {
+    background: #d97706;
+}
+
 .admin-content {
     flex: 1;
     padding: 30px;

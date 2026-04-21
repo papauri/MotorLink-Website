@@ -2410,6 +2410,8 @@ class DealersManager {
         this.currentUser = null;
         this.userLocation = null;
         this.geocodedDealers = new Map(); // Cache for geocoded addresses
+        this.perPage = 25;
+        this.currentPage = 1;
         this.init();
     }
 
@@ -2724,8 +2726,57 @@ class DealersManager {
 
         if (emptyState) emptyState.style.display = 'none';
 
-        dealersGrid.innerHTML = this.filteredDealers.map(dealer => this.createDealerCardHTML(dealer)).join('');
-        
+        const total = this.filteredDealers.length;
+        const perPage = this.perPage;
+        const page = this.currentPage;
+        const paged = perPage === 0 ? this.filteredDealers : this.filteredDealers.slice((page - 1) * perPage, page * perPage);
+
+        dealersGrid.innerHTML = paged.map(dealer => this.createDealerCardHTML(dealer)).join('');
+
+        // Inject pagination below grid
+        let existingPag = dealersGrid.parentElement?.querySelector('.ml-pagination');
+        if (existingPag) existingPag.remove();
+        const pagHtml = this.buildDealersPaginationHTML(total, page, perPage);
+        if (pagHtml) {
+            const pagDiv = document.createElement('div');
+            pagDiv.innerHTML = pagHtml;
+            if (pagDiv.firstElementChild) dealersGrid.parentElement.appendChild(pagDiv.firstElementChild);
+        }
+    }
+
+    buildDealersPaginationHTML(total, page, perPage) {
+        if (total === 0) return '';
+        const effPer = perPage === 0 ? total : perPage;
+        const totalPages = Math.ceil(total / effPer);
+        const start = (page - 1) * effPer + 1;
+        const end   = Math.min(page * effPer, total);
+        return `<div class="ml-pagination">
+            <span class="ml-pag-info">Showing ${start}\u2013${end} of ${total}</span>
+            <div class="ml-pag-controls">
+                <button class="ml-pag-btn" onclick="window.dealersManager.setPage(${page - 1},${perPage})" ${page <= 1 ? 'disabled' : ''}>&#8249; Prev</button>
+                <span class="ml-pag-pages">Page ${page} of ${totalPages}</span>
+                <button class="ml-pag-btn" onclick="window.dealersManager.setPage(${page + 1},${perPage})" ${page >= totalPages ? 'disabled' : ''}>Next &#8250;</button>
+            </div>
+            <label class="ml-pag-perpage">Show:&nbsp;<select class="ml-pag-select" onchange="window.dealersManager.setPage(1,parseInt(this.value))">
+                <option value="25" ${perPage===25?'selected':''}>25</option>
+                <option value="50" ${perPage===50?'selected':''}>50</option>
+                <option value="100" ${perPage===100?'selected':''}>100</option>
+                <option value="200" ${perPage===200?'selected':''}>200</option>
+                <option value="250" ${perPage===250?'selected':''}>250</option>
+                <option value="0" ${perPage===0?'selected':''}>All</option>
+            </select></label>
+        </div>`;
+    }
+
+    setPage(page, perPage) {
+        const total = this.filteredDealers.length;
+        const effPer = perPage === 0 ? total : perPage;
+        const totalPages = Math.ceil(total / effPer) || 1;
+        this.currentPage = Math.max(1, Math.min(page, totalPages));
+        this.perPage = perPage;
+        this.renderDealers();
+        const grid = document.getElementById('dealersGrid');
+        if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     createDealerCardHTML(dealer) {
@@ -3009,28 +3060,30 @@ class DealersManager {
     }
     // Add this method to calculate and update hero statistics
 updateHeroStats(dealers) {
-    // Calculate total verified dealers
-    const verifiedDealers = dealers.filter(dealer => dealer.verified == 1).length;
+    // Total active dealers returned by the API
+    const totalDealers = dealers.length;
 
-    // Calculate total cars available (sum of total_cars from all dealers)
+    // Cars with active listings (sum of total_cars subquery per dealer)
     const totalCars = dealers.reduce((sum, dealer) => sum + (parseInt(dealer.total_cars) || 0), 0);
 
-    // Calculate unique cities covered
-    const uniqueCities = [...new Set(dealers.map(dealer => dealer.location_name))].length;
+    // Unique cities/locations covered
+    const uniqueCities = [...new Set(dealers.map(dealer => dealer.location_name).filter(Boolean))].length;
 
-    // Calculate featured dealers
-    const featuredDealers = dealers.filter(dealer => dealer.featured == 1).length;
+    // Dealers with a logo or certified/featured flag — meaningful "with profile" count
+    const withProfile = dealers.filter(dealer =>
+        dealer.logo_url || dealer.certified == 1 || dealer.featured == 1
+    ).length;
 
     // Update the hero section
-    const totalDealersElement = document.getElementById('totalDealers');
-    const totalCarsElement = document.getElementById('totalCarsAvailable');
-    const totalCitiesElement = document.getElementById('totalCities');
+    const totalDealersElement    = document.getElementById('totalDealers');
+    const totalCarsElement       = document.getElementById('totalCarsAvailable');
+    const totalCitiesElement     = document.getElementById('totalCities');
     const featuredDealersElement = document.getElementById('featuredDealers');
 
-    if (totalDealersElement) totalDealersElement.textContent = `${verifiedDealers}+`;
-    if (totalCarsElement) totalCarsElement.textContent = `${totalCars}+`;
-    if (totalCitiesElement) totalCitiesElement.textContent = `${uniqueCities}`;
-    if (featuredDealersElement) featuredDealersElement.textContent = `${featuredDealers}`;
+    if (totalDealersElement)    totalDealersElement.textContent    = totalDealers + '+';
+    if (totalCarsElement)       totalCarsElement.textContent       = totalCars > 0 ? totalCars + '+' : '0';
+    if (totalCitiesElement)     totalCitiesElement.textContent     = uniqueCities;
+    if (featuredDealersElement) featuredDealersElement.textContent = withProfile + '+';
 }
 
 populateLocationFilter() {
@@ -3114,6 +3167,7 @@ applyFilters() {
     });
 
     this.sortDealers(sortBy);
+    this.currentPage = 1; // Reset page on filter change
     this.renderDealers();
     this.updateResultsCount();
 }
@@ -3132,6 +3186,7 @@ clearFilters() {
 
     this.filteredDealers = [...(this.dealers || [])];
     this.sortDealers('featured');
+    this.currentPage = 1; // Reset page on clear
     this.renderDealers();
     this.updateResultsCount();
 }

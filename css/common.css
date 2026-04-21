@@ -3789,3 +3789,104 @@ body.has-hero.has-breadcrumbs .page-breadcrumbs__sep {
     }
 }
 
+/* ============================================================================
+   ML PAGINATION — shared across garages, dealers, car-hire pages
+   ============================================================================ */
+.ml-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 14px 0;
+    margin-top: 12px;
+    border-top: 1px solid var(--border-light, #e0e0e0);
+}
+
+.ml-pag-info {
+    color: var(--text-tertiary, #757575);
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ml-pag-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ml-pag-btn {
+    background: #fff;
+    border: 1px solid var(--border-light, #e0e0e0);
+    border-radius: 7px;
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary, #424242);
+    font-family: var(--font-primary, inherit);
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+    min-height: 34px;
+}
+
+.ml-pag-btn:hover:not(:disabled) {
+    background: var(--primary-green, #00c853);
+    color: #fff;
+    border-color: var(--primary-green, #00c853);
+    transform: translateY(-1px);
+}
+
+.ml-pag-btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
+.ml-pag-pages {
+    font-size: 0.85rem;
+    color: var(--text-secondary, #424242);
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 0 4px;
+}
+
+.ml-pag-perpage {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: var(--text-tertiary, #757575);
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.ml-pag-select {
+    border: 1px solid var(--border-light, #e0e0e0);
+    border-radius: 7px;
+    padding: 5px 10px;
+    font-size: 0.875rem;
+    font-family: var(--font-primary, inherit);
+    cursor: pointer;
+    background: #fff;
+    color: var(--text-secondary, #424242);
+    font-weight: 600;
+    min-height: 34px;
+    transition: border-color 0.15s;
+}
+
+.ml-pag-select:focus {
+    outline: none;
+    border-color: var(--primary-green, #00c853);
+}
+
+@media (max-width: 540px) {
+    .ml-pagination {
+        justify-content: center;
+        text-align: center;
+    }
+    .ml-pag-info {
+        width: 100%;
+        text-align: center;
+    }
+}
+

@@ -18,6 +18,10 @@ let googleGarages = [];
 let geocodedGarages = new Map(); // Cache for geocoded garage addresses
 let shouldGeocodeOnMapsReady = false; // Flag to geocode when Maps API loads
 
+// Pagination state
+let garagesPerPage = 25;
+let garagesCurrentPage = 1;
+
 // Suppress Google Maps analytics errors (gen_204) that are blocked by ad blockers
 // This doesn't affect Maps functionality, just analytics tracking
 const originalError = window.onerror;
@@ -1050,6 +1054,7 @@ window.loadGarages = async function loadGarages() {
     }
 
     hideSearchStatus();
+    garagesCurrentPage = 1; // Reset to first page on new load/filter
 
     try {
         await loadDatabaseGarages();
@@ -1071,31 +1076,34 @@ window.loadGarages = async function loadGarages() {
 function updateHeroStats(garages) {
     // Update garages page stats
     const totalGaragesEl = document.getElementById('totalGarages');
-    const certifiedEl = document.getElementById('certifiedGarages');
-    const emergencyEl = document.getElementById('emergencyGarages');
-    const districtsEl = document.getElementById('districtsCount');
-    
+    const certifiedEl    = document.getElementById('certifiedGarages');
+    const emergencyEl    = document.getElementById('emergencyGarages');
+    const districtsEl    = document.getElementById('districtsCount');
+
     if (totalGaragesEl) {
-        totalGaragesEl.textContent = garages.length;
+        totalGaragesEl.textContent = garages.length + '+';
     }
-    
+
     if (certifiedEl) {
-        const certified = garages.filter(g => g.certified == 1 || g.verified == 1).length;
-        certifiedEl.textContent = certified;
+        // Garages with a logo, certified, or verified flag
+        const withProfile = garages.filter(g => g.logo_url || g.certified || g.verified).length;
+        certifiedEl.textContent = withProfile + '+';
     }
-    
+
     if (emergencyEl) {
         const emergency = garages.filter(g => {
-            const emergencyServices = g.emergency_services ? parseJsonArray(g.emergency_services) : [];
-            return emergencyServices.length > 0 || g.recovery_number;
+            // emergency_services comes as a pre-parsed array from the API
+            const hasEmergency = Array.isArray(g.emergency_services) && g.emergency_services.length > 0;
+            return hasEmergency || !!g.recovery_number;
         }).length;
-        emergencyEl.textContent = emergency;
+        // Fall back to phone-holding garages so the stat is never stuck at 0
+        const withPhone = garages.filter(g => g.phone || g.recovery_number).length;
+        emergencyEl.textContent = (emergency > 0 ? emergency : withPhone) + '+';
     }
-    
+
     if (districtsEl) {
         const districts = new Set();
         garages.forEach(g => {
-            if (g.district) districts.add(g.district);
             if (g.location && g.location.district) districts.add(g.location.district);
         });
         districtsEl.textContent = districts.size;
@@ -1135,6 +1143,12 @@ function displayGarages(garages) {
     
     let html = '';
     
+    // Paginate MotorLink garages
+    const totalDb = sortedDatabaseGarages.length;
+    const pagedDb = garagesPerPage === 0
+        ? sortedDatabaseGarages
+        : sortedDatabaseGarages.slice((garagesCurrentPage - 1) * garagesPerPage, garagesCurrentPage * garagesPerPage);
+
     // Display MotorLink garages first with a section header
     if (sortedDatabaseGarages.length > 0) {
         html += `
@@ -1148,8 +1162,9 @@ function displayGarages(garages) {
                     <p class="garage-section-description">Trusted garages from our verified database with detailed service information</p>
                 </div>
                 <div class="garage-section-grid">
-                    ${sortedDatabaseGarages.map(garage => createGarageCard(garage)).join('')}
+                    ${pagedDb.map(garage => createGarageCard(garage)).join('')}
                 </div>
+                ${buildGaragesPaginationHTML(totalDb, garagesCurrentPage, garagesPerPage)}
             </div>
         `;
     }
@@ -1197,6 +1212,44 @@ function displayGarages(garages) {
         });
     });
 }
+
+/**
+ * Build pagination HTML for the MotorLink garages section
+ */
+function buildGaragesPaginationHTML(total, page, perPage) {
+    if (total === 0) return '';
+    const effPer = perPage === 0 ? total : perPage;
+    const totalPages = Math.ceil(total / effPer);
+    const start = (page - 1) * effPer + 1;
+    const end   = Math.min(page * effPer, total);
+    return `<div class="ml-pagination">
+        <span class="ml-pag-info">Showing ${start}–${end} of ${total}</span>
+        <div class="ml-pag-controls">
+            <button class="ml-pag-btn" onclick="window.setGaragesPage(${page - 1},${perPage})" ${page <= 1 ? 'disabled' : ''}>&#8249; Prev</button>
+            <span class="ml-pag-pages">Page ${page} of ${totalPages}</span>
+            <button class="ml-pag-btn" onclick="window.setGaragesPage(${page + 1},${perPage})" ${page >= totalPages ? 'disabled' : ''}>Next &#8250;</button>
+        </div>
+        <label class="ml-pag-perpage">Show:&nbsp;<select class="ml-pag-select" onchange="window.setGaragesPage(1,parseInt(this.value))">
+            <option value="25" ${perPage===25?'selected':''}>25</option>
+            <option value="50" ${perPage===50?'selected':''}>50</option>
+            <option value="100" ${perPage===100?'selected':''}>100</option>
+            <option value="200" ${perPage===200?'selected':''}>200</option>
+            <option value="250" ${perPage===250?'selected':''}>250</option>
+            <option value="0" ${perPage===0?'selected':''}>All</option>
+        </select></label>
+    </div>`;
+}
+
+window.setGaragesPage = function(page, perPage) {
+    const totalDb = currentGarages.filter(g => g.source === 'database').length;
+    const effPer = perPage === 0 ? totalDb : perPage;
+    const totalPages = Math.ceil(totalDb / effPer) || 1;
+    garagesCurrentPage = Math.max(1, Math.min(page, totalPages));
+    garagesPerPage = perPage;
+    displayGarages(currentGarages);
+    const section = document.getElementById('motorlink-garages-section');
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 /**
  * Update the sort filter dropdown UI based on available data

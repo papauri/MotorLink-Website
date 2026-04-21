@@ -10,6 +10,11 @@ let stats = {};
 let userLocation = null;
 let geocodedCompanies = new Map(); // Cache geocoded addresses
 
+// Pagination state
+let carHirePerPage = 25;
+let carHireCurrentPage = 1;
+let carHireFilteredAll = []; // Full filtered set for pagination
+
 async function fetchJsonWithRetry(url, options = {}, attempts = 2, timeoutMs = 10000) {
     let lastError = null;
 
@@ -223,8 +228,15 @@ function renderCompanies(data) {
         showNoCompaniesMessage();
         return;
     }
+
+    // Store full filtered set for pagination
+    carHireFilteredAll = data;
+    const total = data.length;
+    const perPage = carHirePerPage;
+    const page = carHireCurrentPage;
+    const paged = perPage === 0 ? data : data.slice((page - 1) * perPage, page * perPage);
     
-    grid.innerHTML = data.map(company => {
+    grid.innerHTML = paged.map(company => {
         // Parse vehicle types safely
         let vehicleTypes = [];
         if (company.vehicle_types) {
@@ -409,9 +421,20 @@ function renderCompanies(data) {
         </a>
         `;
     }).join('');
+
+    // Append pagination controls after the grid
+    const pagContainer = document.getElementById('companiesGrid')?.parentElement;
+    if (pagContainer) {
+        let existingPag = pagContainer.querySelector('.ml-pagination');
+        if (existingPag) existingPag.remove();
+        const pagDiv = document.createElement('div');
+        pagDiv.innerHTML = buildCarHirePaginationHTML(total, page, perPage);
+        if (pagDiv.firstElementChild) pagContainer.appendChild(pagDiv.firstElementChild);
+    }
 }
 
 function applyFilters() {
+    carHireCurrentPage = 1; // Reset page on new filter
     const searchTerm = (document.getElementById('carHireSearch')?.value || '').toLowerCase().trim();
     const location = document.getElementById('locationFilter').value;
     const sort = document.getElementById('sortFilter').value;
@@ -565,6 +588,76 @@ function applyFilters() {
     renderCompanies(filtered);
     updateResultsCount(filtered.length);
 }
+
+function buildCarHirePaginationHTML(total, page, perPage) {
+    if (total === 0) return '';
+    const effPer = perPage === 0 ? total : perPage;
+    const totalPages = Math.ceil(total / effPer);
+    const start = (page - 1) * effPer + 1;
+    const end   = Math.min(page * effPer, total);
+    return `<div class="ml-pagination">
+        <span class="ml-pag-info">Showing ${start}\u2013${end} of ${total}</span>
+        <div class="ml-pag-controls">
+            <button class="ml-pag-btn" onclick="window.setCarHirePage(${page - 1},${perPage})" ${page <= 1 ? 'disabled' : ''}>&#8249; Prev</button>
+            <span class="ml-pag-pages">Page ${page} of ${totalPages}</span>
+            <button class="ml-pag-btn" onclick="window.setCarHirePage(${page + 1},${perPage})" ${page >= totalPages ? 'disabled' : ''}>Next &#8250;</button>
+        </div>
+        <label class="ml-pag-perpage">Show:&nbsp;<select class="ml-pag-select" onchange="window.setCarHirePage(1,parseInt(this.value))">
+            <option value="25" ${perPage===25?'selected':''}>25</option>
+            <option value="50" ${perPage===50?'selected':''}>50</option>
+            <option value="100" ${perPage===100?'selected':''}>100</option>
+            <option value="200" ${perPage===200?'selected':''}>200</option>
+            <option value="250" ${perPage===250?'selected':''}>250</option>
+            <option value="0" ${perPage===0?'selected':''}>All</option>
+        </select></label>
+    </div>`;
+}
+
+window.setCarHirePage = function(page, perPage) {
+    const total = carHireFilteredAll.length;
+    const effPer = perPage === 0 ? total : perPage;
+    const totalPages = Math.ceil(total / effPer) || 1;
+    carHireCurrentPage = Math.max(1, Math.min(page, totalPages));
+    carHirePerPage = perPage;
+    renderCompanies(carHireFilteredAll);
+    const grid = document.getElementById('companiesGrid');
+    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+function buildCarHirePaginationHTML(total, page, perPage) {
+    if (total === 0) return '';
+    const effPer = perPage === 0 ? total : perPage;
+    const totalPages = Math.ceil(total / effPer);
+    const start = (page - 1) * effPer + 1;
+    const end   = Math.min(page * effPer, total);
+    return `<div class="ml-pagination">
+        <span class="ml-pag-info">Showing ${start}\u2013${end} of ${total}</span>
+        <div class="ml-pag-controls">
+            <button class="ml-pag-btn" onclick="window.setCarHirePage(${page - 1},${perPage})" ${page <= 1 ? 'disabled' : ''}>&#8249; Prev</button>
+            <span class="ml-pag-pages">Page ${page} of ${totalPages}</span>
+            <button class="ml-pag-btn" onclick="window.setCarHirePage(${page + 1},${perPage})" ${page >= totalPages ? 'disabled' : ''}>Next &#8250;</button>
+        </div>
+        <label class="ml-pag-perpage">Show:&nbsp;<select class="ml-pag-select" onchange="window.setCarHirePage(1,parseInt(this.value))">
+            <option value="25" ${perPage===25?'selected':''}>25</option>
+            <option value="50" ${perPage===50?'selected':''}>50</option>
+            <option value="100" ${perPage===100?'selected':''}>100</option>
+            <option value="200" ${perPage===200?'selected':''}>200</option>
+            <option value="250" ${perPage===250?'selected':''}>250</option>
+            <option value="0" ${perPage===0?'selected':''}>All</option>
+        </select></label>
+    </div>`;
+}
+
+window.setCarHirePage = function(page, perPage) {
+    const total = carHireFilteredAll.length;
+    const effPer = perPage === 0 ? total : perPage;
+    const totalPages = Math.ceil(total / effPer) || 1;
+    carHireCurrentPage = Math.max(1, Math.min(page, totalPages));
+    carHirePerPage = perPage;
+    renderCompanies(carHireFilteredAll);
+    const grid = document.getElementById('companiesGrid');
+    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 
 function updateResultsCount(count) {
     const resultsElement = document.getElementById('resultsCount');

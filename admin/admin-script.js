@@ -6613,6 +6613,13 @@ async function saveAdminDbCredentials() {
     }
 }
 
+function updateMaintenanceBanner(isEnabled) {
+    const banner = document.getElementById('maintenanceBanner');
+    if (banner) {
+        banner.style.display = isEnabled ? 'flex' : 'none';
+    }
+}
+
 async function toggleMaintenanceMode() {
     const isEnabled = document.getElementById('maintenance-mode').checked;
     const message = document.getElementById('maintenance-message').value;
@@ -6634,6 +6641,7 @@ async function toggleMaintenanceMode() {
         });
 
         if (response.success) {
+            updateMaintenanceBanner(isEnabled);
             admin.showAlert(isEnabled ? 'warning' : 'success',
                            isEnabled ? 'Maintenance mode enabled' : 'Maintenance mode disabled');
             debugLog('Maintenance mode:', isEnabled ? 'enabled' : 'disabled', message);
@@ -6647,6 +6655,11 @@ async function toggleMaintenanceMode() {
         document.getElementById('maintenance-mode').checked = !isEnabled;
         debugLog('Error toggling maintenance mode:', error);
     }
+}
+
+async function disableMaintenanceModeQuick() {
+    document.getElementById('maintenance-mode').checked = false;
+    await toggleMaintenanceMode();
 }
 
 function previewMaintenanceMode() {
@@ -6806,8 +6819,11 @@ async function loadSettings() {
             if (settings['security_enable2FA'] !== undefined) document.getElementById('enable-2fa').checked = settings['security_enable2FA'];
 
             // Maintenance Mode
-            if (settings['maintenance_enabled'] !== undefined) document.getElementById('maintenance-mode').checked = settings['maintenance_enabled'];
-            if (settings['maintenance_message']) document.getElementById('maintenance-message').value = settings['maintenance_message'];
+            if (settings['maintenance_enabled'] !== undefined) {
+                document.getElementById('maintenance-mode').checked = settings['maintenance_enabled'];
+                updateMaintenanceBanner(!!settings['maintenance_enabled']);
+            }
+            if (settings['maintenance_message'] !== undefined) document.getElementById('maintenance-message').value = settings['maintenance_message'];
 
             // Admin DB credentials are managed separately in site_settings.
             await loadAdminDbCredentials();

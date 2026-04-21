@@ -2461,7 +2461,6 @@ function getGarages($db) {
             INNER JOIN locations loc ON g.location_id = loc.id
             WHERE {$whereClause}
             ORDER BY g.featured DESC, g.certified DESC, g.verified DESC, g.name ASC
-            LIMIT 50
         ";
         
         $stmt = $db->prepare($sql);
@@ -2501,6 +2500,7 @@ function getGarages($db) {
                 'verified' => (bool)$garage['verified'],
                 'certified' => (bool)$garage['certified'],
                 'featured' => (bool)$garage['featured'],
+                'logo_url' => $garage['logo_url'] ?? null,
                 'status' => $garage['status'],
                 'created_at' => $garage['created_at'],
                 'updated_at' => $garage['updated_at']
@@ -2530,7 +2530,6 @@ function getDealers($db) {
             INNER JOIN locations loc ON d.location_id = loc.id
             WHERE d.status = 'active'
             ORDER BY d.featured DESC, d.certified DESC, d.verified DESC, d.business_name ASC
-            LIMIT 50
         ");
         $dealers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         sendSuccess(['dealers' => $dealers]);
@@ -2607,7 +2606,6 @@ function getCarHire($db) {
             INNER JOIN locations loc ON c.location_id = loc.id
             WHERE c.status = 'active'
             ORDER BY c.featured DESC, c.certified DESC, c.verified DESC, c.business_name ASC
-            LIMIT 50
         ");
         $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
         sendSuccess(['car_hire' => $companies]);

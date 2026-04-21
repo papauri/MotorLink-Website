@@ -5073,7 +5073,13 @@ function handleSaveSettings($db) {
 
         foreach ($settings as $key => $value) {
             $settingKey = $category . '_' . $key;
-            $settingValue = is_array($value) ? json_encode($value) : $value;
+            if (is_bool($value)) {
+                $settingValue = $value ? '1' : '0';
+            } elseif (is_array($value)) {
+                $settingValue = json_encode($value);
+            } else {
+                $settingValue = $value;
+            }
             $settingType = is_bool($value) ? 'boolean' : (is_numeric($value) ? 'number' : 'string');
 
             $sql = "INSERT INTO settings (setting_key, setting_value, setting_type, updated_by, updated_at)
