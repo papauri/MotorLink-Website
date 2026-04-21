@@ -415,15 +415,11 @@ class AdminDashboard {
             'settings': 'Settings',
             'logs': 'Activity Logs',
             'ai-chat-usage': 'AI Chat Usage Logs',
-            'scraper': 'Business Scraper',
         };
         document.getElementById('pageTitle').textContent = titles[section] || 'Dashboard';
 
         this.currentSection = section;
         this.loadSectionData(section);
-
-        // Notify inline section modules
-        document.dispatchEvent(new CustomEvent('sectionChanged', { detail: { section } }));
     }
 
     toggleSidebar() {

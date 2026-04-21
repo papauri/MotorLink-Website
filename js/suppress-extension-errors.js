@@ -1,12 +1,9 @@
 /**
- * Suppress Chrome Extension Errors
+ * Suppress Chrome Extension Errors & Missing Image/Asset Errors
  *
- * This script suppresses harmless console errors caused by browser extensions
- * trying to inject scripts or communicate with the page. These errors are:
- * "Unchecked runtime.lastError: Could not establish connection. Receiving end does not exist."
- *
- * These errors come from external browser extensions (not our code) and are harmless
- * but clutter the console. This script filters them out.
+ * 1. Suppresses harmless console errors from browser extensions.
+ * 2. Silently handles broken <img>, <link> (favicon), and similar asset
+ *    load failures so they don't clutter the DevTools console.
  */
 
 (function() {
@@ -74,5 +71,43 @@
             event.preventDefault();
         }
     });
+
+    // ── Suppress missing image / favicon / asset 404 errors ─────────────────
+    // These are resource-load errors on <img>, <link rel="icon">, <source>
+    // etc. They show as red network errors in DevTools but carry no useful
+    // runtime information for production. Swap broken images to a transparent
+    // 1×1 GIF placeholder so they vanish visually and the error is silenced.
+    const TRANSPARENT_GIF = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+    document.addEventListener('error', function(e) {
+        const el = e.target;
+        if (!el || !el.tagName) return;
+        const tag = el.tagName.toUpperCase();
+
+        if (tag === 'IMG') {
+            // Only swap if not already the placeholder (prevents infinite loops)
+            if (el.src !== TRANSPARENT_GIF) {
+                el.src = TRANSPARENT_GIF;
+                el.style.visibility = 'hidden'; // keep layout; just invisible
+            }
+            e.stopPropagation();
+            return;
+        }
+
+        if (tag === 'LINK') {
+            // Favicon / stylesheet 404 — just remove the element silently
+            const rel = (el.getAttribute('rel') || '').toLowerCase();
+            if (rel.includes('icon') || rel.includes('stylesheet')) {
+                el.parentNode && el.parentNode.removeChild(el);
+            }
+            e.stopPropagation();
+            return;
+        }
+
+        if (tag === 'SOURCE') {
+            // <picture>/<video> source fallback — let browser use next source
+            e.stopPropagation();
+        }
+    }, /* useCapture = */ true);
 
 })();

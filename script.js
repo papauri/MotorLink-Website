@@ -2753,8 +2753,7 @@ class DealersManager {
             <a href="showroom.html?id=${dealer.id}" class="dealer-business-card-link">
                 <div class="dealer-business-card ${isFeatured ? 'featured-dealer' : ''}" data-dealer-id="${dealer.id}">
                     <div class="dealer-card-header">
-                        <div class="dealer-header-left" style="display:flex;align-items:center;gap:10px;">
-                            ${dealer.logo_url ? `<div class="dealer-card-logo" style="width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#f5f5f5;border:1px solid #e0e0e0;"><img src="${dealer.logo_url}" alt="${this.escapeHtml(dealer.business_name)} logo" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.innerHTML='<i class=\\'fas fa-store\\' style=\\'font-size:20px;color:#ccc;margin:auto;display:flex;align-items:center;justify-content:center;height:100%;\\' />';"></div>` : ''}
+                        <div class="dealer-header-left">
                             <h3 class="dealer-business-name">${this.escapeHtml(dealer.business_name)}</h3>
                         </div>
                         <div class="dealer-header-right">
@@ -3010,17 +3009,17 @@ class DealersManager {
     }
     // Add this method to calculate and update hero statistics
 updateHeroStats(dealers) {
-    // Total active dealers
-    const totalCount = dealers.length;
+    // Calculate total verified dealers
+    const verifiedDealers = dealers.filter(dealer => dealer.verified == 1).length;
 
     // Calculate total cars available (sum of total_cars from all dealers)
     const totalCars = dealers.reduce((sum, dealer) => sum + (parseInt(dealer.total_cars) || 0), 0);
 
     // Calculate unique cities covered
-    const uniqueCities = [...new Set(dealers.map(dealer => dealer.location_name).filter(Boolean))].length;
+    const uniqueCities = [...new Set(dealers.map(dealer => dealer.location_name))].length;
 
-    // Calculate verified dealers
-    const verifiedDealers = dealers.filter(dealer => dealer.verified == 1).length;
+    // Calculate featured dealers
+    const featuredDealers = dealers.filter(dealer => dealer.featured == 1).length;
 
     // Update the hero section
     const totalDealersElement = document.getElementById('totalDealers');
@@ -3028,10 +3027,10 @@ updateHeroStats(dealers) {
     const totalCitiesElement = document.getElementById('totalCities');
     const featuredDealersElement = document.getElementById('featuredDealers');
 
-    if (totalDealersElement) totalDealersElement.textContent = `${totalCount}+`;
-    if (totalCarsElement) totalCarsElement.textContent = totalCars > 0 ? `${totalCars}+` : `${totalCount * 3}+`;
+    if (totalDealersElement) totalDealersElement.textContent = `${verifiedDealers}+`;
+    if (totalCarsElement) totalCarsElement.textContent = `${totalCars}+`;
     if (totalCitiesElement) totalCitiesElement.textContent = `${uniqueCities}`;
-    if (featuredDealersElement) featuredDealersElement.textContent = `${verifiedDealers}`;
+    if (featuredDealersElement) featuredDealersElement.textContent = `${featuredDealers}`;
 }
 
 populateLocationFilter() {
@@ -3084,28 +3083,18 @@ applyFilters() {
     const sortBy = document.getElementById('sortSelect')?.value || 'featured';
 
     this.filteredDealers = (this.dealers || []).filter(dealer => {
-        // Text search — name, location, description, address, owner, district
+        // Text search — name, location, description
         if (searchTerm) {
-            const name  = (dealer.business_name || '').toLowerCase();
-            const loc   = (dealer.location_name  || '').toLowerCase();
-            const desc  = (dealer.description    || '').toLowerCase();
-            const addr  = (dealer.address        || '').toLowerCase();
-            const owner = (dealer.owner_name     || '').toLowerCase();
-            const dist  = (dealer.district       || '').toLowerCase();
-            if (!name.includes(searchTerm) && !loc.includes(searchTerm) &&
-                !desc.includes(searchTerm) && !addr.includes(searchTerm) &&
-                !owner.includes(searchTerm) && !dist.includes(searchTerm)) {
+            const name = (dealer.business_name || '').toLowerCase();
+            const loc  = (dealer.location_name  || '').toLowerCase();
+            const desc = (dealer.description    || '').toLowerCase();
+            if (!name.includes(searchTerm) && !loc.includes(searchTerm) && !desc.includes(searchTerm)) {
                 return false;
             }
         }
 
-        // Location — case-insensitive comparison against location_name or district
-        if (locationVal) {
-            const target = locationVal.trim().toLowerCase();
-            const dl = (dealer.location_name || '').trim().toLowerCase();
-            const dd = (dealer.district || '').trim().toLowerCase();
-            if (dl !== target && dd !== target) return false;
-        }
+        // Location
+        if (locationVal && (dealer.location_name || '') !== locationVal) return false;
 
         // Specialization (JSON array field)
         if (specializationVal) {
@@ -3115,7 +3104,7 @@ applyFilters() {
                     ? JSON.parse(dealer.specialization)
                     : (dealer.specialization || []);
             } catch (e) {}
-            if (!Array.isArray(specs) || !specs.some(s => String(s).trim() === specializationVal)) return false;
+            if (!Array.isArray(specs) || !specs.some(s => s.trim() === specializationVal)) return false;
         }
 
         // Verified status (loose comparison — API may return string "1" or number 1)

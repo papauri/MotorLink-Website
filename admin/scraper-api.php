@@ -152,14 +152,26 @@ case 'start':
     file_put_contents(jobFile($jobsDir, $newJobId), json_encode($jobData, JSON_PRETTY_PRINT));
 
     // Launch background process
-    $phpBin   = PHP_BINARY ?: 'php';
-    $cmd      = escapeshellarg($phpBin) . ' ' . escapeshellarg($scriptPath) . ' ' . implode(' ', array_map('escapeshellarg', $flags));
-    $logFile  = $jobsDir . '/' . $newJobId . '.log';
+    $phpBin  = PHP_BINARY ?: 'php';
+    $logFile = $jobsDir . '/' . $newJobId . '.log';
 
     if (PHP_OS_FAMILY === 'Windows') {
-        $winCmd = 'cmd /C start /B ' . $cmd . ' > ' . escapeshellarg($logFile) . ' 2>&1';
-        popen($winCmd, 'r');
+        // On Windows, cmd `start /B` treats the first double-quoted arg as the window
+        // title and then runs the .php script directly — opening it in Notepad.
+        // Using proc_open with an ARRAY bypasses the shell entirely: no quoting issues,
+        // no Notepad. Child processes on Windows are not tied to the parent, so the
+        // scraper keeps running after we return the JSON response.
+        $procArgs    = array_merge([$phpBin, $scriptPath], $flags);
+        $descriptors = [
+            0 => ['file', 'NUL',    'r'],
+            1 => ['file', $logFile, 'w'],
+            2 => ['file', $logFile, 'a'],
+        ];
+        $proc = proc_open($procArgs, $descriptors, $pipes);
+        // Intentionally not calling proc_close — process runs independently on Windows.
+        unset($proc, $pipes);
     } else {
+        $cmd = escapeshellarg($phpBin) . ' ' . escapeshellarg($scriptPath) . ' ' . implode(' ', array_map('escapeshellarg', $flags));
         exec($cmd . ' > ' . escapeshellarg($logFile) . ' 2>&1 &');
     }
 

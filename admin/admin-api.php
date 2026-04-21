@@ -70,11 +70,45 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
     exit();
 }
 
-// Get action from request
+// Enhanced session configuration - set cookie params only before session starts.
+if (session_status() !== PHP_SESSION_ACTIVE) {
+    $isHTTPS = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? null) == 443)
+        || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+
+    session_set_cookie_params([
+        'lifetime' => 86400,
+        'path' => '/',
+        'domain' => '',  // Empty domain for compatibility
+        'secure' => $isHTTPS,
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+
+    // Start session early
+    session_start();
+}
+
+// Get action
 $action = $_GET['action'] ?? '';
 
+if (empty($action)) {
+    echo json_encode(['success' => false, 'message' => 'No action specified']);
+    exit();
+}
+
 try {
-switch ($action) {
+    $actionsWithoutDatabase = ['admin_logout', 'check_admin_auth'];
+    $db = null;
+
+    if (!in_array($action, $actionsWithoutDatabase, true)) {
+        $db = getDatabase();
+
+        // Test database connection first
+        $db->query("SELECT 1");
+    }
+    
+    switch ($action) {
         case 'admin_login':
             handleAdminLogin($db);
             break;
