@@ -24,3 +24,8 @@ node_modules/
 
 # Runtime user uploads
 uploads/**
+
+# Demo seeder credential output (sensitive)
+scripts/_seed_credentials.csv
+
+scripts/_real_business_credentials.csv
