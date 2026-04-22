@@ -182,122 +182,123 @@
     </div>
 </div>
 
-<!-- Filter Section -->
-<div class="container">
-    <section class="filter-section">
-        <div class="filter-bar enhanced">
-            <div class="filter-group">
-                <label class="filter-label"><i class="fas fa-search"></i> Search</label>
-                <input type="text" id="carHireSearch" class="filter-select search-input"
-                       placeholder="Search companies..." autocomplete="off">
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="fas fa-th-large"></i> Category</label>
-                <select id="categoryFilter" class="filter-select">
-                    <option value="">All Categories</option>
-                    <option value="standard">Standard Car Hire</option>
-                    <option value="events">Events &amp; Occasions</option>
-                    <option value="vans_trucks">Vans &amp; Trucks</option>
-                </select>
-            </div>
-            <div class="filter-group" id="eventTypeFilterGroup" style="display:none;">
-                <label class="filter-label"><i class="fas fa-calendar-check"></i> Event Type</label>
-                <select id="eventTypeFilter" class="filter-select">
-                    <option value="">All Event Types</option>
-                    <option value="Wedding">Wedding</option>
-                    <option value="Corporate Event">Corporate Event</option>
-                    <option value="Funeral">Funeral</option>
-                    <option value="Birthday Party">Birthday Party</option>
-                    <option value="Prom Night">Prom Night</option>
-                    <option value="Airport VIP Transfer">Airport VIP</option>
-                    <option value="Graduation">Graduation</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="fas fa-map-marker-alt"></i> Location</label>
-                <select id="locationFilter" class="filter-select">
-                    <option value="">All Locations</option>
-                    <!-- Populated dynamically from locations table -->
-                </select>
-            </div>
-            <div class="filter-group" id="distanceFilterGroup">
-                <label class="filter-label"><i class="fas fa-location-arrow"></i> Max Distance</label>
-                <select id="distanceFilter" class="filter-select" disabled title="Allow location access to use this filter">
-                    <option value="">Any Distance</option>
-                    <option value="10">Within 10 km</option>
-                    <option value="25">Within 25 km</option>
-                    <option value="50">Within 50 km</option>
-                    <option value="100">Within 100 km</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="fas fa-car"></i> Vehicle Type</label>
-                <select id="vehicleTypeFilter" class="filter-select">
-                    <option value="">All Vehicle Types</option>
-                    <!-- Populated dynamically from car_hire_companies.vehicle_types -->
-                </select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="fas fa-cog"></i> Transmission</label>
-                <select id="transmissionFilter" class="filter-select">
-                    <option value="">All Transmissions</option>
-                    <option value="automatic">Automatic</option>
-                    <option value="manual">Manual</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="fas fa-users"></i> Seats</label>
-                <select id="seatsFilter" class="filter-select">
-                    <option value="">All Seats</option>
-                    <option value="2-4">2–4 Seats</option>
-                    <option value="5-6">5–6 Seats</option>
-                    <option value="7+">7+ Seats</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="fas fa-gas-pump"></i> Fuel Type</label>
-                <select id="fuelTypeFilter" class="filter-select">
-                    <option value="">All Fuel Types</option>
-                    <option value="petrol">Petrol</option>
-                    <option value="diesel">Diesel</option>
-                    <option value="hybrid">Hybrid</option>
-                    <option value="electric">Electric</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label class="filter-label"><i class="fas fa-sort"></i> Sort By</label>
-                <select id="sortFilter" class="filter-select">
-                    <option value="featured">Featured First</option>
-                    <option value="nearest">Nearest First</option>
-                    <option value="vehicles">Most Vehicles</option>
-                    <option value="price">Lowest Rates</option>
-                    <option value="name">Alphabetical</option>
-                </select>
-            </div>
-            <div class="filter-actions">
-                <button type="button" class="btn btn-outline-primary btn-outline" onclick="clearFilters()">
-                    <i class="fas fa-redo"></i> Clear
-                </button>
-                <button class="btn btn-primary btn-filter" onclick="applyFilters()">
-                    <i class="fas fa-filter"></i> Apply
-                </button>
-            </div>
-        </div>
-        <div id="resultsCount" class="results-count"></div>
-    </section>
-</div>
+<!-- Page Content: filter + grid share one container (matches dealers/garages pattern) -->
+<div class="car-hire-page-wrapper">
+    <div class="car-hire-page-container">
 
-    <!-- Companies Grid -->
-    <section class="companies-section">
-        <div class="container">
-            <div id="companiesGrid" class="companies-grid">
-                <div class="loading">
-                    <i class="fas fa-spinner fa-spin"></i>
-                    <p>Loading car hire companies...</p>
+        <!-- Filter Section -->
+        <section class="filter-section">
+            <div class="filter-bar enhanced">
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-search"></i> Search</label>
+                    <input type="text" id="carHireSearch" class="filter-select search-input"
+                           placeholder="Search companies..." autocomplete="off">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-th-large"></i> Category</label>
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="">All Categories</option>
+                        <option value="standard">Standard Car Hire</option>
+                        <option value="events">Events &amp; Occasions</option>
+                        <option value="vans_trucks">Vans &amp; Trucks</option>
+                    </select>
+                </div>
+                <div class="filter-group" id="eventTypeFilterGroup" style="display:none;">
+                    <label class="filter-label"><i class="fas fa-calendar-check"></i> Event Type</label>
+                    <select id="eventTypeFilter" class="filter-select">
+                        <option value="">All Event Types</option>
+                        <option value="Wedding">Wedding</option>
+                        <option value="Corporate Event">Corporate Event</option>
+                        <option value="Funeral">Funeral</option>
+                        <option value="Birthday Party">Birthday Party</option>
+                        <option value="Prom Night">Prom Night</option>
+                        <option value="Airport VIP Transfer">Airport VIP</option>
+                        <option value="Graduation">Graduation</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-map-marker-alt"></i> Location</label>
+                    <select id="locationFilter" class="filter-select">
+                        <option value="">All Locations</option>
+                        <!-- Populated dynamically from locations table -->
+                    </select>
+                </div>
+                <div class="filter-group" id="distanceFilterGroup">
+                    <label class="filter-label"><i class="fas fa-location-arrow"></i> Max Distance</label>
+                    <select id="distanceFilter" class="filter-select" disabled title="Allow location access to use this filter">
+                        <option value="">Any Distance</option>
+                        <option value="10">Within 10 km</option>
+                        <option value="25">Within 25 km</option>
+                        <option value="50">Within 50 km</option>
+                        <option value="100">Within 100 km</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-car"></i> Vehicle Type</label>
+                    <select id="vehicleTypeFilter" class="filter-select">
+                        <option value="">All Vehicle Types</option>
+                        <!-- Populated dynamically from car_hire_companies.vehicle_types -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-cog"></i> Transmission</label>
+                    <select id="transmissionFilter" class="filter-select">
+                        <option value="">All Transmissions</option>
+                        <option value="automatic">Automatic</option>
+                        <option value="manual">Manual</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-users"></i> Seats</label>
+                    <select id="seatsFilter" class="filter-select">
+                        <option value="">All Seats</option>
+                        <option value="2-4">2–4 Seats</option>
+                        <option value="5-6">5–6 Seats</option>
+                        <option value="7+">7+ Seats</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-gas-pump"></i> Fuel Type</label>
+                    <select id="fuelTypeFilter" class="filter-select">
+                        <option value="">All Fuel Types</option>
+                        <option value="petrol">Petrol</option>
+                        <option value="diesel">Diesel</option>
+                        <option value="hybrid">Hybrid</option>
+                        <option value="electric">Electric</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label"><i class="fas fa-sort"></i> Sort By</label>
+                    <select id="sortFilter" class="filter-select">
+                        <option value="featured">Featured First</option>
+                        <option value="nearest">Nearest First</option>
+                        <option value="vehicles">Most Vehicles</option>
+                        <option value="price">Lowest Rates</option>
+                        <option value="name">Alphabetical</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button type="button" class="btn btn-outline-primary btn-outline" onclick="clearFilters()">
+                        <i class="fas fa-redo"></i> Clear
+                    </button>
+                    <button class="btn btn-primary btn-filter" onclick="applyFilters()">
+                        <i class="fas fa-filter"></i> Apply
+                    </button>
                 </div>
             </div>
+            <div id="resultsCount" class="results-count"></div>
+        </section>
+
+        <!-- Companies Grid -->
+        <div id="companiesGrid" class="companies-grid">
+            <div class="loading">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading car hire companies...</p>
+            </div>
         </div>
-    </section>
+
+    </div><!-- /.car-hire-page-container -->
+</div><!-- /.car-hire-page-wrapper -->
 
     <!-- Footer -->
     <footer class="footer" role="contentinfo">

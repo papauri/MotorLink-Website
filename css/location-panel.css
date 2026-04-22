@@ -105,7 +105,7 @@ a.loc-chip.clickable-chip:active {
 
 @media (hover: none) {
   a.loc-chip.clickable-chip {
-    min-height: 32px; /* larger touch target on mobile */
+    min-height: 28px; /* touch target — same as sibling span chips */
   }
 }
 
@@ -161,14 +161,16 @@ a.loc-chip.clickable-chip:active {
 /* Tablet ≤768px */
 @media (max-width: 768px) {
   .loc-panel {
-    padding: 5px 7px;
+    padding: 5px 6px;
     margin: 4px 0 2px;
+    border-radius: 8px;
   }
 
   .loc-chip {
-    font-size: 0.65rem;
-    padding: 4px 8px;
+    font-size: 0.63rem;
+    padding: 4px 7px;
     gap: 4px;
+    border-radius: 6px;
   }
 
   .loc-chip i {
@@ -177,62 +179,64 @@ a.loc-chip.clickable-chip:active {
 
   .loc-chips,
   .loc-stats {
-    gap: 5px;
+    gap: 4px;
   }
 }
 
 /* Small phones ≤480px */
 @media (max-width: 480px) {
   .loc-panel {
-    padding: 4px 6px;
-    border-radius: 8px;
+    padding: 4px 5px;
+    border-radius: 7px;
     margin: 3px 0 2px;
+    background: rgba(248, 250, 252, 0.7);
+    border-color: #dde3ec;
   }
 
   .loc-chips,
   .loc-stats {
-    gap: 4px;
+    gap: 3px;
   }
 
   .loc-stats {
-    margin-top: 4px;
-    padding-top: 4px;
+    margin-top: 3px;
+    padding-top: 3px;
   }
 
   .loc-chip {
-    font-size: 0.6rem;
-    padding: 3px 6px;
-    border-radius: 6px;
+    font-size: 0.58rem;
+    padding: 3px 5px;
+    border-radius: 5px;
     gap: 3px;
   }
 
   .loc-chip i {
-    font-size: 0.52rem;
+    font-size: 0.5rem;
   }
 }
 
 /* Very small ≤360px */
 @media (max-width: 360px) {
   .loc-panel {
-    padding: 3px 5px;
+    padding: 3px 4px;
   }
 
   .loc-chip {
-    font-size: 0.56rem;
-    padding: 2px 5px;
-    gap: 3px;
+    font-size: 0.54rem;
+    padding: 2px 4px;
+    gap: 2px;
   }
 
   .loc-chip i {
-    font-size: 0.48rem;
+    font-size: 0.46rem;
   }
 }
 
 /* Compact 2-col range: 481px – 640px */
 @media (min-width: 481px) and (max-width: 640px) {
   .loc-chip {
-    font-size: 0.62rem;
-    padding: 3px 7px;
+    font-size: 0.61rem;
+    padding: 3px 6px;
   }
 
   .loc-chip i {

@@ -7,20 +7,25 @@
    GLOBAL FILTER CONTAINER STYLES
    ======================================== */
 
-/* Filter section wrapper (car-hire page) */
+/* Filter section wrapper (car-hire page) — matches dealers-filters pattern */
 .filter-section {
     position: sticky;
-    top: 60px;
+    top: 80px;
     background: white;
-    z-index: 10;
-    padding: 20px 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0);
+    z-index: 100;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
     transition: box-shadow 0.3s ease;
-    margin-bottom: 0;
+    margin-bottom: 24px;
+    border: 1px solid #e5e7eb;
 }
 
-.filter-section.scrolled {
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+/* Scrolled state — uniform across all three pages */
+.filter-section.scrolled,
+.dealers-filters.scrolled,
+.garage-filters-container.scrolled {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
 }
 
 /* Base filter container - applies to all pages */
@@ -54,6 +59,7 @@
     margin-bottom: 0;
     background: transparent;
     padding: 0;
+    border-radius: 0;
 }
 
 /* ========================================

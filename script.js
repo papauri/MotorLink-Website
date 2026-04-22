@@ -2791,10 +2791,17 @@ class DealersManager {
         const hasDistance = dealer.distance != null;
         const hasAddress = dealer.address && dealer.address.trim() !== '';
 
-        // Calculate distance info (same logic as car-hire.js)
+        // Calculate distance info (same logic as car-hire.js and garages.js)
         let distanceInfo = '';
         if (hasDistance) {
-            distanceInfo = `<span class="loc-chip distance-info"><i class="fas fa-location-arrow"></i> ${dealer.distance.toFixed(1)} km away</span>`;
+            let mapsUrl;
+            if (dealer.latitude && dealer.longitude) {
+                mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${dealer.latitude},${dealer.longitude}&travelmode=driving`;
+            } else {
+                const q = encodeURIComponent(`${dealer.business_name || ''} ${dealer.address || dealer.location_name || ''}`.trim());
+                mapsUrl = `https://www.google.com/maps/search/?api=1&query=${q}`;
+            }
+            distanceInfo = `<a href="${mapsUrl}" target="_blank" rel="noopener noreferrer" class="loc-chip distance-info clickable-chip" onclick="event.stopPropagation();" title="Get directions to ${this.escapeHtml(dealer.business_name || '')}"><i class="fas fa-location-arrow"></i> ${dealer.distance.toFixed(1)} km away</a>`;
         }
 
         // Generate star rating

@@ -62,8 +62,24 @@
 }
 
 /* ========================================
+   Car Hire Page Wrapper (matches dealers/garages pattern)
+======================================== */
+.car-hire-page-wrapper {
+  width: 100%;
+  background: var(--bg-white, #fff);
+}
+
+.car-hire-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+  box-sizing: border-box;
+}
+
+/* ========================================
    Companies Section - Premium Grid
 ======================================== */
+/* Legacy .companies-section kept for back-compat but no longer the main wrapper */
 .companies-section {
   padding: var(--space-2xl) 0;
   background: var(--bg-white);
@@ -75,6 +91,7 @@
   grid-template-columns: 1fr !important;
   gap: 24px;
   width: 100%;
+  padding-top: 4px; /* Small breathing room below the filter card */
 }
 
 /* Large phones: 2-column grid (481px–639px) */
