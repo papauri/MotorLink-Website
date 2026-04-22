@@ -2139,11 +2139,13 @@ class MotorLink {
         getNoResultsHTML() {
             return `
                 <div class="no-results" style="grid-column: 1 / -1; text-align: center; padding: 80px 20px;">
-                    <i class="fas fa-search" style="font-size: 60px; color: #ddd; margin-bottom: 20px;"></i>
-                    <h3 style="color: #666; margin-bottom: 12px;">No cars found</h3>
-                    <p style="color: #999; margin-bottom: 24px;">Try adjusting your search criteria or browse all categories</p>
-                    <button class="btn btn-primary" onclick="motorLink.clearFilters()" style="padding: 12px 24px; background: #ff6f00; color: white; border: none; border-radius: 6px; cursor: pointer;">
-                        <i class="fas fa-refresh"></i> Clear Filters
+                    <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#fff3e0,#ffe0b2);display:inline-flex;align-items:center;justify-content:center;margin-bottom:20px;box-shadow:0 4px 16px rgba(255,111,0,0.15);">
+                        <i class="fas fa-search" style="font-size:28px;color:#ff6f00;"></i>
+                    </div>
+                    <h3 style="color:#1f2937;font-size:1.15rem;font-weight:700;margin:0 0 8px;">No cars found</h3>
+                    <p style="color:#6b7280;font-size:0.9rem;margin:0 0 24px;">Try adjusting your search criteria or browse all categories</p>
+                    <button onclick="motorLink.clearFilters()" style="display:inline-flex;align-items:center;gap:8px;padding:11px 22px;background:linear-gradient(135deg,#ff6f00,#f57c00);color:#fff;font-size:0.85rem;font-weight:700;border:none;border-radius:999px;cursor:pointer;box-shadow:0 4px 14px rgba(255,111,0,0.35);letter-spacing:0.02em;transition:all 0.2s ease;">
+                        <i class="fas fa-undo" style="font-size:0.8rem;"></i> Clear Filters
                     </button>
                 </div>
             `;
@@ -2812,7 +2814,9 @@ class DealersManager {
                 <div class="dealer-business-card ${isFeatured ? 'featured-dealer' : ''}" data-dealer-id="${dealer.id}">
                     <div class="dealer-card-header">
                         <div class="dealer-header-left" style="display:flex;flex-direction:row;align-items:center;gap:10px;">
-                            ${dealer.logo_url ? `<div style="width:56px;height:56px;border-radius:8px;overflow:hidden;flex-shrink:0;background:#f5f5f5;border:1px solid #e0e0e0;"><img src="${dealer.logo_url}" alt="${this.escapeHtml(dealer.business_name)} logo" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.style.display='none';"></div>` : ''}
+                            <div class="card-logo-dp">
+                                ${dealer.logo_url ? `<img src="${dealer.logo_url}" alt="${this.escapeHtml(dealer.business_name)} logo" onerror="this.remove();">` : '<i class="fas fa-store"></i>'}
+                            </div>
                             <h3 class="dealer-business-name">${this.escapeHtml(dealer.business_name)}</h3>
                         </div>
                         <div class="dealer-header-right">

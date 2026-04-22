@@ -1373,9 +1373,13 @@ function createGarageCard(garage) {
     // Left side: Logo (if available) + Name and meta info
     html += `<div class="garage-header-left">`;
     html += `<div class="garage-logo-name-row">`;
+    html += `<div class="garage-card-logo card-logo-dp">`;
     if (garage.logo_url) {
-        html += `<div class="garage-card-logo"><img src="${garage.logo_url}" alt="${escapeHtml(garage.name)} logo" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.style.display='none';"></div>`;
+        html += `<img src="${garage.logo_url}" alt="${escapeHtml(garage.name)} logo" onerror="this.remove();">`;
+    } else {
+        html += `<i class="fas fa-wrench"></i>`;
     }
+    html += `</div>`;
     html += `<h3 class="garage-service-name">${escapeHtml(garage.name)}</h3>`;
     html += `</div>`;
 
