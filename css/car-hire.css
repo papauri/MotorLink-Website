@@ -2940,9 +2940,10 @@
     
     /* Car hire stats mobile - FIX OVERFLOW */
     .car-hire-stats {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        justify-content: center !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        flex-wrap: unset !important;
+        justify-content: unset !important;
         gap: 10px !important;
         margin: 16px auto 0;
         max-width: 100%;
@@ -2956,14 +2957,17 @@
         backdrop-filter: blur(12px) !important;
         border: 1.5px solid rgba(0, 255, 110, 0.35) !important;
         border-radius: 12px !important;
-        padding: 12px 8px !important;
+        padding: 14px 10px !important;
         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.12) !important;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-        overflow: hidden;
-        min-width: 0;
+        width: 100% !important;
+        flex: unset !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+        overflow: hidden !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 10px !important;
     }
 
     .car-hire-stats .feature-box:hover {
@@ -2996,7 +3000,7 @@
     }
 
     .car-hire-stats .feature-box strong {
-        font-size: 0.8rem !important;
+        font-size: 0.85rem !important;
         font-weight: 700 !important;
     }
 
@@ -3005,9 +3009,7 @@
         opacity: 0.9 !important;
     }
 
-    .car-hire-stats .feature-box:nth-child(n+3) {
-        display: none !important;
-    }
+    /* Show ALL stat boxes — removed the old nth-child(n+3) hide rule */
     
     .fleet-grid {
         grid-template-columns: 1fr;
