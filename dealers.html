@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
     <title>Car Dealers | Verified Car Showrooms & Dealerships — MotorLink</title>
     <meta name="description" content="Find trusted verified car dealers. Browse professional showrooms, compare prices, view inventory, and contact dealers directly on MotorLink.">
     <meta name="keywords" content="car dealers Malawi, car showroom Malawi, car dealership Malawi, Toyota dealer Malawi, used car dealer Malawi, Blantyre car dealer, Lilongwe car dealer, Mzuzu car dealer, verified car dealer Malawi, car sales Malawi, auto dealer Malawi, vehicle dealer Malawi, car trader Malawi, second hand car dealer Malawi, Japanese car dealer Malawi">
@@ -402,6 +403,7 @@
                 gmapsScript.src = `https://maps.googleapis.com/maps/api/js?key=${mapConfig.apiKey}&libraries=places&loading=async`;
                 gmapsScript.async = true;
                 gmapsScript.defer = true;
+                gmapsScript.onload = () => document.dispatchEvent(new CustomEvent('googlemapsloaded'));
                 document.head.appendChild(gmapsScript);
             } catch (error) {
                 console.error('Failed to load Google Maps config:', error);

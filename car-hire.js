@@ -55,6 +55,14 @@ document.addEventListener('DOMContentLoaded', function() {
     loadCompanies();
     getUserLocation();
 
+    // When Google Maps API finishes loading (async), retry geocoding if we already
+    // have user location (handles the race condition where geolocation resolved first)
+    document.addEventListener('googlemapsloaded', function() {
+        if (userLocation && companies.length > 0) {
+            geocodeAndRenderCompanies();
+        }
+    });
+
     // Desktop search — live filter on input
     const carHireSearch = document.getElementById('carHireSearch');
     if (carHireSearch) {
@@ -310,8 +318,8 @@ function renderCompanies(data) {
             <div class="company-card ${isFeatured ? 'featured-company' : ''}">
                 <div class="company-card-header">
                     <div class="company-header-left" style="display:flex;align-items:center;gap:10px;">
-                        <div class="card-logo-dp">
-                            ${company.logo_url ? `<img src="${company.logo_url}" alt="${escapeHtml(company.business_name)} logo" onerror="this.remove();">` : '<i class="fas fa-key"></i>'}
+                        <div class="card-logo-dp"${company.logo_url ? ` style="background-image:url('${company.logo_url}')"` : ''}>
+                            ${!company.logo_url ? '<i class="fas fa-key"></i>' : ''}
                         </div>
                         <h3 class="company-business-name">${escapeHtml(company.business_name)}</h3>
                     </div>
@@ -576,16 +584,21 @@ function applyFilters() {
     }
 
     // Sort results
-    if (sort === 'nearest' && userLocation) {
-        filtered.sort((a, b) => {
-            const distA = (a.latitude && a.longitude)
-                ? calculateDistance(userLocation.lat, userLocation.lng, parseFloat(a.latitude), parseFloat(a.longitude))
-                : 999999;
-            const distB = (b.latitude && b.longitude)
-                ? calculateDistance(userLocation.lat, userLocation.lng, parseFloat(b.latitude), parseFloat(b.longitude))
-                : 999999;
-            return distA - distB;
-        });
+    if (sort === 'nearest') {
+        if (!userLocation) {
+            // Auto-request location; results render unsorted for now, will re-sort once obtained
+            getUserLocation();
+        } else {
+            filtered.sort((a, b) => {
+                const distA = (a.latitude && a.longitude)
+                    ? calculateDistance(userLocation.lat, userLocation.lng, parseFloat(a.latitude), parseFloat(a.longitude))
+                    : 999999;
+                const distB = (b.latitude && b.longitude)
+                    ? calculateDistance(userLocation.lat, userLocation.lng, parseFloat(b.latitude), parseFloat(b.longitude))
+                    : 999999;
+                return distA - distB;
+            });
+        }
     } else if (sort === 'vehicles') {
         filtered.sort((a, b) => (b.total_vehicles || 0) - (a.total_vehicles || 0));
     } else if (sort === 'price') {
@@ -801,18 +814,21 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 // Get user's current location
 function getUserLocation() {
     if (!navigator.geolocation) {
-        console.log('Geolocation is not supported by your browser');
+        showCarHireStatusHint('Location services are not supported by your browser.', true);
         return;
     }
-    
+
+    showCarHireStatusHint('<i class="fas fa-spinner fa-spin"></i> Getting your location…');
+
     navigator.geolocation.getCurrentPosition(
         function(position) {
             userLocation = {
                 lat: position.coords.latitude,
                 lng: position.coords.longitude
             };
-            console.log('User location obtained:', userLocation);
-            
+
+            showCarHireStatusHint('');
+
             // Enable distance filter now that we have a location
             const distFilter = document.getElementById('distanceFilter');
             if (distFilter) {
@@ -820,14 +836,22 @@ function getUserLocation() {
                 distFilter.title = 'Filter by distance from your location';
                 distFilter.addEventListener('change', () => applyFilters());
             }
-            
-            // Re-render companies with distance information if already loaded
+
+            // Geocode then re-apply filters (preserves current sort/filter state)
             if (companies.length > 0) {
                 geocodeAndRenderCompanies();
             }
         },
         function(error) {
-            console.log('Error getting user location:', error.message);
+            const msg = error.code === error.PERMISSION_DENIED
+                ? 'Location access denied. Enable it in browser settings to sort by distance.'
+                : 'Could not get your location. Please try again.';
+            showCarHireStatusHint(msg, true);
+            // Reset sort dropdown back to featured so UI matches behaviour
+            const sortEl = document.getElementById('sortFilter');
+            if (sortEl && sortEl.value === 'nearest') {
+                sortEl.value = 'featured';
+            }
         },
         {
             enableHighAccuracy: false,
@@ -835,6 +859,20 @@ function getUserLocation() {
             maximumAge: 300000 // Cache for 5 minutes
         }
     );
+}
+
+// Show/clear a small status hint below the sort filter
+function showCarHireStatusHint(html, isError) {
+    let hint = document.getElementById('carHireSortHint');
+    if (!hint) {
+        hint = document.createElement('p');
+        hint.id = 'carHireSortHint';
+        hint.style.cssText = 'font-size:12px;margin:4px 0 0;padding:0;';
+        const sortEl = document.getElementById('sortFilter');
+        if (sortEl && sortEl.parentNode) sortEl.parentNode.appendChild(hint);
+    }
+    hint.style.color = isError ? '#d32f2f' : '#555';
+    hint.innerHTML = html;
 }
 
 // Geocode a company address to get coordinates
@@ -900,6 +938,6 @@ async function geocodeAndRenderCompanies() {
     
     await Promise.all(geocodePromises);
     
-    // Re-render companies with distance information
-    renderCompanies(companies);
+    // Re-apply filters/sort so any active "Nearest First" sort takes effect
+    applyFilters();
 }

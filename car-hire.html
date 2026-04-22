@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
     <title>Car Hire & Rental | Affordable Car Rental Companies — MotorLink</title>
     <meta name="description" content="Find trusted car hire and rental companies in Malawi. Compare rates, view fleets and book vehicles in Blantyre, Lilongwe, Mzuzu and all districts. Affordable sedans, SUVs, trucks and luxury cars for rent.">
     <meta name="keywords" content="car hire Malawi, car rental Malawi, rent car Malawi, car hire Blantyre, car rental Lilongwe, car hire Mzuzu, affordable car rental Malawi, SUV rental Malawi, truck hire Malawi, wedding car hire Malawi, corporate car hire Malawi, self drive Malawi, chauffeur Malawi, vehicle rental Malawi, cheap car hire Malawi">
@@ -398,6 +399,7 @@
                 gmapsScript.src = `https://maps.googleapis.com/maps/api/js?key=${mapConfig.apiKey}&libraries=places&loading=async`;
                 gmapsScript.async = true;
                 gmapsScript.defer = true;
+                gmapsScript.onload = () => document.dispatchEvent(new CustomEvent('googlemapsloaded'));
                 document.head.appendChild(gmapsScript);
             } catch (error) {
                 console.error('Failed to load Google Maps config:', error);

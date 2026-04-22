@@ -2814,8 +2814,8 @@ class DealersManager {
                 <div class="dealer-business-card ${isFeatured ? 'featured-dealer' : ''}" data-dealer-id="${dealer.id}">
                     <div class="dealer-card-header">
                         <div class="dealer-header-left" style="display:flex;flex-direction:row;align-items:center;gap:10px;">
-                            <div class="card-logo-dp">
-                                ${dealer.logo_url ? `<img src="${dealer.logo_url}" alt="${this.escapeHtml(dealer.business_name)} logo" onerror="this.remove();">` : '<i class="fas fa-store"></i>'}
+                            <div class="card-logo-dp"${dealer.logo_url ? ` style="background-image:url('${dealer.logo_url}')"` : ''}>
+                                ${!dealer.logo_url ? '<i class="fas fa-store"></i>' : ''}
                             </div>
                             <h3 class="dealer-business-name">${this.escapeHtml(dealer.business_name)}</h3>
                         </div>
