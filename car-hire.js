@@ -891,8 +891,7 @@ async function geocodeAddress(address, locationName) {
     
     // Check if Google Maps is available
     if (typeof google === 'undefined' || !google.maps || !google.maps.Geocoder) {
-        console.log('Google Maps Geocoder not available');
-        return null;
+        return null; // Maps not loaded yet; geocodeAndRenderCompanies will retry via googlemapsloaded event
     }
     
     try {
@@ -922,6 +921,11 @@ async function geocodeAddress(address, locationName) {
 // Geocode all companies and re-render with distance information
 async function geocodeAndRenderCompanies() {
     if (!userLocation) {
+        return;
+    }
+
+    // Bail out if Maps API not ready yet; the 'googlemapsloaded' event listener will re-call us
+    if (typeof google === 'undefined' || !google.maps || !google.maps.Geocoder) {
         return;
     }
     

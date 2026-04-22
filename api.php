@@ -2500,7 +2500,7 @@ function getGarages($db) {
                 'verified' => (bool)$garage['verified'],
                 'certified' => (bool)$garage['certified'],
                 'featured' => (bool)$garage['featured'],
-                'logo_url' => $garage['logo_url'] ?? null,
+                'logo_url' => (!empty($garage['logo_url']) && file_exists(__DIR__ . '/' . ltrim($garage['logo_url'], '/'))) ? $garage['logo_url'] : null,
                 'status' => $garage['status'],
                 'created_at' => $garage['created_at'],
                 'updated_at' => $garage['updated_at']
@@ -2532,6 +2532,13 @@ function getDealers($db) {
             ORDER BY d.featured DESC, d.certified DESC, d.verified DESC, d.business_name ASC
         ");
         $dealers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Null out logo_url if the file is missing on this server (prevents client-side 404s)
+        foreach ($dealers as &$dealer) {
+            if (!empty($dealer['logo_url']) && !file_exists(__DIR__ . '/' . ltrim($dealer['logo_url'], '/'))) {
+                $dealer['logo_url'] = null;
+            }
+        }
+        unset($dealer);
         sendSuccess(['dealers' => $dealers]);
     } catch (Exception $e) {
         error_log("getDealers error: " . $e->getMessage());
@@ -2638,6 +2645,14 @@ function getCarHireCompaniesWithFleet($db) {
             ORDER BY c.featured DESC, c.certified DESC, c.verified DESC, c.business_name ASC
         ");
         $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Null out logo_url if the file is missing on this server (prevents client-side 404s)
+        foreach ($companies as &$company) {
+            if (!empty($company['logo_url']) && !file_exists(__DIR__ . '/' . ltrim($company['logo_url'], '/'))) {
+                $company['logo_url'] = null;
+            }
+        }
+        unset($company);
 
         // Fetch fleet details for each company to enable filtering by vehicle attributes
         foreach ($companies as &$company) {

@@ -22,8 +22,7 @@ node_modules/
 .env.local
 .env.*.local
 
-# Runtime user uploads
-uploads/**
+# uploads/ is fully tracked — all business logos and listing images must deploy to the server
 
 # Demo seeder credential output (sensitive)
 scripts/_seed_credentials.csv

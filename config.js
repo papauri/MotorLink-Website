@@ -519,6 +519,16 @@ function applyBrandingToDocument() {
             el.textContent = CONFIG.SITE_DESCRIPTION;
         });
     }
+    if (CONFIG.COUNTRY_NAME) {
+        document.querySelectorAll('[data-country-name]').forEach((el) => {
+            if (el === document.documentElement || el === document.body) return;
+            el.textContent = CONFIG.COUNTRY_NAME;
+        });
+        document.querySelectorAll('[data-country-possessive]').forEach((el) => {
+            if (el === document.documentElement || el === document.body) return;
+            el.textContent = getCountryPossessiveLabel();
+        });
+    }
 
     applyRuntimeTextToBody(document.body);
 }
@@ -567,27 +577,40 @@ async function getPublicClientConfig(forceRefresh = false) {
     }
 
     __runtimePublicConfigPromise = (async () => {
-        try {
-            const response = await fetch(`${CONFIG.API_URL}?action=get_public_client_config`, {
-                method: 'GET',
-                credentials: CONFIG.USE_CREDENTIALS ? 'include' : 'same-origin'
-            });
+        let lastError;
+        for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+                const response = await fetch(`${CONFIG.API_URL}?action=get_public_client_config`, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    credentials: CONFIG.USE_CREDENTIALS ? 'include' : 'same-origin'
+                });
 
-            if (!response.ok) {
-                throw new Error(`Failed to load runtime config (HTTP ${response.status})`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load runtime config (HTTP ${response.status})`);
+                }
+
+                const data = await response.json();
+                if (!data || !data.success || !data.config) {
+                    throw new Error('Runtime config payload is missing');
+                }
+
+                applyRuntimeSiteConfig(data.config);
+                __runtimePublicConfigLoaded = true;
+                return getPublicSiteConfigSnapshot();
+            } catch (err) {
+                lastError = err;
+                if (attempt < 2) {
+                    // Wait 1 s before retrying (handles transient HTTP/2 connection resets)
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            } finally {
+                if (attempt === 2) {
+                    __runtimePublicConfigPromise = null;
+                }
             }
-
-            const data = await response.json();
-            if (!data || !data.success || !data.config) {
-                throw new Error('Runtime config payload is missing');
-            }
-
-            applyRuntimeSiteConfig(data.config);
-            __runtimePublicConfigLoaded = true;
-            return getPublicSiteConfigSnapshot();
-        } finally {
-            __runtimePublicConfigPromise = null;
         }
+        throw lastError;
     })();
 
     return __runtimePublicConfigPromise;
