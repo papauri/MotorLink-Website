@@ -1,0 +1,379 @@
+/* =============================================================================
+   reviews.css — 5-star reviews section
+   ============================================================================= */
+
+/* Wrapper section */
+.rv-section {
+    background: rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 28px 24px 32px;
+    margin: 32px 0;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.rv-section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-primary, #f0f0f0);
+    margin: 0 0 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.rv-section-title i {
+    color: #f5c518;
+}
+
+/* Loading / Error */
+.rv-loading, .rv-error {
+    text-align: center;
+    padding: 24px;
+    color: rgba(240,240,240,0.55);
+    font-size: 0.9rem;
+}
+.rv-error { color: #ff6b6b; }
+
+/* ---- Summary ---- */
+.rv-summary {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+}
+
+.rv-score-block {
+    text-align: center;
+    min-width: 90px;
+}
+.rv-score-big {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--accent, #00c34b);
+    line-height: 1;
+}
+.rv-score-stars {
+    margin: 4px 0;
+}
+.rv-score-label {
+    font-size: 0.8rem;
+    color: rgba(240,240,240,0.65);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.rv-score-count {
+    font-size: 0.78rem;
+    color: rgba(240,240,240,0.45);
+    margin-top: 2px;
+}
+
+/* Distribution bars */
+.rv-dist-bars {
+    flex: 1;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.rv-dist-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+}
+.rv-dist-label {
+    color: rgba(240,240,240,0.7);
+    width: 36px;
+    flex-shrink: 0;
+    font-size: 0.75rem;
+}
+.rv-dist-label i { color: #f5c518; font-size: 0.7rem; }
+.rv-dist-track {
+    flex: 1;
+    height: 8px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+.rv-dist-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00c34b, #38d77e);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+}
+.rv-dist-count {
+    color: rgba(240,240,240,0.45);
+    font-size: 0.75rem;
+    width: 18px;
+    text-align: right;
+}
+
+/* No reviews */
+.rv-no-reviews {
+    text-align: center;
+    padding: 20px 12px;
+    color: rgba(240,240,240,0.45);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+.rv-no-reviews i { font-size: 2rem; opacity: 0.4; }
+.rv-no-reviews p { font-size: 0.9rem; margin: 0; }
+
+/* ---- Stars (display) ---- */
+.rv-stars {
+    display: inline-flex;
+    gap: 2px;
+}
+.rv-star {
+    font-size: 0.9rem;
+    line-height: 1;
+}
+.rv-star.filled { color: #f5c518; }
+.rv-star.half   { color: #f5c518; }
+.rv-star.empty  { color: rgba(240,240,240,0.2); }
+
+/* ---- Star Picker (interactive) ---- */
+.rv-star-picker {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    gap: 2px;
+}
+.rv-star-input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.rv-star-label {
+    cursor: pointer;
+    color: rgba(240,240,240,0.2);
+    font-size: 1.5rem;
+    transition: color 0.15s, transform 0.1s;
+}
+.rv-star-label:hover,
+.rv-star-label.active,
+.rv-star-picker:hover .rv-star-label:hover ~ .rv-star-label,
+.rv-star-picker .rv-star-input:checked ~ .rv-star-label {
+    color: #f5c518;
+}
+/* Hover highlight for all preceding stars */
+.rv-star-label:hover,
+.rv-star-label:hover ~ .rv-star-label {
+    color: #f5c518;
+}
+.rv-star-label:hover {
+    transform: scale(1.2);
+}
+
+/* ---- Form ---- */
+.rv-form-wrap {
+    background: rgba(0, 195, 75, 0.06);
+    border: 1px solid rgba(0, 195, 75, 0.18);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 28px;
+}
+.rv-form-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary, #f0f0f0);
+    margin: 0 0 16px;
+}
+.rv-form-stars {
+    margin-bottom: 14px;
+}
+.rv-form-stars label {
+    display: block;
+    font-size: 0.82rem;
+    color: rgba(240,240,240,0.6);
+    margin-bottom: 8px;
+}
+.rv-textarea {
+    width: 100%;
+    min-height: 80px;
+    resize: vertical;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 8px;
+    color: var(--text-primary, #f0f0f0);
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    line-height: 1.5;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+.rv-textarea:focus {
+    border-color: var(--accent, #00c34b);
+}
+.rv-form-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+.rv-submit-btn {
+    background: linear-gradient(135deg, #00c34b, #00a83d);
+    color: #fff;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: opacity 0.2s, transform 0.1s;
+    min-height: 44px;
+}
+.rv-submit-btn:hover:not(:disabled) {
+    opacity: 0.88;
+    transform: translateY(-1px);
+}
+.rv-submit-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.rv-form-status {
+    font-size: 0.82rem;
+}
+.rv-form-status.success { color: #5de888; }
+.rv-form-status.error   { color: #ff6b6b; }
+
+/* Login prompt */
+.rv-login-prompt {
+    background: rgba(255,255,255,0.04);
+    border: 1px dashed rgba(255,255,255,0.15);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 0.88rem;
+    color: rgba(240,240,240,0.6);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+}
+.rv-login-prompt a { color: var(--accent, #00c34b); font-weight: 600; }
+
+/* ---- Review items ---- */
+.rv-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.rv-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+.rv-item-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+.rv-reviewer-avatar i {
+    font-size: 1.5rem;
+    color: rgba(240,240,240,0.3);
+}
+.rv-reviewer-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary, #f0f0f0);
+    flex: 1;
+    min-width: 0;
+}
+.rv-item-stars {
+    flex-shrink: 0;
+}
+.rv-item-time {
+    font-size: 0.75rem;
+    color: rgba(240,240,240,0.4);
+    white-space: nowrap;
+}
+.rv-item-text {
+    font-size: 0.88rem;
+    color: rgba(240,240,240,0.75);
+    line-height: 1.55;
+    margin: 0;
+    word-break: break-word;
+}
+
+/* Inline rating badge used on cards */
+.rv-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.82rem;
+    background: rgba(245, 197, 24, 0.12);
+    border: 1px solid rgba(245, 197, 24, 0.28);
+    border-radius: 20px;
+    padding: 3px 9px;
+    font-weight: 600;
+    color: #f5c518;
+    white-space: nowrap;
+}
+.rv-badge i { font-size: 0.75rem; }
+.rv-badge .rv-badge-count {
+    font-size: 0.72rem;
+    font-weight: 400;
+    color: rgba(240,240,240,0.5);
+}
+
+/* ---- Garage card reviews row ---- */
+.garage-card-reviews-row {
+    padding: 10px 16px 12px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+}
+.rv-badge-btn {
+    background: transparent;
+    border: 1px solid rgba(245, 197, 24, 0.35);
+    color: #f5c518;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.18s, border-color 0.18s;
+    min-height: 36px;
+}
+.rv-badge-btn:hover {
+    background: rgba(245, 197, 24, 0.1);
+    border-color: rgba(245, 197, 24, 0.6);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+    .rv-section {
+        padding: 20px 16px 24px;
+        margin: 22px 0;
+        border-radius: 12px;
+    }
+    .rv-summary {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    .rv-score-block {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-align: left;
+        min-width: unset;
+    }
+    .rv-score-big { font-size: 2.5rem; }
+    .rv-dist-bars { min-width: 100%; }
+    .rv-form-wrap { padding: 16px; }
+}

@@ -1536,6 +1536,13 @@ try {
         case 'report_listing': reportListing($db); break;
 
         // ====================================================================
+        // REVIEWS ENDPOINTS
+        // ====================================================================
+        case 'get_reviews': getBusinessReviews($db); break;
+        case 'submit_review': requireAuth(); submitBusinessReview($db); break;
+        case 'check_user_review': requireAuth(); checkUserReview($db); break;
+
+        // ====================================================================
         // MESSAGING ENDPOINTS
         // ====================================================================
         case 'get_conversations': requireAuth(); getConversations($db); break;
@@ -2456,7 +2463,12 @@ function getGarages($db) {
         $whereClause = implode(' AND ', $whereConditions);
         
         $sql = "
-            SELECT g.*, loc.name as location_name, loc.region, loc.district
+            SELECT g.*,
+                   loc.name as location_name, loc.region, loc.district,
+                   (SELECT ROUND(AVG(r.rating), 1) FROM business_reviews r
+                    WHERE r.business_type = 'garage' AND r.business_id = g.id AND r.status = 'active') as avg_rating,
+                   (SELECT COUNT(*) FROM business_reviews r
+                    WHERE r.business_type = 'garage' AND r.business_id = g.id AND r.status = 'active') as review_count
             FROM garages g
             INNER JOIN locations loc ON g.location_id = loc.id
             WHERE {$whereClause}
@@ -2503,7 +2515,9 @@ function getGarages($db) {
                 'logo_url' => (!empty($garage['logo_url']) && file_exists(__DIR__ . '/' . ltrim($garage['logo_url'], '/'))) ? $garage['logo_url'] : null,
                 'status' => $garage['status'],
                 'created_at' => $garage['created_at'],
-                'updated_at' => $garage['updated_at']
+                'updated_at' => $garage['updated_at'],
+                'avg_rating' => $garage['avg_rating'] ? (float)$garage['avg_rating'] : null,
+                'review_count' => (int)($garage['review_count'] ?? 0),
             ];
         }, $garages);
         
@@ -2525,7 +2539,11 @@ function getDealers($db) {
                     FROM car_listings cl 
                     INNER JOIN users u ON cl.user_id = u.id 
                     WHERE u.business_id = d.id AND u.user_type = 'dealer' 
-                    AND cl.status = 'active' AND cl.approval_status = 'approved') as total_cars
+                    AND cl.status = 'active' AND cl.approval_status = 'approved') as total_cars,
+                   (SELECT ROUND(AVG(r.rating), 1) FROM business_reviews r
+                    WHERE r.business_type = 'dealer' AND r.business_id = d.id AND r.status = 'active') as avg_rating,
+                   (SELECT COUNT(*) FROM business_reviews r
+                    WHERE r.business_type = 'dealer' AND r.business_id = d.id AND r.status = 'active') as review_count
             FROM car_dealers d
             INNER JOIN locations loc ON d.location_id = loc.id
             WHERE d.status = 'active'
@@ -2687,7 +2705,10 @@ function getCarHireCompany($db) {
     try {
         $stmt = $db->prepare("
             SELECT c.*, loc.name as location_name, loc.region,
-                   COUNT(f.id) as total_vehicles
+                   COUNT(f.id) as total_vehicles,
+                   SUM(CASE WHEN f.status = 'available' THEN 1 ELSE 0 END) as available_vehicles,
+                   SUM(CASE WHEN f.status = 'rented' THEN 1 ELSE 0 END) as rented_vehicles,
+                   SUM(CASE WHEN f.status = 'maintenance' THEN 1 ELSE 0 END) as maintenance_vehicles
             FROM car_hire_companies c
             INNER JOIN locations loc ON c.location_id = loc.id
             LEFT JOIN car_hire_fleet f ON c.id = f.company_id AND f.is_active = 1
@@ -2759,6 +2780,15 @@ function getCarHireStats($db) {
             WHERE c.status = 'active' AND f.is_active = 1
         ");
         $stats['total_vehicles'] = (int)$stmt->fetchColumn();
+
+        // Count available vehicles only
+        $stmt = $db->query("
+            SELECT COUNT(*)
+            FROM car_hire_fleet f
+            INNER JOIN car_hire_companies c ON f.company_id = c.id
+            WHERE c.status = 'active' AND f.is_active = 1 AND f.status = 'available'
+        ");
+        $stats['available_vehicles'] = (int)$stmt->fetchColumn();
 
         // Count distinct cities/locations with active car hire companies
         $stmt = $db->query("
@@ -5216,6 +5246,146 @@ function reportListing($db) {
     } catch (Exception $e) {
         error_log("reportListing error: " . $e->getMessage());
         sendErrorWithCode('Failed to submit report. Please try again.', 'REPORT_SUBMIT_FAILED', 500);
+    }
+}
+
+// ============================================================================
+// BUSINESS REVIEWS
+// ============================================================================
+
+/**
+ * Get all active reviews + aggregate for a business (public).
+ * GET ?action=get_reviews&business_type=dealer|garage|car_hire&business_id=X
+ */
+function getBusinessReviews($db) {
+    $businessType = strtolower(trim((string)($_GET['business_type'] ?? '')));
+    $businessId   = (int)($_GET['business_id'] ?? 0);
+
+    if (!in_array($businessType, ['dealer', 'garage', 'car_hire'], true) || $businessId <= 0) {
+        sendError('Valid business_type and business_id required', 400);
+    }
+
+    try {
+        $stmt = $db->prepare("
+            SELECT br.id, br.rating, br.review_text, br.created_at,
+                   u.full_name AS reviewer_name
+            FROM business_reviews br
+            INNER JOIN users u ON br.user_id = u.id
+            WHERE br.business_type = ? AND br.business_id = ? AND br.status = 'active'
+            ORDER BY br.created_at DESC
+            LIMIT 100
+        ");
+        $stmt->execute([$businessType, $businessId]);
+        $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Compute aggregate
+        $total  = count($reviews);
+        $avgRaw = $total > 0 ? array_sum(array_column($reviews, 'rating')) / $total : 0;
+        $avg    = round($avgRaw, 1);
+
+        $dist = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+        foreach ($reviews as $r) {
+            $dist[(int)$r['rating']]++;
+        }
+
+        sendSuccess([
+            'reviews'   => $reviews,
+            'aggregate' => [
+                'total'        => $total,
+                'average'      => $avg,
+                'distribution' => $dist,
+            ],
+        ]);
+    } catch (Exception $e) {
+        error_log('getBusinessReviews error: ' . $e->getMessage());
+        sendError('Failed to load reviews', 500);
+    }
+}
+
+/**
+ * Submit or update a review (auth required).
+ * POST ?action=submit_review  body: { business_type, business_id, rating, review_text }
+ */
+function submitBusinessReview($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendError('POST method required', 405);
+    }
+
+    $user  = getCurrentUser(true);
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+
+    $businessType = strtolower(trim((string)($input['business_type'] ?? '')));
+    $businessId   = (int)($input['business_id'] ?? 0);
+    $rating       = (int)($input['rating'] ?? 0);
+    $reviewText   = trim((string)($input['review_text'] ?? ''));
+
+    if (!in_array($businessType, ['dealer', 'garage', 'car_hire'], true)) {
+        sendError('Invalid business_type', 400);
+    }
+    if ($businessId <= 0) {
+        sendError('Valid business_id required', 400);
+    }
+    if ($rating < 1 || $rating > 5) {
+        sendError('Rating must be between 1 and 5', 400);
+    }
+    if (strlen($reviewText) > 2000) {
+        sendError('Review text must be 2000 characters or less', 400);
+    }
+
+    // Prevent reviewing own business
+    $ownerCheck = match($businessType) {
+        'dealer'   => "SELECT id FROM car_dealers WHERE id = ? AND (SELECT user_id FROM users WHERE id = ? AND business_id = id LIMIT 1) IS NOT NULL",
+        'garage'   => "SELECT id FROM garages WHERE id = ? AND (SELECT COUNT(*) FROM users WHERE business_id = ? AND id = {$user['id']}) > 0",
+        'car_hire' => "SELECT id FROM car_hire_companies WHERE id = ?",
+        default    => null
+    };
+
+    try {
+        $stmt = $db->prepare("
+            INSERT INTO business_reviews (business_type, business_id, user_id, rating, review_text, status)
+            VALUES (?, ?, ?, ?, ?, 'active')
+            ON DUPLICATE KEY UPDATE
+                rating      = VALUES(rating),
+                review_text = VALUES(review_text),
+                status      = 'active',
+                updated_at  = NOW()
+        ");
+        $stmt->execute([$businessType, $businessId, $user['id'], $rating, $reviewText ?: null]);
+
+        sendSuccess(['message' => 'Review submitted successfully']);
+    } catch (Exception $e) {
+        error_log('submitBusinessReview error: ' . $e->getMessage());
+        sendError('Failed to submit review', 500);
+    }
+}
+
+/**
+ * Check whether the current user has already reviewed a business.
+ * GET ?action=check_user_review&business_type=X&business_id=Y
+ */
+function checkUserReview($db) {
+    $user         = getCurrentUser(true);
+    $businessType = strtolower(trim((string)($_GET['business_type'] ?? '')));
+    $businessId   = (int)($_GET['business_id'] ?? 0);
+
+    if (!in_array($businessType, ['dealer', 'garage', 'car_hire'], true) || $businessId <= 0) {
+        sendError('Valid business_type and business_id required', 400);
+    }
+
+    try {
+        $stmt = $db->prepare("
+            SELECT id, rating, review_text
+            FROM business_reviews
+            WHERE business_type = ? AND business_id = ? AND user_id = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$businessType, $businessId, $user['id']]);
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        sendSuccess(['existing_review' => $existing ?: null]);
+    } catch (Exception $e) {
+        error_log('checkUserReview error: ' . $e->getMessage());
+        sendError('Failed to check review status', 500);
     }
 }
 

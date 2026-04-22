@@ -129,7 +129,7 @@ async function loadStats() {
     } catch (error) {
         // Set default values if API fails
         document.getElementById('totalCompanies').textContent = '0';
-        document.getElementById('totalVehicles').textContent = '0';
+        document.getElementById('availableVehicles').textContent = '0';
         document.getElementById('totalCities').textContent = '0';
         document.getElementById('featuredCompanies').textContent = '0';
     }
@@ -137,12 +137,12 @@ async function loadStats() {
 
 function updateStatsDisplay() {
     const companiesElement = document.getElementById('totalCompanies');
-    const vehiclesElement = document.getElementById('totalVehicles');
+    const vehiclesElement = document.getElementById('availableVehicles');
     const citiesElement = document.getElementById('totalCities');
     const featuredElement = document.getElementById('featuredCompanies');
 
     if (companiesElement) companiesElement.textContent = (stats.total_companies || 0) + '+';
-    if (vehiclesElement) vehiclesElement.textContent = (stats.total_vehicles || 0) + '+';
+    if (vehiclesElement) vehiclesElement.textContent = (stats.available_vehicles || 0) + '+';
     if (citiesElement) citiesElement.textContent = stats.total_cities || 0;
     if (featuredElement) featuredElement.textContent = stats.featured_companies || 0;
 }

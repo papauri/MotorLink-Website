@@ -73,6 +73,7 @@
     <link rel="stylesheet" href="css/mobile-filter-tray.css">
 
     <link rel="stylesheet" href="css/mobile-footer-optimization.css">
+    <link rel="stylesheet" href="css/reviews.css">
     <link rel="stylesheet" href="css/mobile-page-indicator.css">
     <link rel="stylesheet" href="css/cookie-consent.css">
     <link rel="stylesheet" href="css/animations.css">
@@ -441,12 +442,26 @@
         </div>
     </div>
 
+    <!-- Garage Reviews Modal -->
+    <div id="garageReviewsModal" class="modal" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="garageReviewsModalTitle">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="garageReviewsModalTitle"><i class="fas fa-star"></i> <span id="garageReviewsModalName">Reviews</span></h2>
+                <button class="modal-close" onclick="closeGarageReviews()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding:16px 20px 24px;">
+                <div id="garageReviewsModalBody"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- JavaScript -->
     <script src="config.js"></script>
     <script src="js/nav-loader.js"></script>
     <script src="js/mobile-menu.js"></script>
     <script src="js/footer-loader.js"></script>
     <script src="script.js"></script>
+    <script src="js/reviews.js"></script>
     <script src="js/garages-mobile-filter-tray.js"></script>
     <script src="garages.js"></script>
     <script src="js/cookie-consent.js"></script>
@@ -465,5 +480,34 @@ document.addEventListener('DOMContentLoaded', function() {
             modalNearbyBtn.click();
         });
     }
+});
+
+// Garage reviews modal
+function openGarageReviews(garageId, garageName) {
+    const modal = document.getElementById('garageReviewsModal');
+    const body  = document.getElementById('garageReviewsModalBody');
+    const title = document.getElementById('garageReviewsModalName');
+    if (!modal || !body) return;
+    if (title) title.textContent = garageName;
+    // Give inner a dynamic id so rvRenderSection can refresh itself
+    body.innerHTML = '';
+    body.id = `rv-section-garage-${garageId}`;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    if (typeof rvRenderSection === 'function') {
+        rvRenderSection(body, 'garage', garageId, garageName);
+    }
+}
+
+function closeGarageReviews() {
+    const modal = document.getElementById('garageReviewsModal');
+    if (modal) modal.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// Close modal on overlay click
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('garageReviewsModal');
+    if (modal && e.target === modal) closeGarageReviews();
 });
 </script>

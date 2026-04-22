@@ -3624,6 +3624,16 @@ class ShowroomManager {
 
         // Initialize map with dealer location
         this.initializeDealerMap(dealer);
+
+        // Load reviews section
+        const rvContainer = document.getElementById('rv-section-dealer-container');
+        const rvInner = document.getElementById('rv-section-dealer-inner');
+        if (rvContainer && rvInner && typeof rvRenderSection === 'function') {
+            rvContainer.style.display = '';
+            // Give inner a stable id for rvRenderSection to refresh itself
+            rvInner.id = `rv-section-dealer-${dealer.id}`;
+            rvRenderSection(rvInner, 'dealer', dealer.id, dealer.business_name);
+        }
     }
 
     // Initialize Google Map for dealer location

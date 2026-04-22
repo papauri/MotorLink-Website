@@ -182,6 +182,14 @@ async function loadCompanyData(id) {
                 );
                 updateDistanceDisplay();
             }
+            // Load reviews section
+            const rvContainer = document.getElementById('rv-section-car_hire-container');
+            const rvInner = document.getElementById('rv-section-car_hire-inner');
+            if (rvContainer && rvInner && typeof rvRenderSection === 'function') {
+                rvContainer.style.display = '';
+                rvInner.id = `rv-section-car_hire-${companyData.id}`;
+                rvRenderSection(rvInner, 'car_hire', companyData.id, companyData.business_name);
+            }
         } else {
             showCompanyLoadError(data.message || 'Company not found.');
         }
@@ -227,6 +235,8 @@ function renderCompanyHeader(company) {
     // Calculate stats
     const totalVehicles = company.total_vehicles || 0;
     const availableVehicles = company.available_vehicles || 0;
+    const rentedVehicles = company.rented_vehicles || 0;
+    const maintenanceVehicles = company.maintenance_vehicles || 0;
     const yearsEstablished = company.years_established || null;
     const operates247 = company.operates_24_7 == 1;
     const isVerified = company.verified == 1;
@@ -342,12 +352,28 @@ function renderCompanyHeader(company) {
                         </div>
                     </div>
                 ` : ''}
-                ${availableVehicles > 0 ? `
-                    <div class="feature-box">
-                        <i class="fas fa-check-circle"></i>
+                <div class="feature-box stat-available">
+                    <i class="fas fa-check-circle"></i>
+                    <div>
+                        <strong>${availableVehicles}</strong>
+                        <small>Available Now</small>
+                    </div>
+                </div>
+                ${rentedVehicles > 0 ? `
+                    <div class="feature-box stat-rented">
+                        <i class="fas fa-key"></i>
                         <div>
-                            <strong>${availableVehicles}</strong>
-                            <small>Available Now</small>
+                            <strong>${rentedVehicles}</strong>
+                            <small>Rented Out</small>
+                        </div>
+                    </div>
+                ` : ''}
+                ${maintenanceVehicles > 0 ? `
+                    <div class="feature-box stat-maintenance">
+                        <i class="fas fa-wrench"></i>
+                        <div>
+                            <strong>${maintenanceVehicles}</strong>
+                            <small>In Maintenance</small>
                         </div>
                     </div>
                 ` : ''}
