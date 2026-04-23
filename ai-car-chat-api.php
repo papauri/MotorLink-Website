@@ -4266,6 +4266,19 @@ function buildLocationFollowUpSearchMessage($db, $message, $conversationHistory)
         return false;
     }
 
+    // Avoid hijacking explicit non-listing intents that include a location.
+    if (
+        detectCarHireQuery($current)
+        || detectDealerQuery($current)
+        || detectGarageQuery($current)
+        || detectFuelPriceQuery($current)
+        || detectCarSpecQuery($current)
+        || detectCarRecommendationQuery($current)
+        || detectPartsQuery($current)
+    ) {
+        return false;
+    }
+
     // If current message is already a full search query, no follow-up rewrite needed.
     if (detectSearchQuery($current)) {
         return false;
@@ -4343,6 +4356,19 @@ function buildLocationFollowUpCarHireMessage($db, $message, $conversationHistory
         return false;
     }
 
+    // Never rewrite explicit competing-intent messages as car hire follow-ups.
+    if (
+        detectGarageQuery($current)
+        || detectDealerQuery($current)
+        || detectSearchQuery($current)
+        || detectFuelPriceQuery($current)
+        || detectCarSpecQuery($current)
+        || detectCarRecommendationQuery($current)
+        || detectPartsQuery($current)
+    ) {
+        return false;
+    }
+
     if (!is_array($conversationHistory) || empty($conversationHistory)) {
         return false;
     }
@@ -4353,8 +4379,7 @@ function buildLocationFollowUpCarHireMessage($db, $message, $conversationHistory
     }
 
     $isLikelyFollowUp = preg_match('/\b(what about|how about|about|instead|then|and|try|only|just|show|filter|list|same|switch|change|move)\b/i', $current) === 1
-        || preg_match('/^(only|just)\s/i', $current) === 1
-        || str_word_count($current) <= 8;
+        || preg_match('/^(only|just)\s/i', $current) === 1;
     if (!$isLikelyFollowUp) {
         return false;
     }
@@ -4488,13 +4513,25 @@ function buildCarHireFilterFollowUpMessage($message, $conversationHistory) {
         return false;
     }
 
+    // Never hijack explicit competing-intent messages.
+    if (
+        detectGarageQuery($current)
+        || detectDealerQuery($current)
+        || detectSearchQuery($current)
+        || detectFuelPriceQuery($current)
+        || detectCarSpecQuery($current)
+        || detectCarRecommendationQuery($current)
+        || detectPartsQuery($current)
+    ) {
+        return false;
+    }
+
     if (!is_array($conversationHistory) || empty($conversationHistory)) {
         return false;
     }
 
     $isLikelyFilterFollowUp = preg_match('/\b(self[\s-]?drive|with\s+driver|chauffeur|airport|wedding|corporate|van|minibus|bus|truck|suv|sedan|pickup|automatic|manual|diesel|petrol|cheapest|best\s+value|most\s+expensive|closest|nearest|verified|featured|certified|luxury|economy|family)\b/i', $current) === 1
-        || preg_match('/\b(only|just|same|filter|show|list|with|without)\b/i', $current) === 1
-        || str_word_count($current) <= 7;
+        || preg_match('/\b(only|just|same|filter|show|list|with|without)\b/i', $current) === 1;
 
     if (!$isLikelyFilterFollowUp) {
         return false;
@@ -4791,6 +4828,19 @@ function buildLocationFollowUpGarageMessage($db, $message, $conversationHistory)
         return false;
     }
 
+    // Prevent garage follow-up rewrite from overriding explicit intents.
+    if (
+        detectCarHireQuery($current)
+        || detectDealerQuery($current)
+        || detectSearchQuery($current)
+        || detectFuelPriceQuery($current)
+        || detectCarSpecQuery($current)
+        || detectCarRecommendationQuery($current)
+        || detectPartsQuery($current)
+    ) {
+        return false;
+    }
+
     if (detectGarageQuery($current)) {
         return false;
     }
@@ -4854,6 +4904,19 @@ function buildLocationFollowUpGarageMessage($db, $message, $conversationHistory)
 function buildLocationFollowUpDealerMessage($db, $message, $conversationHistory) {
     $current = trim((string)$message);
     if ($current === '') {
+        return false;
+    }
+
+    // Prevent dealer follow-up rewrite from overriding explicit intents.
+    if (
+        detectCarHireQuery($current)
+        || detectGarageQuery($current)
+        || detectSearchQuery($current)
+        || detectFuelPriceQuery($current)
+        || detectCarSpecQuery($current)
+        || detectCarRecommendationQuery($current)
+        || detectPartsQuery($current)
+    ) {
         return false;
     }
 
@@ -10288,6 +10351,29 @@ function handleGarageQuery($db, $message, $conversationHistory) {
         }
 
         $searchParams = extractGarageSearchParams($message, $db);
+
+        $isProximityQuery = !empty($searchParams['proximity']);
+        $hasExplicitLocation = !empty($searchParams['location']);
+        $hasPreciseUserCoords = isset($userLocation['latitude'], $userLocation['longitude'])
+            && is_numeric($userLocation['latitude'])
+            && is_numeric($userLocation['longitude']);
+
+        // For "near me" queries without GPS coordinates, gracefully fall back
+        // to profile city if available.
+        if ($isProximityQuery && !$hasExplicitLocation && !$hasPreciseUserCoords && !empty($userLocation['location_name'])) {
+            $searchParams['location'] = strtolower(trim((string)$userLocation['location_name']));
+            unset($searchParams['distance_from_user']);
+        }
+
+        if ($isProximityQuery && !$hasExplicitLocation && !$hasPreciseUserCoords && empty($userLocation['location_name'])) {
+            sendSuccess([
+                'response' => 'To find garages near you accurately, please enable location access for MotorLink in your browser or app, then try again. You can also type a city, for example: "Emergency breakdown assistance in Lilongwe".',
+                'garages' => [],
+                'total_results' => 0,
+                'location_required' => true
+            ]);
+            return;
+        }
         
         // If proximity query and user has location, add to search params
         if (!empty($searchParams['proximity']) && $userLocation && !empty($userLocation['location_name'])) {
@@ -10309,7 +10395,6 @@ function handleGarageQuery($db, $message, $conversationHistory) {
         $baseUrl = $protocol . '://' . $serverHost . '/';
         
         // Detect query type
-        $isProximityQuery = !empty($searchParams['proximity']);
         $isMostQuery = detectComparativeQuery($message) === 'most' || detectComparativeQuery($message) === 'largest' || detectComparativeQuery($message) === 'biggest';
         
         // Format response
@@ -10698,9 +10783,21 @@ function extractGarageSearchParams($message, $db = null) {
 
     if (preg_match('/\b(recovery|tow|towing|breakdown|emergency|24\/7|24 7)\b/i', $message)) {
         $params['emergency_only'] = true;
-        if (empty($params['service'])) {
-            $params['service'] = 'Breakdown Recovery';
-            $params['service_terms'] = buildGarageServiceNeedles($params['service']);
+    }
+
+    // Emergency queries should not be over-constrained by a single emergency label
+    // because many garages advertise emergency support using varied wording.
+    if (!empty($params['emergency_only']) && !empty($params['service'])) {
+        $emergencyCanonicalServices = [
+            'Breakdown Recovery',
+            'Towing',
+            'Fuel Delivery',
+            'Jump Start',
+            'Lockout Service'
+        ];
+
+        if (in_array((string)$params['service'], $emergencyCanonicalServices, true)) {
+            unset($params['service'], $params['service_terms']);
         }
     }
 
@@ -11722,34 +11819,42 @@ function buildCarHireConversationOptions($db, array $searchParams, array $compan
 
 function handleCarHireQuery($db, $message, $conversationHistory) {
     try {
-        // Get user info for location context
         $user = getCurrentUser(true);
-        $userLocation = null;
-        if ($user) {
-            try {
-                $locationStmt = $db->prepare("
-                    SELECT u.city, u.address, loc.name as location_name, loc.region, loc.district
-                    FROM users u
-                    LEFT JOIN locations loc ON u.city = loc.name OR u.city LIKE CONCAT('%', loc.name, '%')
-                    WHERE u.id = ?
-                    LIMIT 1
-                ");
-                $locationStmt->execute([$user['id']]);
-                $userLocation = $locationStmt->fetch(PDO::FETCH_ASSOC);
-            } catch (Exception $e) {
-                error_log("Error fetching user location in handleCarHireQuery: " . $e->getMessage());
-            }
+        $userLocation = getAIChatResolvedUserLocationFromContext();
+        if (!$userLocation && $user) {
+            $userLocation = resolveAIChatBusinessUserLocation($db, $user, null);
         }
         
         // Extract search parameters from message
         $searchParams = extractCarHireSearchParams($message, $db);
+
+        $isProximityQuery = !empty($searchParams['proximity']);
+        $hasExplicitLocation = !empty($searchParams['location']);
+        $hasPreciseUserCoords = isset($userLocation['latitude'], $userLocation['longitude'])
+            && is_numeric($userLocation['latitude'])
+            && is_numeric($userLocation['longitude']);
+
+        // For "near me" without GPS coordinates, use profile city as a fallback.
+        if ($isProximityQuery && !$hasExplicitLocation && !$hasPreciseUserCoords && !empty($userLocation['location_name'])) {
+            $searchParams['location'] = strtolower(trim((string)$userLocation['location_name']));
+            unset($searchParams['distance_from_user']);
+        }
+
+        if ($isProximityQuery && !$hasExplicitLocation && !$hasPreciseUserCoords && empty($userLocation['location_name'])) {
+            sendSuccess([
+                'response' => 'To find car hire options near you accurately, please enable location access for MotorLink in your browser or app, then try again. You can also type a city, for example: "car hire near me in Lilongwe".',
+                'car_hire_companies' => [],
+                'total_results' => 0,
+                'location_required' => true
+            ]);
+            return;
+        }
         
         // Detect if this is a "most" query (e.g., "which car hire has most cars")
         $isComparativeQuery = detectComparativeQuery($message);
         $isMostQuery = ($isComparativeQuery === 'most' || $isComparativeQuery === 'largest' || $isComparativeQuery === 'biggest');
         $priceComparison = detectPriceComparativeQuery($message);
         $isPriceComparison = !empty($priceComparison);
-        $isProximityQuery = !empty($searchParams['proximity']);
         
         // If it's a "most" query, sort by vehicle count
         if ($isMostQuery) {

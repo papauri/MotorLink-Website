@@ -22,6 +22,10 @@ class AICarChat {
         this.storagePrefix = 'ai_chat';
         this.storageVersion = 2;
         this.authSessionKey = 'session';
+        this.locationContext = null;
+        this.locationContextUpdatedAt = 0;
+        this.locationContextPromise = null;
+        this.locationCacheTtlMs = 10 * 60 * 1000;
         this._conversationSaveTimeout = null;
         this._persistEventsBound = false;
         this.init();
@@ -950,6 +954,70 @@ class AICarChat {
         URL.revokeObjectURL(url);
     }
 
+    isLocationAwareQuery(message) {
+        const text = String(message || '').toLowerCase();
+        if (!text) {
+            return false;
+        }
+
+        return /\b(closest|nearest|near me|nearby|close to me|around me|my location|from me|within\s+\d+(?:\.\d+)?\s*(?:km|kms|kilometer|kilometers|kilometre|kilometres|mi|mile|miles))\b/i.test(text);
+    }
+
+    hasExplicitLocationMention(message) {
+        const text = String(message || '').toLowerCase();
+        if (!text) {
+            return false;
+        }
+
+        return /\b(blantyre|lilongwe|mzuzu|zomba|mangochi|salima|kasungu|mulanje|dedza|ntcheu|mchinji|dowa|ntchisi|nkhotakota|karonga|rumphi|balaka|machinga|phalombe|thyolo|chiradzulu|nsanje|chikwawa|likoma)\b/i.test(text);
+    }
+
+    async resolveLocationContextForMessage(message) {
+        if (!this.isLocationAwareQuery(message) || this.hasExplicitLocationMention(message)) {
+            return null;
+        }
+
+        if (!navigator.geolocation) {
+            return null;
+        }
+
+        const now = Date.now();
+        if (this.locationContext && (now - this.locationContextUpdatedAt) < this.locationCacheTtlMs) {
+            return this.locationContext;
+        }
+
+        if (this.locationContextPromise) {
+            return this.locationContextPromise;
+        }
+
+        this.locationContextPromise = new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const context = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy_meters: position.coords.accuracy
+                    };
+                    this.locationContext = context;
+                    this.locationContextUpdatedAt = Date.now();
+                    resolve(context);
+                },
+                () => {
+                    resolve(null);
+                },
+                {
+                    enableHighAccuracy: false,
+                    timeout: 6500,
+                    maximumAge: 5 * 60 * 1000
+                }
+            );
+        });
+
+        const resolvedContext = await this.locationContextPromise;
+        this.locationContextPromise = null;
+        return resolvedContext;
+    }
+
     async sendMessage(retryAttempt = 0, triggerSource = 'button') {
         // Check authentication before sending
         if (!this.currentUser) {
@@ -988,7 +1056,7 @@ class AICarChat {
             // Clear input
             input.value = '';
             this.updateCharCount(0);
-            this.autoResizeTextarea(input);
+            requestAnimationFrame(() => this.autoResizeTextarea(input));
 
             // Add user message to UI
             this.addMessage('user', message);
@@ -1009,17 +1077,35 @@ class AICarChat {
         clearTimeout(this._blockHeaderToggleTimeout);
         this._blockHeaderToggleTimeout = setTimeout(() => { this._blockHeaderToggle = false; }, 600);
         this.setInputSendingState(true, retryAttempt);
-        this.startSendFailsafe(input, sendBtn, retryAttempt > 0 ? 36000 : 26000);
+        this.startSendFailsafe(input, sendBtn, retryAttempt > 0 ? 62000 : 48000);
 
         // Show compact in-chat typing indicator
         this.showTypingIndicator();
 
+        let timeoutId = null;
+        let abortReason = '';
+
         try {
             const controller = new AbortController();
-            // Keep waits bounded so users never sit for a minute-plus on degraded paths.
-            const base = 22000;
-            const timeoutDuration = retryAttempt > 0 ? 30000 : base;
-            const timeoutId = setTimeout(() => controller.abort(), timeoutDuration);
+            const locationContext = await this.resolveLocationContextForMessage(message);
+            // Allow realistic server time on live networks without forcing premature aborts.
+            const base = 38000;
+            const timeoutDuration = retryAttempt > 0 ? 52000 : base;
+            timeoutId = setTimeout(() => {
+                abortReason = 'timeout';
+                controller.abort('request_timeout');
+            }, timeoutDuration);
+
+            const requestPayload = {
+                message: message,
+                conversation_history: this.conversationHistory.slice(-6), // Lean payload for faster replies
+                retry_with_improvement: !!this._pendingRetryWithImprovement,
+                rejected_response: this._pendingRejectedResponse || ''
+            };
+
+            if (locationContext) {
+                requestPayload.location_context = locationContext;
+            }
 
             const response = await fetch(`${CONFIG.API_URL}?action=ai_car_chat`, {
                 method: 'POST',
@@ -1030,20 +1116,13 @@ class AICarChat {
                 },
                 credentials: 'include',
                 signal: controller.signal,
-                body: JSON.stringify({
-                    message: message,
-                    conversation_history: this.conversationHistory.slice(-6), // Lean payload for faster replies
-                    retry_with_improvement: !!this._pendingRetryWithImprovement,
-                    rejected_response: this._pendingRejectedResponse || ''
-                })
+                body: JSON.stringify(requestPayload)
             });
 
             // Clear one-shot self-healing flags immediately so subsequent messages
             // don't inherit them.
             this._pendingRetryWithImprovement = false;
             this._pendingRejectedResponse = '';
-
-            clearTimeout(timeoutId);
 
             const rawResponse = await response.text();
             let data = {};
@@ -1191,11 +1270,20 @@ class AICarChat {
             }
         } catch (error) {
             this.hideTypingIndicator();
-            console.error('AI Chat Error:', error);
             const errorMessageText = typeof error?.message === 'string' ? error.message : '';
+            const isNetworkLikeError = error.name === 'TypeError' || error.name === 'NetworkError' || errorMessageText.includes('fetch') || errorMessageText.includes('Failed to fetch');
+            const isTimeoutAbort = error.name === 'AbortError' && abortReason === 'timeout';
 
             // Check if it's a timeout
             if (error.name === 'AbortError') {
+                if (!isTimeoutAbort) {
+                    this.resetInputSendState(input, sendBtn);
+                    this.pendingMessage = null;
+                    this.retryCount = 0;
+                    this.showError('Request was canceled. Please try again.');
+                    return;
+                }
+
                 if (retryAttempt < this.maxRetries) {
                     const exponentialDelay = this.baseRetryDelay * Math.pow(2, Math.min(retryAttempt, 5));
                     const jitter = Math.random() * 1000;
@@ -1225,7 +1313,7 @@ class AICarChat {
             }
 
             // Check if it's a network error
-            if (error.name === 'TypeError' || error.name === 'NetworkError' || errorMessageText.includes('fetch') || errorMessageText.includes('Failed to fetch')) {
+            if (isNetworkLikeError) {
                 if (retryAttempt < this.maxRetries) {
                     // Retry network errors with exponential backoff
                     const exponentialDelay = this.baseRetryDelay * Math.pow(2, Math.min(retryAttempt, 5));
@@ -1256,6 +1344,7 @@ class AICarChat {
             }
 
             // Other errors - don't retry, just show error
+            console.error('AI Chat Error:', error);
             // Clear retry timeout if exists
             if (this.currentRetryTimeout) {
                 clearTimeout(this.currentRetryTimeout);
@@ -1266,6 +1355,10 @@ class AICarChat {
             this.pendingMessage = null;
             this.showError('An unexpected error occurred. Please try again.');
             this.retryCount = 0;
+        } finally {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
         }
     }
     
@@ -1567,7 +1660,6 @@ class AICarChat {
         }
 
         chatInput.value = text;
-        this.autoResizeTextarea(chatInput);
         this.updateCharCount(chatInput.value.length);
         this.sendMessage();
     }

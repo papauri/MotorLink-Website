@@ -416,6 +416,7 @@ class AdminDashboard {
             'settings': 'Settings',
             'logs': 'Activity Logs',
             'ai-chat-usage': 'AI Chat Usage Logs',
+            'feedback': 'User Feedback',
         };
         document.getElementById('pageTitle').textContent = titles[section] || 'Dashboard';
 
@@ -837,6 +838,12 @@ class AdminDashboard {
                     loadAIChatSettings(), // This will also load AI Learning settings
                     loadFuelPriceSettings(),
                     loadFuelSourceSettings()
+                ]);
+            case 'feedback':
+                return Promise.all([
+                    loadFeedbackList(1),
+                    loadFeedbackSettings(),
+                    loadWalkthroughSettings()
                 ]);
             default:
                 return Promise.resolve();
@@ -9396,8 +9403,127 @@ async function loadWalkthroughSettings() {
         if (!resp || !resp.success) return;
         const el = document.getElementById('wtEnabled');
         if (el) el.checked = !!resp.settings?.walkthrough_enabled;
+        initWalkthroughResetAutocomplete();
     } catch (e) { /* ignore */ }
 }
+
+// ── Walkthrough reset autocomplete ──────────────────────────────────────────
+let _wtAcInitialised = false;
+let _wtSelectedUserId = null;   // set when user picks from dropdown
+
+function initWalkthroughResetAutocomplete() {
+    if (_wtAcInitialised) return;
+    const input = document.getElementById('wtResetUser');
+    const list  = document.getElementById('wtSuggestions');
+    if (!input || !list) return;
+    _wtAcInitialised = true;
+
+    let debounce = null;
+
+    input.addEventListener('input', () => {
+        _wtSelectedUserId = null;          // clear any prior selection
+        clearTimeout(debounce);
+        const q = input.value.trim();
+        if (q.length < 2) { _wtCloseSuggestions(list); return; }
+        debounce = setTimeout(() => _wtFetchSuggestions(q, list, input), 280);
+    });
+
+    input.addEventListener('keydown', e => {
+        if (list.style.display === 'none') return;
+        const items = list.querySelectorAll('li[data-id]');
+        const active = list.querySelector('li.wt-ac-active');
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const next = active ? active.nextElementSibling : items[0];
+            if (next) { active?.classList.remove('wt-ac-active'); next.classList.add('wt-ac-active'); }
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const prev = active?.previousElementSibling;
+            if (prev) { active.classList.remove('wt-ac-active'); prev.classList.add('wt-ac-active'); }
+        } else if (e.key === 'Enter') {
+            const highlighted = list.querySelector('li.wt-ac-active');
+            if (highlighted) { e.preventDefault(); highlighted.click(); }
+        } else if (e.key === 'Escape') {
+            _wtCloseSuggestions(list);
+        }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', e => {
+        if (!input.contains(e.target) && !list.contains(e.target)) _wtCloseSuggestions(list);
+    });
+}
+
+async function _wtFetchSuggestions(q, list, input) {
+    try {
+        const resp = await admin.apiCall(`search_users_for_walkthrough_reset&q=${encodeURIComponent(q)}`, 'GET', null);
+        if (!resp || !resp.success) return;
+        _wtRenderSuggestions(resp.users || [], list, input);
+    } catch (e) { /* ignore network errors */ }
+}
+
+function _wtRenderSuggestions(users, list, input) {
+    list.innerHTML = '';
+    if (users.length === 0) {
+        list.innerHTML = '<li style="padding:8px 14px;color:#888;font-size:0.82rem;">No users found</li>';
+        list.style.display = 'block';
+        return;
+    }
+    users.forEach(u => {
+        const li = document.createElement('li');
+        li.dataset.id = u.id;
+        li.style.cssText = 'padding:8px 14px;cursor:pointer;display:flex;flex-direction:column;gap:1px;transition:background 0.13s;';
+        li.innerHTML = `<span style="font-weight:600;font-size:0.88rem;">${escapeHtml(u.full_name)}</span><span style="font-size:0.78rem;color:#888;">${escapeHtml(u.email)}</span>`;
+        li.addEventListener('mouseenter', () => {
+            list.querySelectorAll('li').forEach(x => x.classList.remove('wt-ac-active'));
+            li.classList.add('wt-ac-active');
+        });
+        li.addEventListener('click', () => {
+            _wtSelectedUserId = parseInt(u.id, 10);
+            input.value = u.full_name + ' <' + u.email + '>';
+            input.dataset.resolvedId   = u.id;
+            input.dataset.resolvedName = u.full_name;
+            _wtCloseSuggestions(list);
+            _wtClearStatus();
+        });
+        list.appendChild(li);
+    });
+    list.style.display = 'block';
+}
+
+function _wtCloseSuggestions(list) {
+    if (list) list.style.display = 'none';
+}
+
+function _wtSetStatus(kind, msg) {
+    const el = document.getElementById('wtResetStatus');
+    if (!el) return;
+    el.style.display = 'block';
+    const styles = {
+        success: 'background:#d4edda;color:#155724;border:1px solid #c3e6cb;',
+        error:   'background:#f8d7da;color:#721c24;border:1px solid #f5c6cb;',
+        info:    'background:#d1ecf1;color:#0c5460;border:1px solid #bee5eb;'
+    };
+    el.style.cssText = `display:block;margin-top:8px;padding:8px 12px;border-radius:6px;font-size:0.85rem;font-weight:500;${styles[kind] || styles.info}`;
+    el.innerHTML = msg;
+}
+
+function _wtClearStatus() {
+    const el = document.getElementById('wtResetStatus');
+    if (el) el.style.display = 'none';
+}
+
+// ── active-state CSS injection for suggestions ───────────────────────────────
+(function () {
+    if (document.getElementById('wt-ac-style')) return;
+    const s = document.createElement('style');
+    s.id = 'wt-ac-style';
+    s.textContent = `
+        #wtSuggestions li.wt-ac-active { background: #f0fdf4 !important; }
+        #wtSuggestions li[data-id]:hover { background: #f0fdf4; }
+    `;
+    document.head.appendChild(s);
+}());
 
 async function saveWalkthroughSettings() {
     const enabled = document.getElementById('wtEnabled')?.checked ? 1 : 0;
@@ -9409,30 +9535,56 @@ async function saveWalkthroughSettings() {
 }
 
 async function resetWalkthrough() {
-    const userId = parseInt(document.getElementById('wtResetUser')?.value || '0', 10);
-    const msg = userId > 0
-        ? `Reset the walkthrough for user #${userId}?`
-        : 'Reset the walkthrough for ALL users? They will see the tour again on their next visit.';
-    if (!confirm(msg)) return;
-    try {
-        const resp = await admin.apiCall('reset_walkthrough_for_user', 'POST', { user_id: userId });
-        if (resp && resp.success) admin.showNotification?.(resp.message || 'Reset complete', 'success');
-        else alert(resp?.message || 'Failed');
-    } catch (e) { alert('Error: ' + e.message); }
-}
+    const input  = document.getElementById('wtResetUser');
+    const raw    = (input?.value || '').trim();
+    const btn    = document.getElementById('wtResetBtn');
+    const icon   = document.getElementById('wtResetBtnIcon');
+    const label  = document.getElementById('wtResetBtnLabel');
 
-// Auto-load feedback when the section becomes visible
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('[data-section="feedback"]').forEach(link => {
-        link.addEventListener('click', () => {
+    // Build payload from pre-resolved ID (via autocomplete) or raw text
+    const payload = {};
+    if (_wtSelectedUserId) {
+        payload.user_id = _wtSelectedUserId;
+    } else if (raw !== '') {
+        if (/^\d+$/.test(raw)) payload.user_id = parseInt(raw, 10);
+        else payload.identifier = raw;
+    }
+    const displayName = raw === '' ? 'ALL users' : (input?.dataset.resolvedName || `"${raw}"`);
+
+    // Spinner state
+    if (btn) btn.disabled = true;
+    if (icon)  icon.className  = 'fas fa-spinner fa-spin';
+    if (label) label.textContent = 'Resetting…';
+    _wtClearStatus();
+
+    try {
+        const resp = await admin.apiCall('reset_walkthrough_for_user', 'POST', payload);
+        if (resp && resp.success) {
+            if (icon)  icon.className  = 'fas fa-check';
+            if (label) label.textContent = 'Done!';
+            _wtSetStatus('success', `<i class="fas fa-check-circle"></i> ${escapeHtml(resp.message || 'Reset complete')} — the tour will show on their next visit.`);
+            // Clear the field and reset UI after 2.5 s
             setTimeout(() => {
-                loadFeedbackList(1);
-                loadFeedbackSettings();
-                loadWalkthroughSettings();
-            }, 150);
-        });
-    });
-});
+                if (input) { input.value = ''; delete input.dataset.resolvedId; delete input.dataset.resolvedName; }
+                _wtSelectedUserId = null;
+                if (icon)  icon.className  = 'fas fa-undo';
+                if (label) label.textContent = 'Reset';
+                if (btn)   btn.disabled = false;
+                _wtClearStatus();
+            }, 2500);
+        } else {
+            if (icon)  icon.className  = 'fas fa-undo';
+            if (label) label.textContent = 'Reset';
+            if (btn)   btn.disabled = false;
+            _wtSetStatus('error', `<i class="fas fa-exclamation-circle"></i> ${escapeHtml(resp?.message || 'Failed to reset. Try again.')}`);
+        }
+    } catch (e) {
+        if (icon)  icon.className  = 'fas fa-undo';
+        if (label) label.textContent = 'Reset';
+        if (btn)   btn.disabled = false;
+        _wtSetStatus('error', `<i class="fas fa-exclamation-circle"></i> Network error — please try again.`);
+    }
+}
 
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';

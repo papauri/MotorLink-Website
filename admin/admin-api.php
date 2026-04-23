@@ -487,6 +487,9 @@ try {
         case 'reset_walkthrough_for_user':
             handleResetWalkthroughForUser($db);
             break;
+        case 'search_users_for_walkthrough_reset':
+            handleSearchUsersForWalkthroughReset($db);
+            break;
 
         case 'get_system_info':
             handleGetSystemInfo($db);
@@ -9369,13 +9372,46 @@ function handleResetWalkthroughForUser($db) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendAdminError('POST required', 'INVALID_METHOD', 405);
     }
-    $input  = json_decode(file_get_contents('php://input'), true) ?? [];
-    $userId = (int)($input['user_id'] ?? 0);
+    $input      = json_decode(file_get_contents('php://input'), true) ?? [];
+    $userId     = (int)($input['user_id'] ?? 0);
+    $identifier = trim((string)($input['identifier'] ?? ''));
+
+    // Resolve name / email to a user ID
+    if ($userId <= 0 && $identifier !== '') {
+        $isEmail = filter_var($identifier, FILTER_VALIDATE_EMAIL) !== false;
+        if ($isEmail) {
+            $stmt = $db->prepare("SELECT id, full_name FROM users WHERE email = ? LIMIT 1");
+            $stmt->execute([$identifier]);
+        } else {
+            $stmt = $db->prepare("SELECT id, full_name FROM users WHERE full_name LIKE ? LIMIT 5");
+            $stmt->execute(['%' . $identifier . '%']);
+        }
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($rows)) {
+            echo json_encode(['success' => false, 'message' => "No user found matching '{$identifier}'."]);
+            exit();
+        }
+        if (count($rows) > 1) {
+            $names = implode(', ', array_map(fn($r) => "#{$r['id']} {$r['full_name']}", $rows));
+            echo json_encode(['success' => false, 'message' => "Multiple users matched: {$names}. Please be more specific."]);
+            exit();
+        }
+        $userId = (int)$rows[0]['id'];
+    }
+
     try {
         if ($userId > 0) {
-            $stmt = $db->prepare("UPDATE users SET walkthrough_completed_at = NULL WHERE id = ?");
-            $stmt->execute([$userId]);
-            $msg = "Walkthrough reset for user #{$userId}";
+            // Verify user exists first
+            $check = $db->prepare("SELECT id, full_name FROM users WHERE id = ? LIMIT 1");
+            $check->execute([$userId]);
+            $userRow = $check->fetch(PDO::FETCH_ASSOC);
+            if (!$userRow) {
+                echo json_encode(['success' => false, 'message' => "User #{$userId} not found."]);
+                exit();
+            }
+            $db->prepare("UPDATE users SET walkthrough_completed_at = NULL WHERE id = ?")->execute([$userId]);
+            $name = $userRow['full_name'] ?: "#$userId";
+            $msg = "Walkthrough reset for {$name} (#{$userId})";
         } else {
             $db->exec("UPDATE users SET walkthrough_completed_at = NULL");
             $msg = "Walkthrough reset for ALL users";
@@ -9388,3 +9424,23 @@ function handleResetWalkthroughForUser($db) {
     }
 }
 
+function handleSearchUsersForWalkthroughReset($db) {
+    requireSuperAdmin($db);
+    $q = trim($_GET['q'] ?? '');
+    if (strlen($q) < 2) {
+        echo json_encode(['success' => true, 'users' => []]);
+        exit();
+    }
+    $like = '%' . $q . '%';
+    $stmt = $db->prepare(
+        "SELECT id, full_name, email FROM users
+         WHERE (full_name LIKE ? OR email LIKE ?)
+         ORDER BY full_name
+         LIMIT 8"
+    );
+    $stmt->execute([$like, $like]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Never expose raw passwords or sensitive fields — only id/name/email
+    echo json_encode(['success' => true, 'users' => $rows]);
+    exit();
+}

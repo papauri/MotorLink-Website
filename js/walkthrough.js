@@ -29,7 +29,7 @@
             icon:  'fa-magnifying-glass'
         },
         {
-            selector: 'a[href*="showroom"], a[href*="car-database"]',
+            selector: '#listingsGrid, .listings-section, .listings-grid',
             title: 'Browse Our Showroom',
             body:  'Explore our full inventory — from budget-friendly to luxury cars available across Malawi.',
             icon:  'fa-car-side'
@@ -55,7 +55,7 @@
         {
             selector: '#aiChatToggle, .ai-chat-toggle, [data-ai-chat], .ai-car-chat-widget',
             title: 'Your AI Car Assistant',
-            body:  'Ask anything in plain language — "7-seater under MK3M in Blantyre". Our AI finds it for you.',
+            body:  'Ask anything in plain language — "7-seater under MK3M in Blantyre". Our AI finds it for you. Available to registered users — <a href="register.html" style="color:#00c853;font-weight:600;">sign up free</a> to unlock.',
             icon:  'fa-robot'
         },
         {
@@ -244,22 +244,30 @@
 
     // ── Entry ────────────────────────────────────────────────────────────
     function init() {
-        try {
-            if (localStorage.getItem(LS_DONE) === '1' || localStorage.getItem(LS_SKIP) === '1') return;
-        } catch(e){}
-
+        // Always ask the server first — a DB reset must override any stale localStorage flag
         fetch(`${API_BASE}?action=get_walkthrough_state`, { credentials: 'same-origin' })
             .then(r => r.json())
             .then(d => {
-                if (!d || !d.success || !d.should_show) {
-                    if (d && d.success && !d.should_show) {
-                        try { localStorage.setItem(LS_DONE, '1'); } catch(e){}
-                    }
-                    return;
+                if (!d || !d.success) return;
+
+                if (d.should_show) {
+                    // Server says show — clear any stale "done/skip" flags so the tour runs
+                    try {
+                        localStorage.removeItem(LS_DONE);
+                        localStorage.removeItem(LS_SKIP);
+                    } catch(e){}
+                    setTimeout(launch, 1500);
+                } else {
+                    // Server says done — cache that locally to avoid future API calls
+                    try { localStorage.setItem(LS_DONE, '1'); } catch(e){}
                 }
-                setTimeout(launch, 1500);
             })
-            .catch(() => {});
+            .catch(() => {
+                // Network error — fall back to localStorage check (guests / offline)
+                try {
+                    if (localStorage.getItem(LS_DONE) === '1' || localStorage.getItem(LS_SKIP) === '1') return;
+                } catch(e){}
+            });
     }
 
     // ── Launch ───────────────────────────────────────────────────────────
