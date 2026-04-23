@@ -1854,6 +1854,124 @@ function buildAIChatConversationBrief($conversationHistory, $limit = 6) {
     return implode("\n", $lines);
 }
 
+function decodeAIChatBusinessJsonList($value) {
+    if (is_array($value)) {
+        $items = $value;
+    } elseif (is_string($value) && trim($value) !== '') {
+        $decoded = json_decode($value, true);
+        $items = (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? $decoded : [];
+    } else {
+        $items = [];
+    }
+
+    return array_values(array_filter(array_map(function ($item) {
+        return trim((string)$item);
+    }, $items), function ($item) {
+        return $item !== '';
+    }));
+}
+
+function formatAIChatBusinessList(array $items, $limit = 4) {
+    $items = array_values(array_filter(array_map(function ($item) {
+        return trim((string)$item);
+    }, $items), function ($item) {
+        return $item !== '';
+    }));
+
+    if (empty($items)) {
+        return '';
+    }
+
+    $slice = array_slice($items, 0, $limit);
+    $text = implode(', ', $slice);
+    if (count($items) > $limit) {
+        $text .= ' and ' . (count($items) - $limit) . ' more';
+    }
+
+    return $text;
+}
+
+function buildAIChatBusinessSearchTerms($message, array $exclude = []) {
+    $text = strtolower((string)$message);
+    $text = preg_replace('/[^a-z0-9\s]/', ' ', $text);
+    $parts = preg_split('/\s+/', trim($text));
+    if (!is_array($parts)) {
+        return [];
+    }
+
+    $stopWords = array_merge([
+        'the', 'and', 'for', 'with', 'from', 'that', 'this', 'there', 'their', 'them', 'about', 'tell', 'show',
+        'what', 'which', 'where', 'when', 'give', 'need', 'want', 'find', 'looking', 'look', 'search', 'contact',
+        'number', 'phone', 'whatsapp', 'website', 'facebook', 'instagram', 'twitter', 'linkedin', 'open', 'near',
+        'nearby', 'closest', 'nearest', 'best', 'most', 'top', 'company', 'companies', 'business', 'businesses',
+        'dealer', 'dealers', 'showroom', 'showrooms', 'garage', 'garages', 'workshop', 'workshops', 'hire', 'rental',
+        'rent', 'cars', 'car', 'service', 'services', 'located', 'location', 'need', 'want', 'looking', 'have', 'has',
+        'me', 'my', 'our', 'one', 'ones'
+    ], $exclude);
+    $stopMap = array_fill_keys($stopWords, true);
+
+    $terms = [];
+    foreach ($parts as $part) {
+        if (strlen($part) < 3 || isset($stopMap[$part]) || ctype_digit($part)) {
+            continue;
+        }
+        $terms[] = $part;
+        if (count($terms) >= 6) {
+            break;
+        }
+    }
+
+    return array_values(array_unique($terms));
+}
+
+function aiChatBusinessMatchesList(array $values, array $needles) {
+    if (empty($needles)) {
+        return true;
+    }
+
+    $normalizedValues = array_map('strtolower', array_map('trim', $values));
+    foreach ($needles as $needle) {
+        $needle = strtolower(trim((string)$needle));
+        if ($needle === '') {
+            continue;
+        }
+
+        foreach ($normalizedValues as $value) {
+            if ($value !== '' && (strpos($value, $needle) !== false || strpos($needle, $value) !== false)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+function formatAIChatBusinessStatusBadges(array $business) {
+    $badges = [];
+    if (!empty($business['featured'])) {
+        $badges[] = 'Featured';
+    }
+    if (!empty($business['verified'])) {
+        $badges[] = 'Verified';
+    }
+    if (!empty($business['certified'])) {
+        $badges[] = 'Certified';
+    }
+
+    return !empty($badges) ? implode(' • ', $badges) : '';
+}
+
+function formatAIChatBusinessRating(array $business) {
+    $rating = isset($business['avg_rating']) && $business['avg_rating'] !== null ? (float)$business['avg_rating'] : null;
+    $reviewCount = isset($business['review_count']) ? (int)$business['review_count'] : 0;
+
+    if ($rating === null || $reviewCount <= 0) {
+        return '';
+    }
+
+    return number_format($rating, 1) . '/5 from ' . $reviewCount . ' review' . ($reviewCount !== 1 ? 's' : '');
+}
+
 function buildAIChatResponseEntityDigest($responseData, $maxEntities = 5) {
     if (!is_array($responseData)) {
         return [];
@@ -1931,9 +2049,16 @@ function buildAIChatResponseEntityDigest($responseData, $maxEntities = 5) {
                 'name' => trim((string)($company['business_name'] ?? 'Car hire company')),
                 'location' => aiChatTruncateText((string)($company['location_name'] ?? ''), 80),
                 'phone' => aiChatTruncateText((string)($company['phone'] ?? ''), 40),
+                'whatsapp' => aiChatTruncateText((string)($company['whatsapp'] ?? ''), 40),
+                'website' => aiChatTruncateText((string)($company['website'] ?? ''), 90),
                 'daily_rate_from_mwk' => isset($company['daily_rate_from']) && $company['daily_rate_from'] !== '' ? (float)$company['daily_rate_from'] : null,
                 'inventory_count' => isset($company['total_vehicles']) ? (int)$company['total_vehicles'] : null,
                 'lead_vehicle' => aiChatTruncateText($leadVehicle, 80),
+                'services' => aiChatTruncateText(formatAIChatBusinessList($company['services_list'] ?? decodeAIChatBusinessJsonList($company['services'] ?? []), 3), 90),
+                'special_services' => aiChatTruncateText(formatAIChatBusinessList($company['special_services_list'] ?? decodeAIChatBusinessJsonList($company['special_services'] ?? []), 2), 80),
+                'event_types' => aiChatTruncateText(formatAIChatBusinessList($company['event_types_list'] ?? decodeAIChatBusinessJsonList($company['event_types'] ?? []), 2), 80),
+                'hire_category' => aiChatTruncateText((string)($company['hire_category'] ?? ''), 40),
+                'rating' => formatAIChatBusinessRating($company),
                 'path' => !empty($company['id']) ? 'car-hire-company.html?id=' . (int)$company['id'] : ''
             ]);
         }
@@ -1959,7 +2084,12 @@ function buildAIChatResponseEntityDigest($responseData, $maxEntities = 5) {
                 'name' => trim((string)($garage['name'] ?? 'Garage')),
                 'location' => aiChatTruncateText((string)($garage['location_name'] ?? ''), 80),
                 'phone' => aiChatTruncateText((string)($garage['phone'] ?? ''), 40),
+                'whatsapp' => aiChatTruncateText((string)($garage['whatsapp'] ?? ''), 40),
+                'website' => aiChatTruncateText((string)($garage['website'] ?? ''), 90),
                 'services' => aiChatTruncateText(implode(', ', array_slice(is_array($services) ? $services : [], 0, 3)), 90),
+                'emergency_services' => aiChatTruncateText(formatAIChatBusinessList($garage['emergency_services_list'] ?? decodeAIChatBusinessJsonList($garage['emergency_services'] ?? []), 2), 80),
+                'brands' => aiChatTruncateText(formatAIChatBusinessList($garage['specializes_in_cars_list'] ?? decodeAIChatBusinessJsonList($garage['specializes_in_cars'] ?? []), 3), 80),
+                'rating' => formatAIChatBusinessRating($garage),
                 'path' => !empty($garage['id']) ? 'garages.html?id=' . (int)$garage['id'] : ''
             ]);
         }
@@ -1979,7 +2109,11 @@ function buildAIChatResponseEntityDigest($responseData, $maxEntities = 5) {
                 'name' => trim((string)($dealer['business_name'] ?? 'Dealer')),
                 'location' => aiChatTruncateText((string)($dealer['location_name'] ?? ''), 80),
                 'phone' => aiChatTruncateText((string)($dealer['phone'] ?? ''), 40),
+                'whatsapp' => aiChatTruncateText((string)($dealer['whatsapp'] ?? ''), 40),
+                'website' => aiChatTruncateText((string)($dealer['website'] ?? ''), 90),
                 'inventory_count' => isset($dealer['total_cars']) ? (int)$dealer['total_cars'] : null,
+                'services' => aiChatTruncateText(formatAIChatBusinessList(decodeAIChatBusinessJsonList($dealer['specialization'] ?? []), 3), 80),
+                'rating' => formatAIChatBusinessRating($dealer),
                 'path' => !empty($dealer['id']) ? 'showroom.html?dealer_id=' . (int)$dealer['id'] : ''
             ]);
         }
@@ -2068,6 +2202,12 @@ function buildAIChatRecentEntityContextPrompt($db, $userId, $runtimeSiteUrl = ''
                 if (!empty($entity['phone'])) {
                     $line .= ' - ' . aiChatNormalizePromptText($entity['phone'], 40);
                 }
+                if (!empty($entity['whatsapp'])) {
+                    $line .= ' - WhatsApp ' . aiChatNormalizePromptText($entity['whatsapp'], 40);
+                }
+                if (!empty($entity['website'])) {
+                    $line .= ' - site ' . aiChatNormalizePromptText($entity['website'], 70);
+                }
                 if (!empty($entity['inventory_count'])) {
                     $line .= ' - ' . (int)$entity['inventory_count'] . ' vehicles';
                 }
@@ -2076,6 +2216,24 @@ function buildAIChatRecentEntityContextPrompt($db, $userId, $runtimeSiteUrl = ''
                 }
                 if (!empty($entity['services'])) {
                     $line .= ' - services ' . aiChatNormalizePromptText($entity['services'], 70);
+                }
+                if (!empty($entity['special_services'])) {
+                    $line .= ' - extras ' . aiChatNormalizePromptText($entity['special_services'], 70);
+                }
+                if (!empty($entity['event_types'])) {
+                    $line .= ' - events ' . aiChatNormalizePromptText($entity['event_types'], 70);
+                }
+                if (!empty($entity['emergency_services'])) {
+                    $line .= ' - emergency ' . aiChatNormalizePromptText($entity['emergency_services'], 70);
+                }
+                if (!empty($entity['brands'])) {
+                    $line .= ' - brands ' . aiChatNormalizePromptText($entity['brands'], 70);
+                }
+                if (!empty($entity['hire_category'])) {
+                    $line .= ' - category ' . aiChatNormalizePromptText($entity['hire_category'], 30);
+                }
+                if (!empty($entity['rating'])) {
+                    $line .= ' - rating ' . aiChatNormalizePromptText($entity['rating'], 50);
                 }
 
                 $path = trim((string)($entity['path'] ?? ''));
@@ -2317,6 +2475,13 @@ function buildAIChatDealerRetrievalSnippet($db, $message, $runtimeSiteUrl, $user
         if (!empty($dealer['phone'])) {
             $line .= ' - ' . $dealer['phone'];
         }
+        if (!empty($dealer['whatsapp'])) {
+            $line .= ' - WhatsApp ' . $dealer['whatsapp'];
+        }
+        $ratingText = formatAIChatBusinessRating($dealer);
+        if ($ratingText !== '') {
+            $line .= ' - rating ' . $ratingText;
+        }
         $line .= ' - ' . $url;
         $lines[] = $line;
     }
@@ -2349,6 +2514,13 @@ function buildAIChatGarageRetrievalSnippet($db, $message, $runtimeSiteUrl, $user
         if (!empty($garage['phone'])) {
             $line .= ' - ' . $garage['phone'];
         }
+        if (!empty($garage['recovery_number'])) {
+            $line .= ' - recovery ' . $garage['recovery_number'];
+        }
+        $servicesText = formatAIChatBusinessList($garage['services_list'] ?? decodeAIChatBusinessJsonList($garage['services'] ?? []), 2);
+        if ($servicesText !== '') {
+            $line .= ' - services ' . $servicesText;
+        }
         $line .= ' - ' . $url;
         $lines[] = $line;
     }
@@ -2378,8 +2550,19 @@ function buildAIChatCarHireRetrievalSnippet($db, $message, $runtimeSiteUrl, $use
         if ($distanceLabel !== '') {
             $line .= ' - ' . $distanceLabel;
         }
+        if (!empty($company['phone'])) {
+            $line .= ' - ' . $company['phone'];
+        }
         if (!empty($company['daily_rate_from'])) {
             $line .= ' - from ' . getChatCurrencyCode($db) . ' ' . number_format((float)$company['daily_rate_from']) . '/day';
+        }
+        $servicesText = formatAIChatBusinessList($company['services_list'] ?? decodeAIChatBusinessJsonList($company['services'] ?? []), 2);
+        if ($servicesText !== '') {
+            $line .= ' - services ' . $servicesText;
+        }
+        $eventText = formatAIChatBusinessList($company['event_types_list'] ?? decodeAIChatBusinessJsonList($company['event_types'] ?? []), 2);
+        if ($eventText !== '') {
+            $line .= ' - events ' . $eventText;
         }
         $line .= ' - ' . $url;
         $lines[] = $line;
@@ -9567,6 +9750,12 @@ function extractDealerSearchParams($db, $message) {
         }
     }
 
+    if (preg_match('/\b(verified|certified|featured|trusted|reputable)\b/i', $message)) {
+        $params['quality_only'] = true;
+    }
+
+    $params['search_terms'] = buildAIChatBusinessSearchTerms($message);
+
     return applyAIChatBusinessQueryHints($db, $message, $params);
 }
 
@@ -9603,12 +9792,33 @@ function searchDealers($db, $searchParams, $userLocation = null) {
             $specSearch = '%' . strtolower($searchParams['specialization']) . '%';
             $params[] = $specSearch;
         }
+
+        if (!empty($searchParams['quality_only'])) {
+            $whereConditions[] = "(d.verified = 1 OR d.certified = 1 OR d.featured = 1)";
+        }
+
+        $searchTerms = !empty($searchParams['search_terms']) && is_array($searchParams['search_terms'])
+            ? array_slice($searchParams['search_terms'], 0, 4)
+            : [];
+        if (!empty($searchTerms)) {
+            $termConditions = [];
+            foreach ($searchTerms as $term) {
+                $termConditions[] = "(LOWER(d.business_name) LIKE ? OR LOWER(d.owner_name) LIKE ? OR LOWER(d.address) LIKE ? OR LOWER(d.description) LIKE ?)";
+                $like = '%' . strtolower($term) . '%';
+                array_push($params, $like, $like, $like, $like);
+            }
+            $whereConditions[] = '(' . implode(' OR ', $termConditions) . ')';
+        }
         
         $whereClause = implode(' AND ', $whereConditions);
         
         // Include location information and business_hours
         $stmt = $db->prepare("
                  SELECT d.*, loc.name as location_name, loc.region, loc.district, loc.latitude, loc.longitude, d.business_hours,
+                                     (SELECT ROUND(AVG(r.rating), 1) FROM business_reviews r
+                                        WHERE r.business_type = 'dealer' AND r.business_id = d.id AND r.status = 'active') as avg_rating,
+                                     (SELECT COUNT(*) FROM business_reviews r
+                                        WHERE r.business_type = 'dealer' AND r.business_id = d.id AND r.status = 'active') as review_count,
                    (SELECT COUNT(*) 
                     FROM car_listings cl 
                     INNER JOIN users u ON cl.user_id = u.id 
@@ -9732,9 +9942,32 @@ function handleDealerQuery($db, $message, $conversationHistory) {
                 if (!empty($dealer['phone'])) {
                     $response .= "📞 {$dealer['phone']}\n";
                 }
+
+                if (!empty($dealer['whatsapp'])) {
+                    $response .= "💬 WhatsApp: {$dealer['whatsapp']}\n";
+                }
+
+                $statusBadges = formatAIChatBusinessStatusBadges($dealer);
+                if ($statusBadges !== '') {
+                    $response .= "🏷️ {$statusBadges}\n";
+                }
+
+                $ratingText = formatAIChatBusinessRating($dealer);
+                if ($ratingText !== '') {
+                    $response .= "⭐ {$ratingText}\n";
+                }
+
+                $specialization = formatAIChatBusinessList(decodeAIChatBusinessJsonList($dealer['specialization'] ?? []), 4);
+                if ($specialization !== '') {
+                    $response .= "🏁 {$specialization}\n";
+                }
                 
                 if (!empty($dealer['total_cars'])) {
                     $response .= "🚗 {$dealer['total_cars']} car" . ($dealer['total_cars'] != 1 ? 's' : '') . " available\n";
+                }
+
+                if (!empty($dealer['website'])) {
+                    $response .= "🌐 {$dealer['website']}\n";
                 }
             }
             // For "most" queries, return only the top result
@@ -9749,6 +9982,11 @@ function handleDealerQuery($db, $message, $conversationHistory) {
                 
                 if (!empty($dealer['phone'])) {
                     $response .= "\n📞 {$dealer['phone']}";
+                }
+
+                $ratingText = formatAIChatBusinessRating($dealer);
+                if ($ratingText !== '') {
+                    $response .= "\n⭐ {$ratingText}";
                 }
                 
                 if (!empty($dealer['total_cars'])) {
@@ -9776,9 +10014,32 @@ function handleDealerQuery($db, $message, $conversationHistory) {
                     if (!empty($dealer['phone'])) {
                         $response .= "  📞 {$dealer['phone']}\n";
                     }
+
+                    if (!empty($dealer['whatsapp'])) {
+                        $response .= "  💬 WhatsApp: {$dealer['whatsapp']}\n";
+                    }
+
+                    $statusBadges = formatAIChatBusinessStatusBadges($dealer);
+                    if ($statusBadges !== '') {
+                        $response .= "  🏷️ {$statusBadges}\n";
+                    }
+
+                    $ratingText = formatAIChatBusinessRating($dealer);
+                    if ($ratingText !== '') {
+                        $response .= "  ⭐ {$ratingText}\n";
+                    }
+
+                    $specialization = formatAIChatBusinessList(decodeAIChatBusinessJsonList($dealer['specialization'] ?? []), 3);
+                    if ($specialization !== '') {
+                        $response .= "  🏁 {$specialization}\n";
+                    }
                     
                     if (!empty($dealer['total_cars'])) {
                         $response .= "  🚗 {$dealer['total_cars']} car" . ($dealer['total_cars'] != 1 ? 's' : '') . " available\n";
+                    }
+
+                    if (!empty($dealer['website'])) {
+                        $response .= "  🌐 {$dealer['website']}\n";
                     }
                     
                     $response .= "\n";
@@ -9952,6 +10213,24 @@ function handleGarageQuery($db, $message, $conversationHistory) {
                 if (!empty($garage['phone'])) {
                     $response .= "📞 {$garage['phone']}\n";
                 }
+
+                if (!empty($garage['whatsapp'])) {
+                    $response .= "💬 WhatsApp: {$garage['whatsapp']}\n";
+                }
+
+                if (!empty($garage['recovery_number'])) {
+                    $response .= "🆘 Recovery: {$garage['recovery_number']}\n";
+                }
+
+                $statusBadges = formatAIChatBusinessStatusBadges($garage);
+                if ($statusBadges !== '') {
+                    $response .= "🏷️ {$statusBadges}\n";
+                }
+
+                $ratingText = formatAIChatBusinessRating($garage);
+                if ($ratingText !== '') {
+                    $response .= "⭐ {$ratingText}\n";
+                }
                 
                 if (!empty($garage['services_list'])) {
                     $services = is_array($garage['services_list']) ? $garage['services_list'] : json_decode($garage['services_list'], true);
@@ -10001,9 +10280,37 @@ function handleGarageQuery($db, $message, $conversationHistory) {
                         $response .= "  📞 {$garage['phone']}\n";
                     }
 
+                    if (!empty($garage['whatsapp'])) {
+                        $response .= "  💬 WhatsApp: {$garage['whatsapp']}\n";
+                    }
+
                     $distanceLabel = formatAIChatDistanceLabel($garage);
                     if ($distanceLabel !== '') {
                         $response .= "  📏 {$distanceLabel}\n";
+                    }
+
+                    $statusBadges = formatAIChatBusinessStatusBadges($garage);
+                    if ($statusBadges !== '') {
+                        $response .= "  🏷️ {$statusBadges}\n";
+                    }
+
+                    $ratingText = formatAIChatBusinessRating($garage);
+                    if ($ratingText !== '') {
+                        $response .= "  ⭐ {$ratingText}\n";
+                    }
+
+                    $servicesText = formatAIChatBusinessList($garage['services_list'] ?? [], 3);
+                    if ($servicesText !== '') {
+                        $response .= "  🔧 {$servicesText}\n";
+                    }
+
+                    $emergencyText = formatAIChatBusinessList($garage['emergency_services_list'] ?? [], 2);
+                    if ($emergencyText !== '') {
+                        $response .= "  🚨 {$emergencyText}\n";
+                    }
+
+                    if (!empty($garage['recovery_number'])) {
+                        $response .= "  🆘 Recovery: {$garage['recovery_number']}\n";
                     }
                     
                     // Show if open now (if open_now query was made)
@@ -10164,6 +10471,16 @@ function extractGarageSearchParams($message, $db = null) {
             break;
         }
     }
+
+    if (preg_match('/\b(recovery|tow|towing|breakdown|emergency|24\/7|24 7)\b/i', $message)) {
+        $params['emergency_only'] = true;
+    }
+
+    if (preg_match('/\b(verified|certified|featured|trusted|reputable)\b/i', $message)) {
+        $params['quality_only'] = true;
+    }
+
+    $params['search_terms'] = buildAIChatBusinessSearchTerms($message);
     
     // Detect "open now" queries
     if (detectOpenNowQuery($message)) {
@@ -10247,6 +10564,10 @@ function searchGarages($db, $searchParams, $userLocation = null) {
         $params[] = $serviceSearch;
         $params[] = $serviceSearch;
     }
+
+    if (!empty($searchParams['emergency_only'])) {
+        $whereConditions[] = "(g.recovery_number IS NOT NULL OR g.emergency_services IS NOT NULL)";
+    }
     
     // Specialization filter
     if (!empty($searchParams['specialization'])) {
@@ -10254,6 +10575,23 @@ function searchGarages($db, $searchParams, $userLocation = null) {
         $specSearch = '%' . $searchParams['specialization'] . '%';
         $params[] = $specSearch;
         $params[] = $specSearch;
+    }
+
+    if (!empty($searchParams['quality_only'])) {
+        $whereConditions[] = "(g.verified = 1 OR g.certified = 1 OR g.featured = 1)";
+    }
+
+    $searchTerms = !empty($searchParams['search_terms']) && is_array($searchParams['search_terms'])
+        ? array_slice($searchParams['search_terms'], 0, 4)
+        : [];
+    if (!empty($searchTerms)) {
+        $termConditions = [];
+        foreach ($searchTerms as $term) {
+            $termConditions[] = "(LOWER(g.name) LIKE ? OR LOWER(g.owner_name) LIKE ? OR LOWER(g.address) LIKE ? OR LOWER(g.description) LIKE ?)";
+            $like = '%' . strtolower($term) . '%';
+            array_push($params, $like, $like, $like, $like);
+        }
+        $whereConditions[] = '(' . implode(' OR ', $termConditions) . ')';
     }
     
     $whereClause = implode(' AND ', $whereConditions);
@@ -10265,7 +10603,11 @@ function searchGarages($db, $searchParams, $userLocation = null) {
     // This ensures we only get garages with valid locations
     try {
         $stmt = $db->prepare("
-            SELECT g.*, loc.name as location_name, loc.region, loc.district, loc.latitude, loc.longitude, g.business_hours, g.operating_hours
+                SELECT g.*, loc.name as location_name, loc.region, loc.district, loc.latitude, loc.longitude, g.business_hours, g.operating_hours,
+                   (SELECT ROUND(AVG(r.rating), 1) FROM business_reviews r
+                    WHERE r.business_type = 'garage' AND r.business_id = g.id AND r.status = 'active') as avg_rating,
+                   (SELECT COUNT(*) FROM business_reviews r
+                    WHERE r.business_type = 'garage' AND r.business_id = g.id AND r.status = 'active') as review_count
             FROM garages g
             INNER JOIN locations loc ON g.location_id = loc.id
             WHERE {$whereClause}
@@ -10329,12 +10671,24 @@ function searchGarages($db, $searchParams, $userLocation = null) {
             } else {
                 $garage['specialization_list'] = [];
             }
+
+            if (!empty($garage['specializes_in_cars'])) {
+                if (is_string($garage['specializes_in_cars'])) {
+                    $decoded = json_decode($garage['specializes_in_cars'], true);
+                    $garage['specializes_in_cars_list'] = (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) ? $decoded : [];
+                } else {
+                    $garage['specializes_in_cars_list'] = is_array($garage['specializes_in_cars']) ? $garage['specializes_in_cars'] : [];
+                }
+            } else {
+                $garage['specializes_in_cars_list'] = [];
+            }
         } catch (Exception $e) {
             error_log("Error parsing JSON fields for garage: " . $e->getMessage());
             // Set defaults on error
             $garage['services_list'] = $garage['services_list'] ?? [];
             $garage['emergency_services_list'] = $garage['emergency_services_list'] ?? [];
             $garage['specialization_list'] = $garage['specialization_list'] ?? [];
+            $garage['specializes_in_cars_list'] = $garage['specializes_in_cars_list'] ?? [];
         }
     }
     unset($garage); // Important: unset reference after loop
@@ -10575,6 +10929,20 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                 if (!empty($company['phone'])) {
                     $response .= "📞 {$company['phone']}\n";
                 }
+
+                if (!empty($company['whatsapp'])) {
+                    $response .= "💬 WhatsApp: {$company['whatsapp']}\n";
+                }
+
+                $statusBadges = formatAIChatBusinessStatusBadges($company);
+                if ($statusBadges !== '') {
+                    $response .= "🏷️ {$statusBadges}\n";
+                }
+
+                $ratingText = formatAIChatBusinessRating($company);
+                if ($ratingText !== '') {
+                    $response .= "⭐ {$ratingText}\n";
+                }
                 
                 if (!empty($company['total_vehicles'])) {
                     $response .= "🚗 {$company['total_vehicles']} vehicle" . ($company['total_vehicles'] != 1 ? 's' : '') . " available\n";
@@ -10582,6 +10950,20 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                 
                 if (!empty($company['daily_rate_from'])) {
                     $response .= "💰 Starting from: " . getChatCurrencyCode($db) . " " . number_format($company['daily_rate_from']) . "/day\n";
+                }
+
+                $servicesText = formatAIChatBusinessList($company['services_list'] ?? [], 3);
+                if ($servicesText !== '') {
+                    $response .= "🧰 Services: {$servicesText}\n";
+                }
+
+                $eventText = formatAIChatBusinessList($company['event_types_list'] ?? [], 2);
+                if ($eventText !== '') {
+                    $response .= "🎉 Events: {$eventText}\n";
+                }
+
+                if (!empty($company['website'])) {
+                    $response .= "🌐 {$company['website']}\n";
                 }
                 
                 // Show matching vehicle details if available
@@ -10609,6 +10991,11 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                 
                 if (!empty($company['phone'])) {
                     $response .= "📞 Phone: {$company['phone']}\n";
+                }
+
+                $ratingText = formatAIChatBusinessRating($company);
+                if ($ratingText !== '') {
+                    $response .= "⭐ {$ratingText}\n";
                 }
                 
                 if (!empty($company['daily_rate_from'])) {
@@ -10650,6 +11037,20 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                     if (!empty($company['phone'])) {
                         $response .= "  📞 {$company['phone']}\n";
                     }
+
+                    if (!empty($company['whatsapp'])) {
+                        $response .= "  💬 WhatsApp: {$company['whatsapp']}\n";
+                    }
+
+                    $statusBadges = formatAIChatBusinessStatusBadges($company);
+                    if ($statusBadges !== '') {
+                        $response .= "  🏷️ {$statusBadges}\n";
+                    }
+
+                    $ratingText = formatAIChatBusinessRating($company);
+                    if ($ratingText !== '') {
+                        $response .= "  ⭐ {$ratingText}\n";
+                    }
                     
                     if (!empty($company['total_vehicles'])) {
                         $response .= "  🚗 {$company['total_vehicles']} vehicle" . ($company['total_vehicles'] != 1 ? 's' : '') . "\n";
@@ -10657,6 +11058,25 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
                     
                     if (!empty($company['daily_rate_from'])) {
                         $response .= "  💰 From " . getChatCurrencyCode($db) . " " . number_format($company['daily_rate_from']) . "/day\n";
+                    }
+
+                    $servicesText = formatAIChatBusinessList($company['services_list'] ?? [], 3);
+                    if ($servicesText !== '') {
+                        $response .= "  🧰 {$servicesText}\n";
+                    }
+
+                    $specialText = formatAIChatBusinessList($company['special_services_list'] ?? [], 2);
+                    if ($specialText !== '') {
+                        $response .= "  ✨ {$specialText}\n";
+                    }
+
+                    $eventText = formatAIChatBusinessList($company['event_types_list'] ?? [], 2);
+                    if ($eventText !== '') {
+                        $response .= "  🎉 {$eventText}\n";
+                    }
+
+                    if (!empty($company['website'])) {
+                        $response .= "  🌐 {$company['website']}\n";
                     }
                     
                     // Show matching vehicle details if available
@@ -10702,7 +11122,7 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
 /**
  * Extract car hire search parameters from user message
  */
-function extractCarHireSearchParams($message) {
+function extractCarHireSearchParams($message, $db = null) {
     $params = [];
     $messageLower = strtolower($message);
     
@@ -10793,12 +11213,62 @@ function extractCarHireSearchParams($message) {
         $params['transmission'] = 'manual';
     }
 
+    $serviceMap = [
+        'self drive' => 'Self Drive',
+        'with driver' => 'With Driver',
+        'driver' => 'With Driver',
+        'chauffeur' => 'Chauffeur Service',
+        'airport' => 'Airport Pickup',
+        'wedding' => 'Wedding Cars',
+        'corporate' => 'Corporate Rental',
+        'van hire' => 'Van Hire',
+        'truck hire' => 'Truck Hire',
+        'vip' => 'VIP Service',
+        'tourist' => 'Tourist Packages',
+        '24/7' => '24/7 Service'
+    ];
+    foreach ($serviceMap as $needle => $mapped) {
+        if (strpos($messageLower, $needle) !== false) {
+            $params['company_service'] = $mapped;
+            break;
+        }
+    }
+
+    $eventMap = [
+        'wedding' => 'Wedding',
+        'corporate event' => 'Corporate Event',
+        'funeral' => 'Funeral',
+        'birthday' => 'Birthday Party',
+        'prom' => 'Prom Night',
+        'vip transfer' => 'Airport VIP Transfer',
+        'graduation' => 'Graduation',
+        'church' => 'Church Event'
+    ];
+    foreach ($eventMap as $needle => $mapped) {
+        if (strpos($messageLower, $needle) !== false) {
+            $params['event_type'] = $mapped;
+            break;
+        }
+    }
+
+    if (preg_match('/\b(wedding|event|corporate|funeral|birthday|prom|graduation|church)\b/i', $message)) {
+        $params['hire_category'] = 'events';
+    } elseif (preg_match('/\b(van|truck|minibus|bus|cargo)\b/i', $message)) {
+        $params['hire_category'] = 'vans_trucks';
+    }
+
+    if (preg_match('/\b(verified|certified|featured|trusted|reputable)\b/i', $message)) {
+        $params['quality_only'] = true;
+    }
+
+    $params['search_terms'] = buildAIChatBusinessSearchTerms($message);
+
     $priceComparison = detectPriceComparativeQuery($message);
     if (!empty($priceComparison)) {
         $params['price_comparison'] = $priceComparison;
     }
     
-    return $params;
+    return $db ? applyAIChatBusinessQueryHints($db, $message, $params) : $params;
 }
 
 /**
@@ -10825,6 +11295,28 @@ function searchCarHire($db, $searchParams, $userLocation = null) {
         $params[] = $locationPattern;
         $params[] = $locationPattern;
     }
+
+    if (!empty($searchParams['hire_category'])) {
+        $whereConditions[] = "(ch.hire_category = ? OR ch.hire_category = 'all')";
+        $params[] = $searchParams['hire_category'];
+    }
+
+    if (!empty($searchParams['quality_only'])) {
+        $whereConditions[] = "(ch.verified = 1 OR ch.certified = 1 OR ch.featured = 1)";
+    }
+
+    $searchTerms = !empty($searchParams['search_terms']) && is_array($searchParams['search_terms'])
+        ? array_slice($searchParams['search_terms'], 0, 4)
+        : [];
+    if (!empty($searchTerms)) {
+        $termConditions = [];
+        foreach ($searchTerms as $term) {
+            $termConditions[] = "(LOWER(ch.business_name) LIKE ? OR LOWER(ch.owner_name) LIKE ? OR LOWER(ch.address) LIKE ? OR LOWER(ch.description) LIKE ?)";
+            $like = '%' . strtolower($term) . '%';
+            array_push($params, $like, $like, $like, $like);
+        }
+        $whereConditions[] = '(' . implode(' OR ', $termConditions) . ')';
+    }
     
     $whereClause = implode(' AND ', $whereConditions);
     
@@ -10842,8 +11334,12 @@ function searchCarHire($db, $searchParams, $userLocation = null) {
     
     // Get car hire companies with vehicle count and location information
     $stmt = $db->prepare("
-        SELECT ch.*, loc.name as location_name, loc.region, loc.district,
-               COUNT(f.id) as vehicle_count
+         SELECT ch.*, loc.name as location_name, loc.region, loc.district, loc.latitude, loc.longitude,
+             COUNT(f.id) as vehicle_count,
+             (SELECT ROUND(AVG(r.rating), 1) FROM business_reviews r
+              WHERE r.business_type = 'car_hire' AND r.business_id = ch.id AND r.status = 'active') as avg_rating,
+             (SELECT COUNT(*) FROM business_reviews r
+              WHERE r.business_type = 'car_hire' AND r.business_id = ch.id AND r.status = 'active') as review_count
         FROM car_hire_companies ch
         INNER JOIN locations loc ON ch.location_id = loc.id
         LEFT JOIN car_hire_fleet f ON ch.id = f.company_id AND f.is_active = 1
@@ -10855,13 +11351,17 @@ function searchCarHire($db, $searchParams, $userLocation = null) {
     
     $stmt->execute($params);
     $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Note: Distance calculation removed as locations table doesn't have latitude/longitude columns
+
+    $companies = rankAIChatBusinessResultsByDistance($companies, (array)$searchParams, $userLocation);
     
     // For each company, check if they have matching vehicles
     foreach ($companies as &$company) {
         $company['matching_vehicles'] = [];
         $company['total_vehicles'] = 0;
+        $company['vehicle_types_list'] = decodeAIChatBusinessJsonList($company['vehicle_types'] ?? []);
+        $company['services_list'] = decodeAIChatBusinessJsonList($company['services'] ?? []);
+        $company['special_services_list'] = decodeAIChatBusinessJsonList($company['special_services'] ?? []);
+        $company['event_types_list'] = decodeAIChatBusinessJsonList($company['event_types'] ?? []);
         
         // Search fleet for matching vehicles
         $fleetConditions = ["f.company_id = ?", "f.is_active = 1", "f.is_available = 1"];
@@ -10957,8 +11457,33 @@ function searchCarHire($db, $searchParams, $userLocation = null) {
             if (!empty($rates)) {
                 $company['daily_rate_from'] = min($rates);
             }
+        } elseif (!empty($company['daily_rate_from'])) {
+            $company['daily_rate_from'] = (float)$company['daily_rate_from'];
         }
     }
+
+    $companies = array_values(array_filter($companies, function($company) use ($searchParams) {
+        if (!empty($searchParams['company_service'])) {
+            $companyServices = array_merge($company['services_list'] ?? [], $company['special_services_list'] ?? []);
+            if (!aiChatBusinessMatchesList($companyServices, [$searchParams['company_service']])) {
+                return false;
+            }
+        }
+
+        if (!empty($searchParams['event_type']) && !aiChatBusinessMatchesList($company['event_types_list'] ?? [], [$searchParams['event_type']])) {
+            return false;
+        }
+
+        if (!empty($searchParams['vehicle_type'])) {
+            $companyVehicleTypes = $company['vehicle_types_list'] ?? [];
+            $companyVehicleTypes[] = (string)($company['hire_category'] ?? '');
+            if (!aiChatBusinessMatchesList($companyVehicleTypes, [$searchParams['vehicle_type']]) && empty($company['matching_vehicles'])) {
+                return false;
+            }
+        }
+
+        return true;
+    }));
     
     // Filter companies to only show those with matching vehicles if vehicle filters were specified
     if (!empty($searchParams['make']) || !empty($searchParams['model']) || !empty($searchParams['vehicle_type']) || 
