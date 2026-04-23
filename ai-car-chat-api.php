@@ -11296,9 +11296,33 @@ function searchCarHire($db, $searchParams, $userLocation = null) {
         $params[] = $locationPattern;
     }
 
+    // Build company-level service/event filter as one OR group for speed
+    $companyFilterConds = [];
+    $companyFilterParams = [];
+
     if (!empty($searchParams['hire_category'])) {
-        $whereConditions[] = "(ch.hire_category = ? OR ch.hire_category = 'all')";
-        $params[] = $searchParams['hire_category'];
+        $companyFilterConds[] = "ch.hire_category = ?";
+        $companyFilterConds[] = "ch.hire_category = 'all'";
+        $companyFilterParams[] = $searchParams['hire_category'];
+    }
+
+    if (!empty($searchParams['company_service'])) {
+        $svcLike = '%' . addcslashes($searchParams['company_service'], '%_\\') . '%';
+        $companyFilterConds[] = "ch.services LIKE ?";
+        $companyFilterConds[] = "ch.special_services LIKE ?";
+        $companyFilterParams[] = $svcLike;
+        $companyFilterParams[] = $svcLike;
+    }
+
+    if (!empty($searchParams['event_type'])) {
+        $evtLike = '%' . addcslashes($searchParams['event_type'], '%_\\') . '%';
+        $companyFilterConds[] = "ch.event_types LIKE ?";
+        $companyFilterParams[] = $evtLike;
+    }
+
+    if (!empty($companyFilterConds)) {
+        $whereConditions[] = '(' . implode(' OR ', $companyFilterConds) . ')';
+        foreach ($companyFilterParams as $p) { $params[] = $p; }
     }
 
     if (!empty($searchParams['quality_only'])) {
@@ -11462,18 +11486,9 @@ function searchCarHire($db, $searchParams, $userLocation = null) {
         }
     }
 
+    // SQL already filtered on hire_category/services/event_types via OR group above.
+    // Only apply vehicle_type PHP post-filter (needs decoded JSON lists).
     $companies = array_values(array_filter($companies, function($company) use ($searchParams) {
-        if (!empty($searchParams['company_service'])) {
-            $companyServices = array_merge($company['services_list'] ?? [], $company['special_services_list'] ?? []);
-            if (!aiChatBusinessMatchesList($companyServices, [$searchParams['company_service']])) {
-                return false;
-            }
-        }
-
-        if (!empty($searchParams['event_type']) && !aiChatBusinessMatchesList($company['event_types_list'] ?? [], [$searchParams['event_type']])) {
-            return false;
-        }
-
         if (!empty($searchParams['vehicle_type'])) {
             $companyVehicleTypes = $company['vehicle_types_list'] ?? [];
             $companyVehicleTypes[] = (string)($company['hire_category'] ?? '');
@@ -11481,7 +11496,6 @@ function searchCarHire($db, $searchParams, $userLocation = null) {
                 return false;
             }
         }
-
         return true;
     }));
     

@@ -1756,11 +1756,8 @@ class MotorLink {
             // Use image_count from API if available, otherwise use images array length
             const totalImageCount = listing.image_count || listing.images_count || images.length;
 
-            // Show image count if there are multiple images (either loaded or indicated by API)
-            const showImageCount = hasMultipleImages || totalImageCount > 1;
-            const imageCountBadge = showImageCount
-                ? `<div class="image-count" onclick="event.stopPropagation(); openImageGallery(${listing.id}, '${escapedTitleForJs}')"><i class="fas fa-images"></i> ${totalImageCount}</div>`
-                : '';
+            // Image count badge removed
+            const imageCountBadge = '';
 
             // Thumbnail row: up to 3 extra images under the featured image
             const thumbs = images.slice(1, 4);
@@ -3979,7 +3976,6 @@ class ShowroomManager {
                                 '<i class="fas fa-car"></i>'
                             }
                             ${badgeHTML}
-                            ${car.image_count > 1 ? `<div class="image-count" onclick="event.stopPropagation(); openImageGallery(${car.id}, '${(car.title || `${car.year} ${car.make_name} ${car.model_name}`).replace(/'/g, "\\'")}')"><i class="fas fa-images"></i> ${car.image_count}</div>` : ''}
                         </div>
                         ${galleryStripHTML}
                     </div>
