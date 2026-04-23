@@ -3540,8 +3540,8 @@ REMEMBER (MANDATORY WORKFLOW):
             'response' => $aiResponse
         ]);
 
-    } catch (Exception $e) {
-        error_log("handleAICarChat error: " . $e->getMessage());
+    } catch (Throwable $e) {
+        error_log("handleAICarChat error: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine());
         error_log("Stack trace: " . $e->getTraceAsString());
         sendError('I apologize, but I encountered an error processing your request. Please try again, or rephrase your question.', 500);
     }
@@ -5698,12 +5698,20 @@ function handleSearchQuery($db, $message, $conversationHistory) {
             'total_results' => count($listings), // Total matching results
             'base_url' => $baseUrl
         ]);
-        
-    } catch (Exception $e) {
-        error_log("handleSearchQuery error: " . $e->getMessage());
+
+    } catch (Throwable $e) {
+        error_log("handleSearchQuery error: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine());
         error_log("handleSearchQuery trace: " . $e->getTraceAsString());
-        // Fallback to regular AI response
-        sendError('Search failed: ' . $e->getMessage() . '. Please try rephrasing your query.', 500);
+        $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $baseUrl = $serverHost ? ($protocol . '://' . $serverHost . '/') : '/';
+        sendSuccess([
+            'response' => "I couldn't search the listings just now. You can [browse all cars for sale]({$baseUrl}index.html) directly.",
+            'search_results' => [],
+            'total_results' => 0,
+            'base_url' => $baseUrl,
+            'soft_error' => true
+        ]);
     }
 }
 
@@ -10122,11 +10130,20 @@ function handleDealerQuery($db, $message, $conversationHistory) {
             'total_results' => count($dealers),
             'base_url' => $baseUrl
         ]);
-        
-    } catch (Exception $e) {
-        error_log("handleDealerQuery error: " . $e->getMessage());
-        error_log("Stack trace: " . $e->getTraceAsString());
-        sendError('Dealer search failed. Please try rephrasing your query.', 500);
+
+    } catch (Throwable $e) {
+        error_log("handleDealerQuery error: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine());
+        error_log("handleDealerQuery trace: " . $e->getTraceAsString());
+        $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $baseUrl = $serverHost ? ($protocol . '://' . $serverHost . '/') : '/';
+        sendSuccess([
+            'response' => "I couldn't search the dealer directory just now. You can [browse all dealers]({$baseUrl}dealers.html) directly.",
+            'dealers' => [],
+            'total_results' => 0,
+            'base_url' => $baseUrl,
+            'soft_error' => true
+        ]);
     }
 }
 
@@ -10406,11 +10423,20 @@ function handleGarageQuery($db, $message, $conversationHistory) {
             'total_results' => count($garages),
             'base_url' => $baseUrl
         ]);
-        
-    } catch (Exception $e) {
-        error_log("handleGarageQuery error: " . $e->getMessage());
-        error_log("Stack trace: " . $e->getTraceAsString());
-        sendError('Garage search failed. Please try rephrasing your query.', 500);
+
+    } catch (Throwable $e) {
+        error_log("handleGarageQuery error: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine());
+        error_log("handleGarageQuery trace: " . $e->getTraceAsString());
+        $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $baseUrl = $serverHost ? ($protocol . '://' . $serverHost . '/') : '/';
+        sendSuccess([
+            'response' => "I couldn't search the garage directory just now. You can [browse all garages]({$baseUrl}garages.html) directly.",
+            'garages' => [],
+            'total_results' => 0,
+            'base_url' => $baseUrl,
+            'soft_error' => true
+        ]);
     }
 }
 
@@ -11203,10 +11229,21 @@ function handleCarHireQuery($db, $message, $conversationHistory) {
             'total_results' => count($results['companies']),
             'base_url' => $baseUrl
         ]);
-        
-    } catch (Exception $e) {
-        error_log("handleCarHireQuery error: " . $e->getMessage());
-        sendError('Car hire search failed. Please try rephrasing your query.', 500);
+
+    } catch (Throwable $e) {
+        error_log("handleCarHireQuery error: " . $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine());
+        error_log("handleCarHireQuery trace: " . $e->getTraceAsString());
+        // Graceful fallback — never let car-hire search bring down the chat with 500.
+        $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $baseUrl = $serverHost ? ($protocol . '://' . $serverHost . '/') : '/';
+        sendSuccess([
+            'response' => "I wasn't able to search the car hire directory just now. You can [browse all car hire companies]({$baseUrl}car-hire.html) directly while I recover.",
+            'car_hire_companies' => [],
+            'total_results' => 0,
+            'base_url' => $baseUrl,
+            'soft_error' => true
+        ]);
     }
 }
 
