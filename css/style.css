@@ -1451,6 +1451,33 @@ body {
     margin-top: auto;
 }
 
+/* WhatsApp share button on each car card — Malawi-first viral sharing */
+.car-share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #25D366;
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+    line-height: 1.2;
+}
+.car-share-btn:hover,
+.car-share-btn:focus-visible {
+    background: #1ebe57;
+    transform: translateY(-1px);
+    outline: none;
+}
+.car-share-btn i { font-size: 12px; }
+@media (max-width: 480px) {
+    .car-share-btn { padding: 5px 9px; font-size: 10.5px; }
+}
+
 /* ============================================================================
    DESKTOP CARD LAYOUT - 2-column grid with image carousel ≥1024px
    ============================================================================ */

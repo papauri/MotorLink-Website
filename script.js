@@ -110,6 +110,13 @@ class MotorLink {
                 this.startTour();
             }
         }, 2000);
+
+        // Mobile: auto-enable "Near Me" sort on first visit (Malawi-first: most
+        // buyers only care about cars in their own city)
+        this.autoEnableNearestSortOnMobile();
+
+        // Honour district query string: ?district=blantyre pre-filters the list
+        this.applyDistrictFromUrl();
     }
 
     initScrollHeader() {
@@ -490,6 +497,114 @@ class MotorLink {
         }
     }
     
+    // Auto-prompt for location on mobile if user hasn't decided yet, then
+    // switch the sort to "Nearest First" so most relevant cars show up top.
+    // Respects decline — only asks once per device.
+    autoEnableNearestSortOnMobile() {
+        try {
+            // Only on the main index listings page
+            if (!document.querySelector('.listings-grid')) return;
+            if (!navigator.geolocation) return;
+
+            const isMobile = window.matchMedia('(max-width: 768px)').matches;
+            if (!isMobile) return;
+
+            const DECISION_KEY = 'motorlink_near_me_decision';
+            const decision = localStorage.getItem(DECISION_KEY);
+
+            // Previously declined — do nothing
+            if (decision === 'denied') return;
+
+            // Previously granted — silently request location and apply nearest sort
+            if (decision === 'granted') {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                        this.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                        this.setSortToNearestAndReload();
+                    },
+                    () => { /* silent fail — user may have revoked permission */ },
+                    { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
+                );
+                return;
+            }
+
+            // First-time: ask politely after a short delay so the page settles first
+            setTimeout(() => {
+                const yes = confirm(
+                    'Show cars near you first?\n\n' +
+                    'MotorLink can sort listings by distance from your location. ' +
+                    'Your location stays on your device — we never store it.'
+                );
+                if (yes) {
+                    localStorage.setItem(DECISION_KEY, 'granted');
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => {
+                            this.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                            this.setSortToNearestAndReload();
+                        },
+                        () => { localStorage.setItem(DECISION_KEY, 'denied'); },
+                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                    );
+                } else {
+                    localStorage.setItem(DECISION_KEY, 'denied');
+                }
+            }, 1500);
+        } catch (_) { /* feature is best-effort; never break the page */ }
+    }
+
+    setSortToNearestAndReload() {
+        const sortSelect = document.querySelector('.sort-select');
+        if (sortSelect) {
+            sortSelect.value = 'nearest';
+        }
+        if (typeof this.applyFilters === 'function') {
+            this.applyFilters();
+        }
+    }
+
+    // Apply ?district=<name> from the URL to pre-filter listings. Lets dealers
+    // share "cars in Blantyre" links directly in WhatsApp / Facebook groups.
+    applyDistrictFromUrl() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const district = (params.get('district') || '').trim();
+            if (!district) return;
+
+            // Wait for the location filter to be populated, then apply.
+            const applyOnce = () => {
+                const locSelect = document.getElementById('locationFilter');
+                if (!locSelect || locSelect.options.length <= 1) return false;
+
+                const needle = district.toLowerCase();
+                let matched = false;
+                for (const opt of locSelect.options) {
+                    const optVal  = (opt.value || '').toLowerCase();
+                    const optText = (opt.textContent || '').toLowerCase();
+                    if (optVal === needle || optText.startsWith(needle + ',') || optText === needle) {
+                        locSelect.value = opt.value;
+                        matched = true;
+                        break;
+                    }
+                }
+                if (matched) {
+                    // Also mirror into any mobile location select
+                    const mobileLoc = document.getElementById('mobile-locationFilter');
+                    if (mobileLoc) mobileLoc.value = locSelect.value;
+                    if (typeof this.applyFilters === 'function') this.applyFilters();
+                }
+                return true;
+            };
+
+            // Try immediately, then retry for a short window while locations load
+            if (applyOnce()) return;
+            let attempts = 0;
+            const interval = setInterval(() => {
+                attempts++;
+                if (applyOnce() || attempts > 20) clearInterval(interval);
+            }, 300);
+        } catch (_) { /* never block page on URL parse errors */ }
+    }
+
     // Get user's current location
     getUserLocation() {
         if (!navigator.geolocation) {
@@ -1835,6 +1950,12 @@ class MotorLink {
                         <div class="car-meta">
                             <span><i class="fas fa-eye"></i> ${listing.views_count || 0} views</span>
                             <span><i class="fas fa-clock"></i> ${this.timeAgo(listing.created_at)}</span>
+                            <button type="button" class="car-share-btn" aria-label="Share on WhatsApp"
+                                    data-share-id="${listing.id}"
+                                    data-share-title="${escapedTitle}"
+                                    data-share-price="${listing.price || 0}">
+                                <i class="fab fa-whatsapp"></i> Share
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1846,6 +1967,27 @@ class MotorLink {
             
             cards.forEach(card => {
                 card.setAttribute('data-setup', 'true');
+
+                // WhatsApp share button — prevent bubbling into the card click
+                const shareBtn = card.querySelector('.car-share-btn');
+                if (shareBtn) {
+                    shareBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        const id = shareBtn.dataset.shareId;
+                        const title = shareBtn.dataset.shareTitle || 'this car';
+                        const rawPrice = parseInt(shareBtn.dataset.sharePrice || '0', 10);
+                        const priceText = rawPrice > 0
+                            ? `${CONFIG.CURRENCY_CODE || 'MWK'} ${this.formatNumber(rawPrice)}`
+                            : 'Price on request';
+                        const origin = window.location.origin + window.location.pathname.replace(/[^/]*$/, '');
+                        const url = `${origin}car.html?id=${id}`;
+                        const msg = `Check out this car on MotorLink Malawi:\n\n${title}\nPrice: ${priceText}\n\n${url}`;
+                        const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+                        window.open(waUrl, '_blank', 'noopener');
+                    });
+                }
+
                 card.addEventListener('click', (e) => {
                     const listingId = card.dataset.id;
                     

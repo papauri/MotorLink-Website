@@ -9528,7 +9528,7 @@ function getWalkthroughState($db) {
             return;
         }
 
-        $user = getCurrentUser(true);
+        $user = getCurrentUser(false); // false = optional; guests get null without 401
         if (!$user) {
             // Guest — let client decide via localStorage
             sendSuccess(['should_show' => true, 'reason' => 'guest', 'authenticated' => false]);
@@ -9558,7 +9558,7 @@ function completeWalkthrough($db) {
         sendError('POST required', 405);
     }
     try {
-        $user = getCurrentUser(true);
+        $user = getCurrentUser(false); // false = optional; guests get null without 401
         if (!$user) {
             // Guest — nothing to persist server-side
             sendSuccess(['persisted' => false]);

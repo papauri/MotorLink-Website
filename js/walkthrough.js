@@ -282,11 +282,20 @@
                 if (!d || !d.success) return;
 
                 if (d.should_show) {
-                    // Server says show — clear any stale "done/skip" flags so the tour runs
-                    try {
-                        localStorage.removeItem(LS_DONE);
-                        localStorage.removeItem(LS_SKIP);
-                    } catch(e){}
+                    // For guests the server always returns should_show:true because it has
+                    // no DB record to consult.  Respect whatever the guest stored locally —
+                    // if they've already dismissed/completed the tour, don't show it again.
+                    if (d.reason === 'guest') {
+                        try {
+                            if (localStorage.getItem(LS_DONE) === '1' || localStorage.getItem(LS_SKIP) === '1') return;
+                        } catch(e){}
+                    } else {
+                        // Authenticated user: server is authoritative — clear stale flags
+                        try {
+                            localStorage.removeItem(LS_DONE);
+                            localStorage.removeItem(LS_SKIP);
+                        } catch(e){}
+                    }
                     setTimeout(launch, 1500);
                 } else {
                     // Server says done — cache that locally to avoid future API calls

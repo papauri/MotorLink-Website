@@ -919,13 +919,8 @@ try {
         sendError('No action specified', 400);
     }
 
-    // ── Auth gate: recommendation engine is for logged-in users only ──
-    if (empty($_SESSION['user_id'])) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'message' => 'Authentication required']);
-        exit;
-    }
-
+    // Recommendations work for both logged-in users and guests.
+    // Logged-in users get personalised results; guests fall back to trending.
     $sessionId = trim((string)($_GET['session_id'] ?? $_POST['session_id'] ?? ($jsonInput['session_id'] ?? '')));
     if ($sessionId === '') {
         $sessionId = null;
