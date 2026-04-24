@@ -869,7 +869,8 @@
 
     .showroom-card-image {
         width: 100% !important;
-        height: 220px !important;
+        aspect-ratio: 16 / 9 !important;
+        height: auto !important;
         position: relative !important;
         overflow: hidden !important;
         background: var(--bg-light, #f3f4f6);
@@ -882,6 +883,7 @@
         width: 100% !important;
         height: 100% !important;
         object-fit: cover !important;
+        object-position: center !important;
     }
 
     .showroom-card-content {
@@ -978,7 +980,8 @@
 .showroom-card-image {
     position: relative;
     width: 100%;
-    height: 200px;
+    aspect-ratio: 16 / 9;
+    height: auto;
     overflow: hidden;
     background: var(--bg-light);
 }
@@ -987,6 +990,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center;
     transition: transform 0.3s ease;
 }
 
