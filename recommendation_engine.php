@@ -1010,22 +1010,28 @@ try {
             $reDB  = getDB();
 
             if ($userId) {
-                // Authenticated: query viewing_history
-                $stmt = $reDB->prepare("
-                    SELECT
-                        vh.listing_id, vh.last_viewed,
-                        cl.title, cl.make, cl.model, cl.year, cl.price, cl.mileage,
-                        cl.fuel_type, cl.transmission, cl.location_id,
-                        l.name AS location_name,
-                        (SELECT id FROM car_listing_images WHERE listing_id = cl.id AND is_primary = 1 LIMIT 1) AS primary_image_id
-                    FROM viewing_history vh
-                    JOIN car_listings cl ON cl.id = vh.listing_id AND cl.status = 'active'
-                    LEFT JOIN locations l ON l.id = cl.location_id
-                    WHERE vh.user_id = ?
-                    ORDER BY vh.last_viewed DESC
-                    LIMIT ?
-                ");
-                $stmt->execute([$userId, $limit]);
+                // Authenticated: query viewing_history (table may not exist on older installs)
+                try {
+                    $stmt = $reDB->prepare("
+                        SELECT
+                            vh.listing_id, vh.last_viewed,
+                            cl.title, cl.make, cl.model, cl.year, cl.price, cl.mileage,
+                            cl.fuel_type, cl.transmission, cl.location_id,
+                            l.name AS location_name,
+                            (SELECT id FROM car_listing_images WHERE listing_id = cl.id AND is_primary = 1 LIMIT 1) AS primary_image_id
+                        FROM viewing_history vh
+                        JOIN car_listings cl ON cl.id = vh.listing_id AND cl.status = 'active'
+                        LEFT JOIN locations l ON l.id = cl.location_id
+                        WHERE vh.user_id = ?
+                        ORDER BY vh.last_viewed DESC
+                        LIMIT ?
+                    ");
+                    $stmt->execute([$userId, $limit]);
+                } catch (Exception $vhe) {
+                    error_log('get_recently_viewed user query failed: ' . $vhe->getMessage());
+                    sendSuccess(['listings' => []]);
+                    break;
+                }
             } elseif ($sessionId) {
                 // Guest: query guest_viewing_history
                 try {

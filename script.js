@@ -111,10 +111,6 @@ class MotorLink {
             }
         }, 2000);
 
-        // Mobile: auto-enable "Near Me" sort on first visit (Malawi-first: most
-        // buyers only care about cars in their own city)
-        this.autoEnableNearestSortOnMobile();
-
         // Honour district query string: ?district=blantyre pre-filters the list
         this.applyDistrictFromUrl();
 
@@ -572,71 +568,6 @@ class MotorLink {
         };
         track.addEventListener('scroll', updateArrows, { passive: true });
         updateArrows();
-    }
-
-    // Auto-prompt for location on mobile if user hasn't decided yet, then
-    // switch the sort to "Nearest First" so most relevant cars show up top.
-    // Respects decline — only asks once per device.
-    autoEnableNearestSortOnMobile() {
-        try {
-            // Only on the main index listings page
-            if (!document.querySelector('.listings-grid')) return;
-            if (!navigator.geolocation) return;
-
-            const isMobile = window.matchMedia('(max-width: 768px)').matches;
-            if (!isMobile) return;
-
-            const DECISION_KEY = 'motorlink_near_me_decision';
-            const decision = localStorage.getItem(DECISION_KEY);
-
-            // Previously declined — do nothing
-            if (decision === 'denied') return;
-
-            // Previously granted — silently request location and apply nearest sort
-            if (decision === 'granted') {
-                navigator.geolocation.getCurrentPosition(
-                    (pos) => {
-                        this.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                        this.setSortToNearestAndReload();
-                    },
-                    () => { /* silent fail — user may have revoked permission */ },
-                    { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60 * 1000 }
-                );
-                return;
-            }
-
-            // First-time: ask politely after a short delay so the page settles first
-            setTimeout(() => {
-                const yes = confirm(
-                    'Show cars near you first?\n\n' +
-                    'MotorLink can sort listings by distance from your location. ' +
-                    'Your location stays on your device — we never store it.'
-                );
-                if (yes) {
-                    localStorage.setItem(DECISION_KEY, 'granted');
-                    navigator.geolocation.getCurrentPosition(
-                        (pos) => {
-                            this.userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-                            this.setSortToNearestAndReload();
-                        },
-                        () => { localStorage.setItem(DECISION_KEY, 'denied'); },
-                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-                    );
-                } else {
-                    localStorage.setItem(DECISION_KEY, 'denied');
-                }
-            }, 1500);
-        } catch (_) { /* feature is best-effort; never break the page */ }
-    }
-
-    setSortToNearestAndReload() {
-        const sortSelect = document.querySelector('.sort-select');
-        if (sortSelect) {
-            sortSelect.value = 'nearest';
-        }
-        if (typeof this.applyFilters === 'function') {
-            this.applyFilters();
-        }
     }
 
     // Apply ?district=<name> from the URL to pre-filter listings. Lets dealers
