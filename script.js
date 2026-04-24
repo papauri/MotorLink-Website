@@ -117,6 +117,9 @@ class MotorLink {
 
         // Honour district query string: ?district=blantyre pre-filters the list
         this.applyDistrictFromUrl();
+
+        // Recently Viewed carousel
+        this.initRecentlyViewed();
     }
 
     initScrollHeader() {
@@ -497,6 +500,76 @@ class MotorLink {
         }
     }
     
+    // ── Recently Viewed Carousel ───────────────────────────────────────────
+    initRecentlyViewed() {
+        const section = document.getElementById('recentlyViewedSection');
+        const track   = document.getElementById('rvTrack');
+        if (!section || !track) return;
+
+        const recUrl = this.getRecommendationApiUrl();
+        const sid    = this.getOrCreateSessionId();
+
+        fetch(`${recUrl}?action=get_recently_viewed&limit=12`, {
+            credentials: 'include'
+        })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (!data || !data.success || !data.listings || data.listings.length < 2) return;
+            this.renderRecentlyViewed(data.listings);
+        })
+        .catch(() => {}); // non-blocking
+
+        // Clear button
+        const clearBtn = document.getElementById('rvClearBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                section.style.display = 'none';
+            });
+        }
+    }
+
+    renderRecentlyViewed(listings) {
+        const section = document.getElementById('recentlyViewedSection');
+        const track   = document.getElementById('rvTrack');
+        if (!section || !track || !listings.length) return;
+
+        track.innerHTML = listings.map(l => {
+            const title = this.escapeHtml(l.title || `${l.make} ${l.model}`);
+            const price = l.price > 0
+                ? (CONFIG.CURRENCY_CODE || 'MWK') + ' ' + Number(l.price).toLocaleString()
+                : 'Price on request';
+            const meta  = [l.year, l.location_name].filter(Boolean).join(' · ');
+            const img   = l.image_url
+                ? `<img class="rv-card-img" src="${this.escapeHtml(l.image_url)}" alt="${title}" loading="lazy" onerror="this.parentNode.innerHTML='<div class=\\'rv-card-img-placeholder\\'><i class=\\'fas fa-car\\'></i></div>'">`
+                : `<div class="rv-card-img-placeholder"><i class="fas fa-car"></i></div>`;
+            return `
+                <a href="car.html?id=${Number(l.id)}" class="rv-card" role="listitem" aria-label="${title}">
+                    ${img}
+                    <div class="rv-card-info">
+                        <div class="rv-card-title">${title}</div>
+                        <div class="rv-card-price">${price}</div>
+                        ${meta ? `<div class="rv-card-meta">${this.escapeHtml(meta)}</div>` : ''}
+                    </div>
+                </a>`;
+        }).join('');
+
+        section.style.display = '';
+
+        // Arrow scroll
+        const arrowL = document.getElementById('rvArrowLeft');
+        const arrowR = document.getElementById('rvArrowRight');
+        const scroll = (dir) => { track.scrollBy({ left: dir * 160, behavior: 'smooth' }); };
+        if (arrowL) arrowL.addEventListener('click', () => scroll(-1));
+        if (arrowR) arrowR.addEventListener('click', () => scroll(1));
+
+        const updateArrows = () => {
+            if (arrowL) arrowL.disabled = track.scrollLeft <= 4;
+            if (arrowR) arrowR.disabled = track.scrollLeft + track.clientWidth >= track.scrollWidth - 4;
+        };
+        track.addEventListener('scroll', updateArrows, { passive: true });
+        updateArrows();
+    }
+
     // Auto-prompt for location on mobile if user hasn't decided yet, then
     // switch the sort to "Nearest First" so most relevant cars show up top.
     // Respects decline — only asks once per device.

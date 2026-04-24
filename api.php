@@ -9377,7 +9377,8 @@ function getPublicClientConfig($db) {
 
         $allowedKeys = [
             'google_maps_api_key',
-            'google_maps_map_id'
+            'google_maps_map_id',
+            'ga_measurement_id'
         ];
 
         $placeholders = implode(',', array_fill(0, count($allowedKeys), '?'));
@@ -9387,7 +9388,8 @@ function getPublicClientConfig($db) {
 
         $config = [
             'google_maps_api_key' => '',
-            'google_maps_map_id' => ''
+            'google_maps_map_id' => '',
+            'ga_measurement_id'  => ''
         ];
 
         foreach ($rows as $row) {

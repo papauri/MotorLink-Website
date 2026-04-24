@@ -2012,3 +2012,26 @@ body {
     min-width: 0; /* Prevent overflow */
 }
 
+
+/* -- Recently Viewed Carousel -- */
+#recentlyViewedSection{margin:0 0 22px;background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,.07);padding:16px 14px 14px;overflow:hidden}
+.rv-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.rv-title{font-size:.95rem;font-weight:700;color:#1a1a2e;display:flex;align-items:center;gap:7px}
+.rv-title i{color:#00c853}
+.rv-clear-btn{background:none;border:1px solid #e5e7eb;border-radius:7px;padding:4px 10px;font-size:.75rem;color:#9ca3af;cursor:pointer;display:flex;align-items:center;gap:5px;transition:all .2s}
+.rv-clear-btn:hover{background:#fee2e2;color:#dc2626;border-color:#fca5a5}
+.rv-track-wrap{position:relative;display:flex;align-items:center;gap:4px}
+.rv-track{display:flex;gap:10px;overflow-x:auto;scroll-behavior:smooth;scrollbar-width:none;-ms-overflow-style:none;flex:1;padding:4px 2px 6px}
+.rv-track::-webkit-scrollbar{display:none}
+.rv-arrow{flex-shrink:0;width:30px;height:30px;border-radius:50%;background:#fff;border:1px solid #e5e7eb;box-shadow:0 2px 6px rgba(0,0,0,.1);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.8rem;color:#374151;transition:all .2s}
+.rv-arrow:hover{background:#00c853;color:#fff;border-color:#00c853}
+.rv-arrow:disabled{opacity:.35;cursor:default;pointer-events:none}
+.rv-card{flex-shrink:0;width:160px;background:#f9fafb;border-radius:10px;overflow:hidden;border:1px solid #f3f4f6;cursor:pointer;transition:transform .2s,box-shadow .2s;text-decoration:none;display:block;color:inherit}
+.rv-card:hover{transform:translateY(-3px);box-shadow:0 6px 18px rgba(0,0,0,.12)}
+.rv-card-img{width:100%;height:96px;object-fit:cover;background:#e5e7eb;display:block}
+.rv-card-img-placeholder{width:100%;height:96px;background:linear-gradient(135deg,#e5e7eb,#d1d5db);display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:1.6rem}
+.rv-card-info{padding:8px 9px 9px}
+.rv-card-title{font-size:.78rem;font-weight:600;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+.rv-card-price{font-size:.82rem;font-weight:700;color:#00c853}
+.rv-card-meta{font-size:.7rem;color:#9ca3af;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:480px){.rv-card{width:138px}.rv-card-img,.rv-card-img-placeholder{height:82px}.rv-arrow{width:26px;height:26px;font-size:.7rem}}

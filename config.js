@@ -369,6 +369,10 @@ function applyRuntimeSiteConfig(runtimeConfig = {}) {
     if (Object.prototype.hasOwnProperty.call(merged, 'google_maps_map_id')) {
         CONFIG.GOOGLE_MAPS_MAP_ID = merged.google_maps_map_id || null;
     }
+    if (merged.ga_measurement_id && /^G-[A-Z0-9]+$/i.test(merged.ga_measurement_id)) {
+        CONFIG.GA_MEASUREMENT_ID = merged.ga_measurement_id;
+        injectGA4(merged.ga_measurement_id);
+    }
 
     applyBrandingToDocument();
 
@@ -399,8 +403,28 @@ function getPublicSiteConfigSnapshot() {
         geo_position: CONFIG.GEO_POSITION,
         icbm: CONFIG.ICBM,
         google_maps_api_key: CONFIG.GOOGLE_MAPS_API_KEY,
-        google_maps_map_id: CONFIG.GOOGLE_MAPS_MAP_ID
+        google_maps_map_id: CONFIG.GOOGLE_MAPS_MAP_ID,
+        ga_measurement_id: CONFIG.GA_MEASUREMENT_ID
     };
+}
+
+/**
+ * Dynamically inject the Google Analytics 4 gtag.js snippet.
+ * Called once when the measurement ID is first resolved from site_settings.
+ * Idempotent — does nothing if the script is already present.
+ */
+function injectGA4(measurementId) {
+    if (!measurementId || document.getElementById('ml-ga4-script')) return;
+    const s = document.createElement('script');
+    s.id = 'ml-ga4-script';
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(measurementId);
+    document.head.appendChild(s);
+    window.dataLayer = window.dataLayer || [];
+    function gtag() { window.dataLayer.push(arguments); }
+    window.gtag = window.gtag || gtag;
+    gtag('js', new Date());
+    gtag('config', measurementId);
 }
 
 function applyBrandingToDocument() {
@@ -561,7 +585,8 @@ const CONFIG = {
     VERSION: '4.1.0',
     USE_CREDENTIALS: true,
     GOOGLE_MAPS_API_KEY: null,
-    GOOGLE_MAPS_MAP_ID: null
+    GOOGLE_MAPS_MAP_ID: null,
+    GA_MEASUREMENT_ID: null
 };
 
 let __runtimePublicConfigPromise = null;

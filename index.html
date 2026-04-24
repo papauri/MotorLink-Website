@@ -677,6 +677,27 @@
                     </div>
                 </div>
 
+                <!-- Recently Viewed Carousel (populated by script.js) -->
+                <section id="recentlyViewedSection" style="display:none;" aria-label="Recently viewed cars">
+                    <div class="rv-header">
+                        <span class="rv-title"><i class="fas fa-history"></i> Recently Viewed</span>
+                        <button class="rv-clear-btn" id="rvClearBtn" aria-label="Clear recently viewed history">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                    <div class="rv-track-wrap">
+                        <button class="rv-arrow rv-arrow-left" id="rvArrowLeft" aria-label="Scroll left">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <div class="rv-track" id="rvTrack" role="list" aria-live="polite">
+                            <!-- cards injected by script.js -->
+                        </div>
+                        <button class="rv-arrow rv-arrow-right" id="rvArrowRight" aria-label="Scroll right">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                </section>
+
                 <!-- Car Listings Grid -->
                 <div class="listings-grid" id="listingsGrid" role="region" aria-label="Car listings results">
                     <div class="loading" style="grid-column: 1 / -1;">

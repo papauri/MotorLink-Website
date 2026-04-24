@@ -1004,6 +1004,77 @@ try {
             ]);
             break;
 
+        case 'get_recently_viewed':
+            // Returns the most recently viewed listings for the current user (or session for guests).
+            $limit = max(1, min(20, (int)($_GET['limit'] ?? $_POST['limit'] ?? ($jsonInput['limit'] ?? 8))));
+            $reDB  = getDB();
+
+            if ($userId) {
+                // Authenticated: query viewing_history
+                $stmt = $reDB->prepare("
+                    SELECT
+                        vh.listing_id, vh.last_viewed,
+                        cl.title, cl.make, cl.model, cl.year, cl.price, cl.mileage,
+                        cl.fuel_type, cl.transmission, cl.location_id,
+                        l.name AS location_name,
+                        (SELECT image_url FROM car_listing_images WHERE listing_id = cl.id AND is_primary = 1 LIMIT 1) AS image_url
+                    FROM viewing_history vh
+                    JOIN car_listings cl ON cl.id = vh.listing_id AND cl.status = 'active'
+                    LEFT JOIN locations l ON l.id = cl.location_id
+                    WHERE vh.user_id = ?
+                    ORDER BY vh.last_viewed DESC
+                    LIMIT ?
+                ");
+                $stmt->execute([$userId, $limit]);
+            } elseif ($sessionId) {
+                // Guest: query guest_viewing_history
+                try {
+                    $stmt = $reDB->prepare("
+                        SELECT
+                            gvh.listing_id, gvh.last_viewed,
+                            cl.title, cl.make, cl.model, cl.year, cl.price, cl.mileage,
+                            cl.fuel_type, cl.transmission, cl.location_id,
+                            l.name AS location_name,
+                            (SELECT image_url FROM car_listing_images WHERE listing_id = cl.id AND is_primary = 1 LIMIT 1) AS image_url
+                        FROM guest_viewing_history gvh
+                        JOIN car_listings cl ON cl.id = gvh.listing_id AND cl.status = 'active'
+                        LEFT JOIN locations l ON l.id = cl.location_id
+                        WHERE gvh.session_id = ?
+                        ORDER BY gvh.last_viewed DESC
+                        LIMIT ?
+                    ");
+                    $stmt->execute([$sessionId, $limit]);
+                } catch (Exception $gve) {
+                    // guest_viewing_history may not exist — return empty
+                    sendSuccess(['listings' => []]);
+                    break;
+                }
+            } else {
+                sendSuccess(['listings' => []]);
+                break;
+            }
+
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $listings = array_map(function ($r) {
+                return [
+                    'id'            => (int)$r['listing_id'],
+                    'title'         => $r['title'],
+                    'make'          => $r['make'],
+                    'model'         => $r['model'],
+                    'year'          => $r['year'],
+                    'price'         => (float)$r['price'],
+                    'mileage'       => $r['mileage'],
+                    'fuel_type'     => $r['fuel_type'],
+                    'transmission'  => $r['transmission'],
+                    'location_name' => $r['location_name'],
+                    'image_url'     => $r['image_url'] ?: null,
+                    'last_viewed'   => $r['last_viewed'],
+                ];
+            }, $rows);
+
+            sendSuccess(['listings' => $listings]);
+            break;
+
         default:
             sendError('Invalid action: ' . $action, 400);
     }

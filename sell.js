@@ -655,6 +655,12 @@ class SellManager {
         if (descriptionInput && descCounter) {
             descCounter.textContent = `${descriptionInput.value.length}/1000`;
         }
+
+        // Draft restore (only for new listings — never overwrite an edit)
+        if (!this.editMode) {
+            this.restoreDraft();
+            this.bindDraftAutoSave();
+        }
     }
 
     // Setup instant validation for form fields
@@ -2659,6 +2665,7 @@ removePhoto(index) {
     }
 
     showSuccessMessage(listingId, submitResponse = null) {
+        this.clearDraft(); // draft fulfilled on success
         const container = document.querySelector('.form-container');
         if (!container) return;
 
@@ -2741,6 +2748,86 @@ removePhoto(index) {
 
         container.innerHTML = successHTML;
         this.showToast('Listing submitted successfully!', 'success');
+    }
+
+    // ── Draft auto-save ────────────────────────────────────────────────────
+    _draftFields() {
+        const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+        const gs = sel => { const el = document.querySelector(sel); return el ? el.value : ''; };
+        return {
+            make:         g('makeInput') || gs('select[name="make"]'),
+            model:        g('modelInput') || gs('select[name="model"]'),
+            year:         gs('select[name="year"]') || g('yearInput'),
+            price:        g('priceInput'),
+            mileage:      g('mileageInput'),
+            fuel_type:    gs('select[name="fuel_type"]') || gs('#fuelTypeSelect'),
+            transmission: gs('select[name="transmission"]') || gs('#transmissionSelect'),
+            condition:    gs('select[name="condition_type"]') || gs('#conditionSelect'),
+            color:        g('colorInput') || gs('select[name="exterior_color"]'),
+            description:  g('descriptionInput'),
+            title:        g('titleInput'),
+            listing_type: this.currentListingType || ''
+        };
+    }
+
+    saveDraft() {
+        if (this.editMode) return;
+        const data = this._draftFields();
+        const hasContent = Object.values(data).some(v => v && v.trim && v.trim().length > 0);
+        if (!hasContent) return;
+        try { localStorage.setItem('ml_sell_draft', JSON.stringify(data)); } catch (_) {}
+    }
+
+    restoreDraft() {
+        let raw;
+        try { raw = localStorage.getItem('ml_sell_draft'); } catch (_) { return; }
+        if (!raw) return;
+        let draft;
+        try { draft = JSON.parse(raw); } catch (_) { return; }
+
+        const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+        const setq = (sel, val) => { const el = document.querySelector(sel); if (el && val) el.value = val; };
+
+        set('titleInput', draft.title);
+        set('descriptionInput', draft.description);
+        set('priceInput', draft.price);
+        set('mileageInput', draft.mileage);
+        set('colorInput', draft.color);
+        setq('select[name="make"]', draft.make) || set('makeInput', draft.make);
+        setq('select[name="model"]', draft.model) || set('modelInput', draft.model);
+        setq('select[name="year"]', draft.year) || set('yearInput', draft.year);
+        setq('select[name="fuel_type"]', draft.fuel_type) || setq('#fuelTypeSelect', draft.fuel_type);
+        setq('select[name="transmission"]', draft.transmission) || setq('#transmissionSelect', draft.transmission);
+        setq('select[name="condition_type"]', draft.condition) || setq('#conditionSelect', draft.condition);
+        if (draft.listing_type) this.selectListingType(draft.listing_type);
+
+        // Show dismissible banner
+        const existing = document.getElementById('ml-draft-banner');
+        if (existing) existing.remove();
+        const banner = document.createElement('div');
+        banner.id = 'ml-draft-banner';
+        banner.style.cssText = 'background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46;padding:10px 14px;border-radius:9px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;font-size:.85rem;gap:8px';
+        banner.innerHTML = `<span><i class="fas fa-history" style="margin-right:6px"></i>Draft restored from your last session.</span>
+            <button onclick="window._sellMgr && window._sellMgr.clearDraft(true)" style="background:none;border:none;cursor:pointer;color:#047857;font-size:.82rem;text-decoration:underline">Start fresh</button>`;
+        const form = document.querySelector('.sell-form, #sellForm, form') || document.querySelector('.form-container');
+        if (form) form.prepend(banner);
+    }
+
+    clearDraft(reload = false) {
+        try { localStorage.removeItem('ml_sell_draft'); } catch (_) {}
+        const banner = document.getElementById('ml-draft-banner');
+        if (banner) banner.remove();
+        if (reload) window.location.reload();
+    }
+
+    bindDraftAutoSave() {
+        const form = document.querySelector('.sell-form, #sellForm, form');
+        if (!form) return;
+        let timer;
+        const save = () => { clearTimeout(timer); timer = setTimeout(() => this.saveDraft(), 900); };
+        form.addEventListener('input', save, { passive: true });
+        form.addEventListener('change', save, { passive: true });
+        window._sellMgr = this; // expose for "Start fresh" button in banner
     }
 
     // UTILITY FUNCTIONS
