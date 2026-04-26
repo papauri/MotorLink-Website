@@ -120,6 +120,23 @@ document.addEventListener('DOMContentLoaded', function() {
     if (nearbyBtn) {
         nearbyBtn.addEventListener('click', findNearbyCarHire);
     }
+
+    // Sync the results-header sort select (always visible on mobile/tablet)
+    // with the sidebar sortFilter (desktop only). Both drive the same applyFilters logic.
+    const carHireSortSelect = document.getElementById('carHireSortSelect');
+    const sidebarSortFilter = document.getElementById('sortFilter');
+    if (carHireSortSelect) {
+        carHireSortSelect.addEventListener('change', function() {
+            if (sidebarSortFilter) sidebarSortFilter.value = this.value;
+            applyFilters();
+        });
+    }
+    if (sidebarSortFilter) {
+        sidebarSortFilter.addEventListener('change', function() {
+            if (carHireSortSelect) carHireSortSelect.value = this.value;
+            // applyFilters() already fires from the forEach listener above
+        });
+    }
 });
 
 // Load overall car hire statistics
@@ -781,6 +798,8 @@ function clearFilters() {
 
     const sortFilter = document.getElementById('sortFilter');
     if (sortFilter) sortFilter.value = 'featured';
+    const carHireSortSelectEl = document.getElementById('carHireSortSelect');
+    if (carHireSortSelectEl) carHireSortSelectEl.value = 'featured';
 
     const carHireSearch = document.getElementById('carHireSearch');
     if (carHireSearch) carHireSearch.value = '';
@@ -868,6 +887,8 @@ function activateCarHireNearbyFilter() {
 
     const sortFilter = document.getElementById('sortFilter');
     if (sortFilter) sortFilter.value = 'nearest';
+    const carHireSortSelectEl = document.getElementById('carHireSortSelect');
+    if (carHireSortSelectEl) carHireSortSelectEl.value = 'nearest';
 
     showCarHireStatusHint(`Showing car hire companies within ${CAR_HIRE_NEARBY_RADIUS_KM}km of your location.`);
 

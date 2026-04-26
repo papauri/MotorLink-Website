@@ -1503,11 +1503,61 @@
 }
 
 .results-count {
-    text-align: center;
     color: var(--text-muted);
     font-size: 0.875rem;
-    margin-bottom: var(--space-lg);
-    grid-column: 1 / -1;
+}
+
+/* Results header: title + sort — always visible including mobile/tablet */
+.car-hire-results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-light, #e8ecef);
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.car-hire-results-header .results-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.car-hire-results-header .results-count {
+    margin-top: 3px;
+    font-size: 13px;
+    text-align: left;
+}
+
+.car-hire-results-header .sort-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.car-hire-results-header .sort-controls label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+@media (max-width: 576px) {
+    .car-hire-results-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .car-hire-results-header .sort-controls {
+        width: 100%;
+    }
+    .car-hire-results-header .sort-controls .filter-select {
+        flex: 1;
+        min-width: 0;
+    }
 }
 
 /* .filter-bar.enhanced styling handled by unified-filters.css */

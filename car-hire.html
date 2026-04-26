@@ -315,8 +315,25 @@
                     </button>
                 </div>
             </div>
-            <div id="resultsCount" class="results-count"></div>
         </section>
+
+        <!-- Results header with count + sort — always visible on mobile/tablet -->
+        <div class="results-header car-hire-results-header">
+            <div>
+                <h2 class="results-title">Car Hire Companies</h2>
+                <p class="results-count" id="resultsCount"></p>
+            </div>
+            <div class="sort-controls">
+                <label for="carHireSortSelect"><i class="fas fa-sort"></i> Sort by:</label>
+                <select class="filter-select" id="carHireSortSelect">
+                    <option value="featured">Featured First</option>
+                    <option value="nearest">Nearest First</option>
+                    <option value="vehicles">Most Vehicles</option>
+                    <option value="price">Lowest Rates</option>
+                    <option value="name">Alphabetical</option>
+                </select>
+            </div>
+        </div>
 
         <!-- Companies Grid -->
         <div id="companiesGrid" class="companies-grid">
