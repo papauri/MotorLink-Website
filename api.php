@@ -1396,6 +1396,7 @@ try {
         case 'delete_listing_image': deleteListingImage($db); break;
         case 'site_settings': 
         case 'get_site_settings': getSiteSettings($db); break;
+        case 'log_cookie_consent': logCookieConsent($db); break;
         case 'listing_restrictions': getListingRestrictions($db); break;
         case 'check_guest_identity': checkGuestIdentity($db); break;
         case 'get_public_client_config': getPublicClientConfig($db); break;
@@ -2433,12 +2434,15 @@ function getGarages($db) {
         
         // Search filter
         if (!empty($_GET['search'])) {
-            $whereConditions[] = "(g.name LIKE ? OR g.address LIKE ? OR g.description LIKE ? OR g.owner_name LIKE ?)";
+            $whereConditions[] = "(
+                g.name LIKE ? OR g.owner_name LIKE ? OR g.address LIKE ? OR g.description LIKE ?
+                OR g.phone LIKE ? OR g.whatsapp LIKE ? OR g.email LIKE ? OR g.website LIKE ?
+                OR g.facebook_url LIKE ? OR g.instagram_url LIKE ? OR g.services LIKE ?
+                OR g.emergency_services LIKE ? OR g.specialization LIKE ? OR g.specializes_in_cars LIKE ?
+                OR loc.name LIKE ? OR loc.district LIKE ? OR loc.region LIKE ?
+            )";
             $searchTerm = '%' . $_GET['search'] . '%';
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
+            $params = array_merge($params, array_fill(0, 17, $searchTerm));
         }
         
         // Specialization filter
@@ -2539,7 +2543,7 @@ function getGarages($db) {
 function getDealers($db) {
     try {
         $stmt = $db->query("
-            SELECT d.*, loc.name as location_name, loc.region,
+            SELECT d.*, loc.name as location_name, loc.region, loc.district,
                    (SELECT COUNT(*) 
                     FROM car_listings cl 
                     INNER JOIN users u ON cl.user_id = u.id 
@@ -2631,7 +2635,11 @@ function getDealerShowroom($db) {
 function getCarHire($db) {
     try {
         $stmt = $db->query("
-            SELECT c.*, loc.name as location_name, loc.region
+            SELECT c.*, loc.name as location_name, loc.region, loc.district,
+                   (SELECT ROUND(AVG(r.rating), 1) FROM business_reviews r
+                    WHERE r.business_type = 'car_hire' AND r.business_id = c.id AND r.status = 'active') as avg_rating,
+                   (SELECT COUNT(*) FROM business_reviews r
+                    WHERE r.business_type = 'car_hire' AND r.business_id = c.id AND r.status = 'active') as review_count
             FROM car_hire_companies c
             INNER JOIN locations loc ON c.location_id = loc.id
             WHERE c.status = 'active'
@@ -2651,7 +2659,7 @@ function getCarHire($db) {
 function getCarHireCompaniesWithFleet($db) {
     try {
         $stmt = $db->query("
-            SELECT c.*, loc.name as location_name, loc.region,
+            SELECT c.*, loc.name as location_name, loc.region, loc.district,
                    COUNT(f.id) as total_vehicles,
                    MIN(f.daily_rate) as daily_rate_from,
                    MAX(f.daily_rate) as daily_rate_to,
@@ -2659,7 +2667,11 @@ function getCarHireCompaniesWithFleet($db) {
                    MAX(f.weekly_rate) as weekly_rate_to,
                    SUM(CASE WHEN f.vehicle_category = 'van' THEN 1 ELSE 0 END) as van_count,
                    SUM(CASE WHEN f.vehicle_category = 'truck' THEN 1 ELSE 0 END) as truck_count,
-                   SUM(CASE WHEN f.event_suitable = 1 THEN 1 ELSE 0 END) as event_vehicle_count
+                     SUM(CASE WHEN f.event_suitable = 1 THEN 1 ELSE 0 END) as event_vehicle_count,
+                     (SELECT ROUND(AVG(r.rating), 1) FROM business_reviews r
+                      WHERE r.business_type = 'car_hire' AND r.business_id = c.id AND r.status = 'active') as avg_rating,
+                     (SELECT COUNT(*) FROM business_reviews r
+                      WHERE r.business_type = 'car_hire' AND r.business_id = c.id AND r.status = 'active') as review_count
             FROM car_hire_companies c
             INNER JOIN locations loc ON c.location_id = loc.id
             LEFT JOIN car_hire_fleet f ON c.id = f.company_id AND f.is_active = 1
@@ -5699,6 +5711,11 @@ function getBusinessReviews($db) {
     }
 
     try {
+        ensureBusinessReviewsSchema($db);
+        if (!businessReviewTargetExists($db, $businessType, $businessId)) {
+            sendError('Business not found', 404);
+        }
+
         $stmt = $db->prepare("
             SELECT br.id, br.rating, br.review_text, br.created_at,
                    u.full_name AS reviewer_name
@@ -5765,22 +5782,23 @@ function submitBusinessReview($db) {
         sendError('Review text must be 2000 characters or less', 400);
     }
 
-    // Prevent reviewing own business
-    $ownerCheck = match($businessType) {
-        'dealer'   => "SELECT id FROM car_dealers WHERE id = ? AND (SELECT user_id FROM users WHERE id = ? AND business_id = id LIMIT 1) IS NOT NULL",
-        'garage'   => "SELECT id FROM garages WHERE id = ? AND (SELECT COUNT(*) FROM users WHERE business_id = ? AND id = {$user['id']}) > 0",
-        'car_hire' => "SELECT id FROM car_hire_companies WHERE id = ?",
-        default    => null
-    };
-
     try {
+        ensureBusinessReviewsSchema($db);
+        if (!businessReviewTargetExists($db, $businessType, $businessId)) {
+            sendError('Business not found', 404);
+        }
+
+        if (userOwnsBusinessReviewTarget($db, (int)$user['id'], $businessType, $businessId)) {
+            sendError('You cannot review your own business', 403);
+        }
+
         $stmt = $db->prepare("
             INSERT INTO business_reviews (business_type, business_id, user_id, rating, review_text, status)
             VALUES (?, ?, ?, ?, ?, 'active')
             ON DUPLICATE KEY UPDATE
                 rating      = VALUES(rating),
                 review_text = VALUES(review_text),
-                status      = 'active',
+                status      = IF(status = 'hidden', 'hidden', 'active'),
                 updated_at  = NOW()
         ");
         $stmt->execute([$businessType, $businessId, $user['id'], $rating, $reviewText ?: null]);
@@ -5806,8 +5824,13 @@ function checkUserReview($db) {
     }
 
     try {
+        ensureBusinessReviewsSchema($db);
+        if (!businessReviewTargetExists($db, $businessType, $businessId)) {
+            sendError('Business not found', 404);
+        }
+
         $stmt = $db->prepare("
-            SELECT id, rating, review_text
+            SELECT id, rating, review_text, status
             FROM business_reviews
             WHERE business_type = ? AND business_id = ? AND user_id = ?
             LIMIT 1
@@ -5819,6 +5842,146 @@ function checkUserReview($db) {
     } catch (Exception $e) {
         error_log('checkUserReview error: ' . $e->getMessage());
         sendError('Failed to check review status', 500);
+    }
+}
+
+function ensureBusinessReviewsSchema($db) {
+    static $ensured = false;
+    if ($ensured) {
+        return;
+    }
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS business_reviews (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            business_type ENUM('dealer','garage','car_hire') NOT NULL,
+            business_id INT UNSIGNED NOT NULL,
+            user_id INT UNSIGNED NOT NULL,
+            rating TINYINT UNSIGNED NOT NULL,
+            review_text TEXT NULL,
+            status ENUM('active','hidden') NOT NULL DEFAULT 'active',
+            created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            UNIQUE KEY uq_user_business (business_type, business_id, user_id),
+            KEY idx_business (business_type, business_id, status),
+            KEY idx_user (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $ensured = true;
+}
+
+function businessReviewTargetExists($db, $businessType, $businessId) {
+    $queries = [
+        'dealer' => "SELECT id FROM car_dealers WHERE id = ? AND status = 'active' LIMIT 1",
+        'garage' => "SELECT id FROM garages WHERE id = ? AND status = 'active' LIMIT 1",
+        'car_hire' => "SELECT id FROM car_hire_companies WHERE id = ? AND status = 'active' LIMIT 1"
+    ];
+
+    if (!isset($queries[$businessType])) {
+        return false;
+    }
+
+    $stmt = $db->prepare($queries[$businessType]);
+    $stmt->execute([(int)$businessId]);
+    return (bool)$stmt->fetchColumn();
+}
+
+function userOwnsBusinessReviewTarget($db, $userId, $businessType, $businessId) {
+    $stmt = $db->prepare("SELECT id FROM users WHERE id = ? AND user_type = ? AND business_id = ? LIMIT 1");
+    $stmt->execute([(int)$userId, $businessType, (int)$businessId]);
+    return (bool)$stmt->fetchColumn();
+}
+
+function ensureCookieConsentLogSchema($db) {
+    static $ensured = false;
+    if ($ensured) {
+        return;
+    }
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS cookie_consent_logs (
+            id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+            user_id INT UNSIGNED NULL,
+            consent_version VARCHAR(20) NOT NULL,
+            action VARCHAR(24) NOT NULL,
+            essential TINYINT(1) NOT NULL DEFAULT 1,
+            functional TINYINT(1) NOT NULL DEFAULT 0,
+            analytics TINYINT(1) NOT NULL DEFAULT 0,
+            visitor_hash CHAR(64) NULL,
+            session_hash CHAR(64) NULL,
+            ip_hash CHAR(64) NULL,
+            user_agent_hash CHAR(64) NULL,
+            page_url VARCHAR(500) NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_created_at (created_at),
+            KEY idx_user_id (user_id),
+            KEY idx_action (action)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+
+    $ensured = true;
+}
+
+function logCookieConsent($db) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        sendError('POST method required', 405);
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    $preferences = is_array($input['preferences'] ?? null) ? $input['preferences'] : [];
+    $version = trim((string)($input['version'] ?? '1.0'));
+    $action = trim((string)($input['action'] ?? 'custom'));
+    $pageUrl = trim((string)($input['page_url'] ?? ''));
+
+    if ($version === '' || strlen($version) > 20) {
+        $version = '1.0';
+    }
+
+    $allowedActions = ['accept_all', 'reject_all', 'custom', 'update'];
+    if (!in_array($action, $allowedActions, true)) {
+        $action = 'custom';
+    }
+
+    if (strlen($pageUrl) > 500) {
+        $pageUrl = substr($pageUrl, 0, 500);
+    }
+
+    $user = getCurrentUser(false);
+    $userId = $user && !empty($user['id']) ? (int)$user['id'] : null;
+    $sessionId = session_id() ?: '';
+    $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '';
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    $hashSalt = DB_NAME . '|' . SITE_NAME;
+
+    try {
+        ensureCookieConsentLogSchema($db);
+        $stmt = $db->prepare("
+            INSERT INTO cookie_consent_logs
+                (user_id, consent_version, action, essential, functional, analytics,
+                 visitor_hash, session_hash, ip_hash, user_agent_hash, page_url, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $stmt->execute([
+            $userId,
+            $version,
+            $action,
+            1,
+            !empty($preferences['functional']) ? 1 : 0,
+            !empty($preferences['analytics']) ? 1 : 0,
+            $userId ? hash('sha256', 'user|' . $userId . '|' . $hashSalt) : null,
+            $sessionId !== '' ? hash('sha256', 'session|' . $sessionId . '|' . $hashSalt) : null,
+            $remoteAddr !== '' ? hash('sha256', 'ip|' . $remoteAddr . '|' . $hashSalt) : null,
+            $userAgent !== '' ? hash('sha256', 'ua|' . $userAgent . '|' . $hashSalt) : null,
+            $pageUrl !== '' ? $pageUrl : null
+        ]);
+
+        sendSuccess(['message' => 'Cookie consent logged']);
+    } catch (Exception $e) {
+        error_log('logCookieConsent error: ' . $e->getMessage());
+        sendSuccess(['message' => 'Cookie consent saved locally']);
     }
 }
 
@@ -9378,7 +9541,10 @@ function getPublicClientConfig($db) {
         $allowedKeys = [
             'google_maps_api_key',
             'google_maps_map_id',
-            'ga_measurement_id'
+            'ga_measurement_id',
+            'cookie_consent_enabled',
+            'cookie_consent_version',
+            'cookie_consent_log_enabled'
         ];
 
         $placeholders = implode(',', array_fill(0, count($allowedKeys), '?'));
@@ -9389,7 +9555,10 @@ function getPublicClientConfig($db) {
         $config = [
             'google_maps_api_key' => '',
             'google_maps_map_id' => '',
-            'ga_measurement_id'  => ''
+            'ga_measurement_id'  => '',
+            'cookie_consent_enabled' => '1',
+            'cookie_consent_version' => '1.0',
+            'cookie_consent_log_enabled' => '1'
         ];
 
         foreach ($rows as $row) {

@@ -20,6 +20,7 @@
  *   php scripts/scrape_v2.php --insert-only         # Phase 2 only
  *   php scripts/scrape_v2.php --type=garage         # Single type only
  *   php scripts/scrape_v2.php --enrich-limit=200    # Limit enrichment rows
+ *   php scripts/scrape_v2.php --insert-only --max-new=30 --new-per-type=10 --target-per-type=120
  *
  * Safe to run multiple times — duplicate skips are idempotent.
  */
@@ -40,11 +41,19 @@ $doRefresh   = in_array('--refresh',      $args, true);
 $insertOnly  = in_array('--insert-only',  $args, true);
 $enrichOnly  = in_array('--enrich-only',  $args, true);
 $enrichLimit = 1000;
+$maxNew      = null;
+$newPerType  = null;
+$targetPerType = null;
+$targetOverrides = [];
 $onlyType    = null;
 $jobId       = null;
 foreach ($args as $a) {
     if (preg_match('/^--type=(.+)$/',         $a, $m)) $onlyType    = strtolower(trim($m[1]));
     if (preg_match('/^--enrich-limit=(\d+)$/', $a, $m)) $enrichLimit = max(1, (int)$m[1]);
+    if (preg_match('/^--max-new=(\d+)$/',      $a, $m)) $maxNew      = max(1, (int)$m[1]);
+    if (preg_match('/^--new-per-type=(\d+)$/', $a, $m)) $newPerType  = max(1, (int)$m[1]);
+    if (preg_match('/^--target-per-type=(\d+)$/', $a, $m)) $targetPerType = max(1, (int)$m[1]);
+    if (preg_match('/^--target-(dealer|garage|car_hire)=(\d+)$/', $a, $m)) $targetOverrides[$m[1]] = max(1, (int)$m[2]);
     if (preg_match('/^--job-id=([a-zA-Z0-9_\-]+)$/', $a, $m)) $jobId = $m[1];
 }
 
@@ -157,6 +166,14 @@ jlog("API key loaded.");
 
 // ── TARGETS ──────────────────────────────────────────────────────────────────
 $TARGETS = ['dealer' => 500, 'garage' => 400, 'car_hire' => 300];
+if ($targetPerType !== null) {
+    $TARGETS = array_map(fn() => $targetPerType, $TARGETS);
+}
+foreach ($targetOverrides as $targetType => $targetValue) {
+    if (isset($TARGETS[$targetType])) {
+        $TARGETS[$targetType] = $targetValue;
+    }
+}
 
 // ── CITIES — Primary (searched every query template first) ───────────────────
 $CITIES_PRIMARY = ['Lilongwe', 'Blantyre', 'Mzuzu', 'Zomba'];
@@ -380,6 +397,7 @@ function randPwd(int $n = 12): string
  *  - Social links: facebook, instagram, twitter, linkedin
  *  - WhatsApp from wa.me links and plain-text patterns
  *  - Phone number from plain text (Malawi formats: +265xxx, 0888xxx, 0999xxx)
+ *  - Public email addresses from mailto links and visible text
  *
  * Checks: href/content/data-* attributes, JSON-LD sameAs, og: meta tags,
  * and raw page text.
@@ -393,6 +411,7 @@ function extractFromWebsite(string $websiteUrl): array
         'linkedin'  => '',
         'whatsapp'  => '',
         'phone'     => '',
+        'email'     => '',
     ];
     if (!$websiteUrl) return $out;
     if (!preg_match('#^https?://#i', $websiteUrl)) $websiteUrl = 'https://' . $websiteUrl;
@@ -477,6 +496,17 @@ function extractFromWebsite(string $websiteUrl): array
 
     // ── Plain-text phone + WhatsApp extraction ────────────────────────────────
     $text = strip_tags($html);
+
+    if (!$out['email']) {
+        if (preg_match('/mailto:([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i', $html, $em)) {
+            $out['email'] = strtolower(trim($em[1]));
+        } elseif (preg_match('/\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b/', $text, $em)) {
+            $candidateEmail = strtolower(trim($em[0]));
+            if (!preg_match('/\.(png|jpe?g|gif|webp|svg)$/i', $candidateEmail)) {
+                $out['email'] = $candidateEmail;
+            }
+        }
+    }
 
     // Phone extraction — uses international format first (+XX...), then generic local format
     if (!$out['phone']) {
@@ -848,6 +878,8 @@ if (!$enrichOnly) {
             }
 
             jlog("  Total $type: " . count($discovered[$type]));
+            file_put_contents($cachePath, json_encode($discovered, JSON_PRETTY_PRINT));
+            jlog("  [cache] Saved partial discovery for $type");
         }
 
         file_put_contents($cachePath, json_encode($discovered, JSON_PRETTY_PRINT));
@@ -858,16 +890,28 @@ if (!$enrichOnly) {
 // ═════════════════════════════════════════════════════════════════════════════
 // PHASE 2 — INSERT NEW BUSINESSES
 // ═════════════════════════════════════════════════════════════════════════════
-$csvPath = __DIR__ . '/_scrape_v2_credentials.csv';
-$csvFp   = fopen($csvPath, 'w');
-fputcsv($csvFp, [
-    'type', 'business_name', 'email', 'username', 'phone', 'city', 'password',
-    'website', 'facebook', 'instagram', 'twitter', 'linkedin', 'whatsapp', 'logo', 'place_id',
-]);
+$csvPath = null;
+$csvFp   = null;
+if (!$enrichOnly) {
+    $csvPath = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR)
+             . DIRECTORY_SEPARATOR . 'motorlink_scrape_v2_credentials_' . date('Ymd_His') . '.csv';
+    $csvFp = fopen($csvPath, 'w');
+    if (!$csvFp) {
+        updateJob(['status' => 'error', 'error' => 'Unable to create private credentials export']);
+        die("ERROR: Unable to create private credentials export.\n");
+    }
+    @chmod($csvPath, 0600);
+    fputcsv($csvFp, [
+        'type', 'business_name', 'email', 'username', 'phone', 'city', 'password',
+        'website', 'facebook', 'instagram', 'twitter', 'linkedin', 'whatsapp', 'logo', 'place_id',
+    ]);
+    jlog('  [private] Credentials export will be written outside the web root.');
+}
 
 $inserted = 0;
 $skipped  = 0;
 $withLogo = 0;
+$insertedByType = ['dealer' => 0, 'garage' => 0, 'car_hire' => 0];
 
 if (!$enrichOnly) {
     jlog("=== PHASE 2: INSERT NEW BUSINESSES ===");
@@ -931,9 +975,19 @@ if (!$enrichOnly) {
 
     foreach ($discovered as $type => $list) {
         if ($onlyType && $type !== $onlyType) continue;
+        if ($maxNew !== null && $inserted >= $maxNew) break;
         jlog("\n  Processing $type (" . count($list) . " candidates)...");
 
         foreach ($list as $b) {
+            if ($maxNew !== null && $inserted >= $maxNew) {
+                jlog("    [CAP] Max new insert cap reached ({$maxNew}).");
+                break;
+            }
+            if ($newPerType !== null && ($insertedByType[$type] ?? 0) >= $newPerType) {
+                jlog("    [CAP] {$type} per-type insert cap reached ({$newPerType}).");
+                break;
+            }
+
             $pidSuffix = substr($b['pid'], -6);
             if (isset($existingSuffixes[$pidSuffix])) { $skipped++; continue; }
 
@@ -970,7 +1024,7 @@ if (!$enrichOnly) {
 
             // Scrape website for social links, WhatsApp, and additional phone
             $social = ['facebook' => '', 'instagram' => '', 'twitter' => '',
-                       'linkedin' => '', 'whatsapp' => '', 'phone' => ''];
+                       'linkedin' => '', 'whatsapp' => '', 'phone' => '', 'email' => ''];
             if ($website) {
                 $social = extractFromWebsite($website);
                 if (!$phone && $social['phone']) $phone = $social['phone'];
@@ -978,7 +1032,8 @@ if (!$enrichOnly) {
                    . " ig=" . ($social['instagram'] ? 'y' : '-')
                    . " tw=" . ($social['twitter']   ? 'y' : '-')
                    . " wa=" . ($social['whatsapp']  ? 'y' : '-')
-                   . " ph=" . ($phone               ? 'y' : '-'));
+                   . " ph=" . ($phone               ? 'y' : '-')
+                   . " em=" . ($social['email']     ? 'y' : '-'));
                 usleep(400000);
             }
 
@@ -993,6 +1048,7 @@ if (!$enrichOnly) {
             $username = uniqueUsername($db, $name);
             $email    = 'biz.' . substr($slug, 0, 20) . '.' . $pidSuffix . '@motorlink.test';
             if (strlen($email) > 100) $email = 'biz.' . substr(md5($b['pid']), 0, 18) . '@motorlink.test';
+            $publicEmail = filter_var($social['email'] ?? '', FILTER_VALIDATE_EMAIL) ? strtolower(substr($social['email'], 0, 100)) : '';
             $pwd      = randPwd(12);
             $hash     = password_hash($pwd, PASSWORD_DEFAULT);
             $phone    = substr(preg_replace('/[^\d+\-() ]/', '', $phone), 0, 20);
@@ -1032,7 +1088,7 @@ if (!$enrichOnly) {
                 $common = [
                     ':user_id'       => $userId,
                     ':owner_name'    => substr($name, 0, 100),
-                    ':email'         => $email,
+                    ':email'         => $publicEmail,
                     ':phone'         => $phone,
                     ':whatsapp'      => $social['whatsapp'] ?: $phone,
                     ':address'       => $addr,
@@ -1059,6 +1115,7 @@ if (!$enrichOnly) {
                 $db->commit();
 
                 $inserted++;
+                $insertedByType[$type] = ($insertedByType[$type] ?? 0) + 1;
                 if ($logoPath) $withLogo++;
                 $existingSuffixes[$pidSuffix] = true;
 
@@ -1073,7 +1130,7 @@ if (!$enrichOnly) {
                     $logoPath ? ' [logo]' : '',
                     ($social['facebook'] || $social['instagram'] || $social['whatsapp']) ? ' [social]' : ''
                 ));
-                updateJob(['inserted' => $inserted, 'with_logo' => $withLogo, 'skipped' => $skipped]);
+                updateJob(['inserted' => $inserted, 'inserted_by_type' => $insertedByType, 'with_logo' => $withLogo, 'skipped' => $skipped]);
 
             } catch (PDOException $e) {
                 if ($db->inTransaction()) $db->rollBack();
@@ -1087,11 +1144,17 @@ if (!$enrichOnly) {
     }
 
     jlog("\n  Inserted: $inserted  |  With logo: $withLogo  |  Skipped/duplicate: $skipped");
-    updateJob(['inserted' => $inserted, 'with_logo' => $withLogo, 'skipped' => $skipped]);
+    jlog("  By type: dealer={$insertedByType['dealer']} | garage={$insertedByType['garage']} | car_hire={$insertedByType['car_hire']}");
+    updateJob(['inserted' => $inserted, 'inserted_by_type' => $insertedByType, 'with_logo' => $withLogo, 'skipped' => $skipped]);
 }
 
-fclose($csvFp);
-@chmod($csvPath, 0600);
+if (is_resource($csvFp)) {
+    fclose($csvFp);
+    @chmod((string)$csvPath, 0600);
+    if ($inserted > 0) {
+        jlog('  [private] Credentials export: ' . $csvPath);
+    }
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // PHASE 3 — ENRICH EXISTING BUSINESSES
@@ -1120,13 +1183,14 @@ if (!$insertOnly) {
 
         // Fetch rows missing ANY useful contact/social/website data
         $rows = $db->query("
-            SELECT id, `{$nameCol}` AS biz_name, phone, website,
+            SELECT id, `{$nameCol}` AS biz_name, phone, email, website,
                    facebook_url, instagram_url, twitter_url, linkedin_url,
                    whatsapp, address, logo_url
             FROM `{$tbl}`
             WHERE status = 'active'
               AND (
                   (phone        IS NULL OR phone        = '')
+                  OR (email     IS NULL OR email        = '' OR email LIKE '%@motorlink.test')
                   OR (website   IS NULL OR website      = '')
                   OR (facebook_url  IS NULL OR facebook_url  = '')
                   OR (instagram_url IS NULL OR instagram_url = '')
@@ -1143,6 +1207,7 @@ if (!$insertOnly) {
             $bizId       = (int)$row['id'];
             $bizName     = (string)$row['biz_name'];
             $curPhone    = (string)($row['phone']        ?? '');
+            $curEmail    = (string)($row['email']        ?? '');
             $curWebsite  = (string)($row['website']      ?? '');
             $curFb       = (string)($row['facebook_url'] ?? '');
             $curIg       = (string)($row['instagram_url'] ?? '');
@@ -1152,6 +1217,7 @@ if (!$insertOnly) {
             $city        = cityFromAddress((string)($row['address'] ?? ''));
 
             $newPhone    = $curPhone;
+            $newEmail    = $curEmail;
             $newWebsite  = $curWebsite;
             $newFb       = $curFb;
             $newIg       = $curIg;
@@ -1189,7 +1255,7 @@ if (!$insertOnly) {
             }
 
             // ── Step 2: Scrape website for social + phone + WhatsApp ──────────
-            $needMore = !$newFb || !$newIg || !$newTw || !$newWa || !$newPhone;
+            $needMore = !$newFb || !$newIg || !$newTw || !$newWa || !$newPhone || !$newEmail || stripos($newEmail, '@motorlink.test') !== false;
             if ($needMore && $newWebsite) {
                 $soc = extractFromWebsite($newWebsite);
                 usleep(500000);
@@ -1199,12 +1265,16 @@ if (!$insertOnly) {
                 if (!$newLi    && $soc['linkedin'])  $newLi    = $soc['linkedin'];
                 if (!$newWa    && $soc['whatsapp'])  $newWa    = $soc['whatsapp'];
                 if (!$newPhone && $soc['phone'])     $newPhone = $soc['phone'];
+                if ((!$newEmail || stripos($newEmail, '@motorlink.test') !== false) && !empty($soc['email'])) {
+                    $newEmail = $soc['email'];
+                }
             }
 
             // ── Step 3: Build UPDATE only for changed fields ───────────────────
             $updates = [];
             $params  = [];
             if ($newPhone   && $newPhone   !== $curPhone)   { $updates[] = 'phone = ?';        $params[] = $newPhone; }
+            if ($newEmail && $newEmail !== $curEmail && filter_var($newEmail, FILTER_VALIDATE_EMAIL)) { $updates[] = 'email = ?'; $params[] = strtolower(substr($newEmail, 0, 100)); }
             if ($newWebsite && $newWebsite !== $curWebsite) { $updates[] = 'website = ?';       $params[] = $newWebsite; }
             if ($newFb      && $newFb      !== $curFb)      { $updates[] = 'facebook_url = ?';  $params[] = $newFb; }
             if ($newIg      && $newIg      !== $curIg)      { $updates[] = 'instagram_url = ?'; $params[] = $newIg; }
@@ -1236,9 +1306,10 @@ if (!$insertOnly) {
                     }
 
                     $enriched++;
-                    jlog(sprintf("    ~ %-32s | ph:%s web:%s fb:%s ig:%s tw:%s wa:%s",
+                    jlog(sprintf("    ~ %-32s | ph:%s em:%s web:%s fb:%s ig:%s tw:%s wa:%s",
                         substr($bizName, 0, 32),
                         $newPhone ? 'y' : '-',
+                        $newEmail ? 'y' : '-',
                         $newWebsite ? 'y' : '-',
                         $newFb ? 'y' : '-',
                         $newIg ? 'y' : '-',
@@ -1267,14 +1338,15 @@ $summaryData = [];
 foreach (['car_dealers', 'garages', 'car_hire_companies'] as $t) {
     $tot = $db->query("SELECT COUNT(*) FROM `$t` WHERE status='active'")->fetchColumn();
     $ph  = $db->query("SELECT COUNT(*) FROM `$t` WHERE status='active' AND phone != '' AND phone IS NOT NULL")->fetchColumn();
+    $em  = $db->query("SELECT COUNT(*) FROM `$t` WHERE status='active' AND email != '' AND email IS NOT NULL AND email NOT LIKE '%@motorlink.test'")->fetchColumn();
     $web = $db->query("SELECT COUNT(*) FROM `$t` WHERE status='active' AND website != '' AND website IS NOT NULL")->fetchColumn();
     $fb  = $db->query("SELECT COUNT(*) FROM `$t` WHERE status='active' AND facebook_url != '' AND facebook_url IS NOT NULL")->fetchColumn();
     $ig  = $db->query("SELECT COUNT(*) FROM `$t` WHERE status='active' AND instagram_url != '' AND instagram_url IS NOT NULL")->fetchColumn();
     $wa  = $db->query("SELECT COUNT(*) FROM `$t` WHERE status='active' AND whatsapp != '' AND whatsapp IS NOT NULL")->fetchColumn();
     $lg  = $db->query("SELECT COUNT(*) FROM `$t` WHERE status='active' AND logo_url IS NOT NULL")->fetchColumn();
-    $summaryData[$t] = ['active' => (int)$tot, 'phone' => (int)$ph, 'website' => (int)$web, 'facebook' => (int)$fb, 'instagram' => (int)$ig, 'whatsapp' => (int)$wa, 'logo' => (int)$lg];
-    jlog(sprintf("  %-24s  active:%3d | phone:%3d | web:%3d | fb:%3d | ig:%3d | wa:%3d | logo:%3d",
-        $t, $tot, $ph, $web, $fb, $ig, $wa, $lg));
+    $summaryData[$t] = ['active' => (int)$tot, 'phone' => (int)$ph, 'email' => (int)$em, 'website' => (int)$web, 'facebook' => (int)$fb, 'instagram' => (int)$ig, 'whatsapp' => (int)$wa, 'logo' => (int)$lg];
+    jlog(sprintf("  %-24s  active:%3d | phone:%3d | email:%3d | web:%3d | fb:%3d | ig:%3d | wa:%3d | logo:%3d",
+        $t, $tot, $ph, $em, $web, $fb, $ig, $wa, $lg));
 }
 
 jlog("Done.");

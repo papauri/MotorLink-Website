@@ -29,6 +29,17 @@
   grid-template-columns: 1fr;
 }
 
+.dealer-business-card .loc-chips:has(> :only-child),
+.company-card .loc-chips:has(> :only-child) {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dealer-business-card .loc-chips .loc-chip,
+.company-card .loc-chips .loc-chip {
+  font-size: 0.66rem;
+  padding: 4px 7px;
+}
+
 /* ── Row 2: Stats — equal 2-col grid with divider ────────────── */
 .loc-stats {
   display: grid;
@@ -186,6 +197,12 @@ button.loc-chip.clickable-chip:focus-visible {
     font-size: 0.55rem;
   }
 
+  .dealer-business-card .loc-chips .loc-chip,
+  .company-card .loc-chips .loc-chip {
+    font-size: 0.63rem;
+    padding: 4px 7px;
+  }
+
   .loc-chips,
   .loc-stats {
     gap: 4px;
@@ -222,6 +239,12 @@ button.loc-chip.clickable-chip:focus-visible {
   .loc-chip i {
     font-size: 0.5rem;
   }
+
+  .dealer-business-card .loc-chips .loc-chip,
+  .company-card .loc-chips .loc-chip {
+    font-size: 0.58rem;
+    padding: 3px 5px;
+  }
 }
 
 /* Very small ≤360px */
@@ -239,11 +262,23 @@ button.loc-chip.clickable-chip:focus-visible {
   .loc-chip i {
     font-size: 0.46rem;
   }
+
+  .dealer-business-card .loc-chips .loc-chip,
+  .company-card .loc-chips .loc-chip {
+    font-size: 0.54rem;
+    padding: 2px 4px;
+  }
 }
 
 /* Compact 2-col range: 481px – 640px */
 @media (min-width: 481px) and (max-width: 640px) {
   .loc-chip {
+    font-size: 0.61rem;
+    padding: 3px 6px;
+  }
+
+  .dealer-business-card .loc-chips .loc-chip,
+  .company-card .loc-chips .loc-chip {
     font-size: 0.61rem;
     padding: 3px 6px;
   }

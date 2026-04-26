@@ -21,7 +21,8 @@ function rvStars(rating, interactive = false, name = 'rating') {
     // Interactive star picker
     let html = `<div class="rv-star-picker" role="radiogroup" aria-label="Select rating">`;
     for (let i = 1; i <= 5; i++) {
-        html += `<input type="radio" class="rv-star-input" id="rv-star-${name}-${i}" name="${name}" value="${i}" required>
+        const checked = Number(rating) === i ? ' checked' : '';
+        html += `<input type="radio" class="rv-star-input" id="rv-star-${name}-${i}" name="${name}" value="${i}" required${checked}>
                  <label class="rv-star-label" for="rv-star-${name}-${i}" title="${i} star${i > 1 ? 's' : ''}">
                      <i class="fas fa-star"></i>
                  </label>`;

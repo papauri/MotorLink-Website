@@ -2929,9 +2929,9 @@ class DealersManager {
     }
 
     createDealerCardHTML(dealer) {
-        const rating = parseFloat(dealer.rating) || 0;
+        const rating = parseFloat(dealer.avg_rating || dealer.rating) || 0;
         const totalCars = dealer.total_cars || 0;
-        const totalReviews = dealer.total_reviews || 0;
+        const totalReviews = dealer.review_count || dealer.total_reviews || 0;
         const yearsEstablished = dealer.years_established || 0;
         const totalSales = dealer.total_sales || 0;
         const isVerified = dealer.verified == 1;
@@ -3303,16 +3303,25 @@ applyFilters() {
     const sortBy = document.getElementById('sortSelect')?.value || 'featured';
 
     this.filteredDealers = (this.dealers || []).filter(dealer => {
-        // Text search — name, location, address, phone, description
+        // Text search — name, location, contact, social, and specialization details
         if (searchTerm) {
-            const name  = (dealer.business_name || '').toLowerCase();
-            const loc   = (dealer.location_name  || '').toLowerCase();
-            const addr  = (dealer.address        || '').toLowerCase();
-            const phone = (dealer.phone          || '').toLowerCase();
-            const desc  = (dealer.description    || '').toLowerCase();
-            if (!name.includes(searchTerm) && !loc.includes(searchTerm) &&
-                !addr.includes(searchTerm) && !phone.includes(searchTerm) &&
-                !desc.includes(searchTerm)) {
+            const searchable = [
+                dealer.business_name,
+                dealer.owner_name,
+                dealer.location_name,
+                dealer.region,
+                dealer.address,
+                dealer.phone,
+                dealer.whatsapp,
+                dealer.email,
+                dealer.website,
+                dealer.facebook_url,
+                dealer.instagram_url,
+                dealer.description,
+                dealer.specialization
+            ].map(value => String(value || '').toLowerCase()).join(' ');
+
+            if (!searchable.includes(searchTerm)) {
                 return false;
             }
         }
@@ -3328,7 +3337,8 @@ applyFilters() {
                     ? JSON.parse(dealer.specialization)
                     : (dealer.specialization || []);
             } catch (e) {}
-            if (!Array.isArray(specs) || !specs.some(s => s.trim() === specializationVal)) return false;
+            const wantedSpec = specializationVal.toLowerCase();
+            if (!Array.isArray(specs) || !specs.some(s => String(s || '').trim().toLowerCase() === wantedSpec)) return false;
         }
 
         // Verified status (loose comparison — API may return string "1" or number 1)

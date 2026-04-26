@@ -814,6 +814,392 @@ function isAIChatProviderEnabled($settings, $provider) {
     return (int)($settings[$field] ?? 1) === 1;
 }
 
+function aiChatGetSiteSetting($db, $key, $defaultValue = null) {
+    try {
+        $stmt = $db->prepare("SELECT setting_value FROM site_settings WHERE setting_key = ? LIMIT 1");
+        $stmt->execute([trim((string)$key)]);
+        $value = $stmt->fetchColumn();
+        return $value !== false ? $value : $defaultValue;
+    } catch (Exception $e) {
+        error_log('aiChatGetSiteSetting error: ' . $e->getMessage());
+        return $defaultValue;
+    }
+}
+
+function aiChatSetSiteSetting($db, $key, $value, $group = 'ai_chat', $description = 'AI chat runtime setting') {
+    try {
+        $key = trim((string)$key);
+        if ($key === '') {
+            return false;
+        }
+
+        $stmt = $db->prepare("SELECT id FROM site_settings WHERE setting_key = ? LIMIT 1");
+        $stmt->execute([$key]);
+        $existingId = $stmt->fetchColumn();
+
+        if ($existingId) {
+            $update = $db->prepare("UPDATE site_settings SET setting_value = ?, updated_at = NOW() WHERE setting_key = ?");
+            $update->execute([(string)$value, $key]);
+            return true;
+        }
+
+        $columns = aichatGetTableColumns($db, 'site_settings');
+        $insertColumns = ['setting_key', 'setting_value'];
+        $placeholders = ['?', '?'];
+        $params = [$key, (string)$value];
+
+        if (isset($columns['setting_group'])) {
+            $insertColumns[] = 'setting_group';
+            $placeholders[] = '?';
+            $params[] = $group;
+        }
+        if (isset($columns['setting_type'])) {
+            $insertColumns[] = 'setting_type';
+            $placeholders[] = '?';
+            $params[] = 'string';
+        }
+        if (isset($columns['description'])) {
+            $insertColumns[] = 'description';
+            $placeholders[] = '?';
+            $params[] = $description;
+        }
+        if (isset($columns['is_public'])) {
+            $insertColumns[] = 'is_public';
+            $placeholders[] = '?';
+            $params[] = 0;
+        }
+        if (isset($columns['created_at'])) {
+            $insertColumns[] = 'created_at';
+            $placeholders[] = 'NOW()';
+        }
+        if (isset($columns['updated_at'])) {
+            $insertColumns[] = 'updated_at';
+            $placeholders[] = 'NOW()';
+        }
+
+        $sql = 'INSERT INTO site_settings (' . implode(', ', $insertColumns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+        $insert = $db->prepare($sql);
+        $insert->execute($params);
+        return true;
+    } catch (Exception $e) {
+        error_log('aiChatSetSiteSetting error: ' . $e->getMessage());
+        return false;
+    }
+}
+
+function maybeRunDailyAIChatLearning($db) {
+    static $checked = false;
+    if ($checked) {
+        return;
+    }
+    $checked = true;
+
+    $today = date('Y-m-d');
+    $lastRun = trim((string)aiChatGetSiteSetting($db, 'ai_learning_last_daily_auto_run', ''));
+    if ($lastRun === $today) {
+        return;
+    }
+
+    // Set the marker before scheduling to avoid duplicate long-running batches.
+    aiChatSetSiteSetting($db, 'ai_learning_last_daily_auto_run', $today, 'ai_learning', 'Last automatic daily AI learning run date');
+
+    register_shutdown_function(function() use ($db, $today) {
+        try {
+            if (function_exists('fastcgi_finish_request')) {
+                @fastcgi_finish_request();
+            }
+
+            require_once __DIR__ . '/ai-learning-api.php';
+            if (!function_exists('getAILearningSettings') || !function_exists('learnWebCacheTopics') || !function_exists('learnPartsCacheTopics')) {
+                return;
+            }
+
+            @set_time_limit(420);
+            $settings = getAILearningSettings($db);
+            $webLimit = max(1, (int)($settings['web_cache_limit'] ?? 20));
+            $partsLimit = max(1, (int)($settings['parts_cache_limit'] ?? 500));
+
+            $webTarget = min($webLimit, 20);
+            $partsTarget = min($partsLimit, 100);
+
+            $webResult = @learnWebCacheTopics($db, $webTarget, 'auto');
+            $partsResult = @learnPartsCacheTopics($db, $partsTarget, 'auto');
+
+            aiChatSetSiteSetting(
+                $db,
+                'ai_learning_last_daily_auto_result',
+                json_encode([
+                    'date' => $today,
+                    'web' => $webResult,
+                    'parts' => $partsResult
+                ], JSON_UNESCAPED_UNICODE),
+                'ai_learning',
+                'Last automatic daily AI learning result'
+            );
+        } catch (Throwable $e) {
+            error_log('maybeRunDailyAIChatLearning shutdown error: ' . $e->getMessage());
+            aiChatSetSiteSetting($db, 'ai_learning_last_daily_auto_error', $e->getMessage(), 'ai_learning', 'Last automatic daily AI learning error');
+        }
+    });
+}
+
+function aiChatHttpGetJson($url, array $headers = [], $timeout = 6) {
+    if (!function_exists('curl_init')) {
+        return null;
+    }
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+    curl_setopt($ch, CURLOPT_MAXREDIRS, 2);
+    curl_setopt($ch, CURLOPT_TIMEOUT, max(3, (int)$timeout));
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
+    curl_setopt($ch, CURLOPT_ENCODING, '');
+    curl_setopt($ch, CURLOPT_USERAGENT, 'MotorLinkAI/1.0 (+https://promanaged-it.com/motorlink/)');
+    $serverHost = $_SERVER['HTTP_HOST'] ?? '';
+    $isLocalDev = (strpos($serverHost, 'localhost') !== false || strpos($serverHost, '127.0.0.1') !== false || PHP_OS_FAMILY === 'Windows');
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, !$isLocalDev);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, !$isLocalDev ? 2 : 0);
+    if (!empty($headers)) {
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+    }
+
+    $body = curl_exec($ch);
+    $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if ($error || $httpCode < 200 || $httpCode >= 300 || !is_string($body) || trim($body) === '') {
+        if ($error) {
+            error_log('aiChatHttpGetJson cURL error: ' . $error);
+        }
+        return null;
+    }
+
+    $decoded = json_decode($body, true);
+    return is_array($decoded) ? $decoded : null;
+}
+
+function aiChatNormalizeWebSources(array $sources, $limit = 5) {
+    $normalized = [];
+    $seen = [];
+
+    foreach ($sources as $source) {
+        if (!is_array($source)) {
+            continue;
+        }
+        $title = trim((string)($source['title'] ?? ''));
+        $url = trim((string)($source['url'] ?? $source['link'] ?? ''));
+        $snippet = trim((string)($source['snippet'] ?? $source['description'] ?? ''));
+        if ($title === '' && $snippet === '') {
+            continue;
+        }
+        $key = strtolower($url !== '' ? $url : ($title . '|' . $snippet));
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $normalized[] = [
+            'title' => aiChatTruncateText($title !== '' ? $title : 'Web result', 120),
+            'link' => $url,
+            'snippet' => aiChatTruncateText($snippet, 260)
+        ];
+        if (count($normalized) >= $limit) {
+            break;
+        }
+    }
+
+    return $normalized;
+}
+
+function aiChatFetchLiveWebSearch($db, $query, $limit = 5) {
+    $query = trim((string)$query);
+    if ($query === '' || strlen($query) < 4) {
+        return [];
+    }
+
+    $enabled = strtolower(trim((string)aiChatGetSiteSetting($db, 'ai_web_search_enabled', '1')));
+    if (in_array($enabled, ['0', 'false', 'off', 'disabled'], true)) {
+        return [];
+    }
+
+    $limit = max(1, min((int)$limit, 6));
+    $sources = [];
+
+    $braveKey = trim((string)aiChatGetSiteSetting($db, 'brave_search_api_key', ''));
+    if ($braveKey !== '') {
+        $url = 'https://api.search.brave.com/res/v1/web/search?q=' . urlencode($query) . '&count=' . $limit . '&safesearch=moderate';
+        $data = aiChatHttpGetJson($url, ['Accept: application/json', 'X-Subscription-Token: ' . $braveKey], 6);
+        $rows = $data['web']['results'] ?? [];
+        foreach ($rows as $row) {
+            $sources[] = [
+                'title' => $row['title'] ?? '',
+                'link' => $row['url'] ?? '',
+                'snippet' => $row['description'] ?? ''
+            ];
+        }
+    }
+
+    if (empty($sources)) {
+        $serpKey = trim((string)aiChatGetSiteSetting($db, 'serpapi_api_key', ''));
+        if ($serpKey !== '') {
+            $url = 'https://serpapi.com/search.json?engine=google&q=' . urlencode($query) . '&num=' . $limit . '&api_key=' . urlencode($serpKey);
+            $data = aiChatHttpGetJson($url, [], 6);
+            foreach (($data['organic_results'] ?? []) as $row) {
+                $sources[] = [
+                    'title' => $row['title'] ?? '',
+                    'link' => $row['link'] ?? '',
+                    'snippet' => $row['snippet'] ?? ''
+                ];
+            }
+        }
+    }
+
+    if (empty($sources)) {
+        $url = 'https://api.duckduckgo.com/?q=' . urlencode($query) . '&format=json&no_redirect=1&no_html=1&skip_disambig=1';
+        $data = aiChatHttpGetJson($url, [], 5);
+        if (is_array($data)) {
+            if (!empty($data['AbstractText'])) {
+                $sources[] = [
+                    'title' => $data['Heading'] ?? 'DuckDuckGo instant answer',
+                    'link' => $data['AbstractURL'] ?? '',
+                    'snippet' => $data['AbstractText']
+                ];
+            }
+            $related = $data['RelatedTopics'] ?? [];
+            foreach ($related as $topic) {
+                if (isset($topic['Topics']) && is_array($topic['Topics'])) {
+                    foreach ($topic['Topics'] as $nested) {
+                        $sources[] = [
+                            'title' => $nested['Text'] ?? '',
+                            'link' => $nested['FirstURL'] ?? '',
+                            'snippet' => $nested['Text'] ?? ''
+                        ];
+                    }
+                } else {
+                    $sources[] = [
+                        'title' => $topic['Text'] ?? '',
+                        'link' => $topic['FirstURL'] ?? '',
+                        'snippet' => $topic['Text'] ?? ''
+                    ];
+                }
+            }
+        }
+    }
+
+    if (empty($sources)) {
+        $url = 'https://en.wikipedia.org/w/api.php?action=opensearch&search=' . urlencode($query) . '&limit=' . $limit . '&namespace=0&format=json';
+        $data = aiChatHttpGetJson($url, [], 5);
+        if (is_array($data) && isset($data[1], $data[2], $data[3]) && is_array($data[1])) {
+            $titles = $data[1];
+            $descriptions = is_array($data[2]) ? $data[2] : [];
+            $links = is_array($data[3]) ? $data[3] : [];
+            foreach ($titles as $idx => $title) {
+                $sources[] = [
+                    'title' => $title,
+                    'link' => $links[$idx] ?? '',
+                    'snippet' => $descriptions[$idx] ?? ''
+                ];
+            }
+        }
+    }
+
+    return aiChatNormalizeWebSources($sources, $limit);
+}
+
+function cacheAIChatLiveWebResearch($db, $query, array $sources) {
+    if (empty($sources)) {
+        return;
+    }
+
+    try {
+        $query = trim((string)$query);
+        $summaryLines = [];
+        foreach ($sources as $source) {
+            $title = trim((string)($source['title'] ?? 'Web result'));
+            $snippet = trim((string)($source['snippet'] ?? ''));
+            $link = trim((string)($source['link'] ?? ''));
+            $summaryLines[] = '- ' . $title . ($snippet !== '' ? ': ' . $snippet : '') . ($link !== '' ? ' (' . $link . ')' : '');
+        }
+        $summary = "Live web research snippets for: {$query}\n" . implode("\n", $summaryLines);
+        $sourcesJson = json_encode($sources, JSON_UNESCAPED_UNICODE);
+        $queryHash = hash('sha256', strtolower($query));
+
+        $columns = aichatGetTableColumns($db, 'ai_web_cache');
+        if (empty($columns)) {
+            return;
+        }
+
+        $existing = $db->prepare("SELECT id FROM ai_web_cache WHERE query_hash = ? LIMIT 1");
+        $existing->execute([$queryHash]);
+        if ($existing->fetchColumn()) {
+            return;
+        }
+
+        $insertColumns = ['query_hash', 'query_text', 'summary', 'sources_json'];
+        $placeholders = ['?', '?', '?', '?'];
+        $params = [$queryHash, $query, $summary, $sourcesJson];
+
+        if (isset($columns['learning_provider'])) {
+            $insertColumns[] = 'learning_provider';
+            $placeholders[] = '?';
+            $params[] = 'live_web_search';
+        }
+        if (isset($columns['learning_model'])) {
+            $insertColumns[] = 'learning_model';
+            $placeholders[] = '?';
+            $params[] = 'external_search';
+        }
+        if (isset($columns['learning_status'])) {
+            $insertColumns[] = 'learning_status';
+            $placeholders[] = '?';
+            $params[] = 'web_searched';
+        }
+        if (isset($columns['created_at'])) {
+            $insertColumns[] = 'created_at';
+            $placeholders[] = 'NOW()';
+        }
+        if (isset($columns['updated_at'])) {
+            $insertColumns[] = 'updated_at';
+            $placeholders[] = 'NOW()';
+        }
+
+        $sql = 'INSERT INTO ai_web_cache (' . implode(', ', $insertColumns) . ') VALUES (' . implode(', ', $placeholders) . ')';
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+    } catch (Exception $e) {
+        error_log('cacheAIChatLiveWebResearch error: ' . $e->getMessage());
+    }
+}
+
+function aiChatMessageRequestsWebSearch($message) {
+    return preg_match('/\b(web|internet|online|search\s+the\s+web|latest|current|today|outside\s+(?:motorlink|the\s+database)|not\s+in\s+(?:the\s+)?database)\b/i', (string)$message) === 1;
+}
+
+function buildAIChatLiveWebResearchContext($db, $message, $limit = 4) {
+    $sources = aiChatFetchLiveWebSearch($db, $message, $limit);
+    if (empty($sources)) {
+        return '';
+    }
+
+    cacheAIChatLiveWebResearch($db, $message, $sources);
+
+    $lines = ['LIVE WEB RESEARCH (external snippets; use carefully and prefer MotorLink data for local inventory/prices):'];
+    foreach ($sources as $source) {
+        $line = '- ' . aiChatTruncateText($source['title'] ?? 'Web result', 100);
+        if (!empty($source['snippet'])) {
+            $line .= ': ' . aiChatTruncateText($source['snippet'], 220);
+        }
+        if (!empty($source['link'])) {
+            $line .= ' - ' . aiChatTruncateText($source['link'], 160);
+        }
+        $lines[] = $line;
+    }
+
+    return "\n\n" . implode("\n", $lines) . "\n";
+}
+
 /**
  * Schedule non-blocking learning for automotive user queries.
  * Uses shutdown callback so chat response is never delayed.
@@ -921,6 +1307,9 @@ function handleAIFeedback($db) {
              VALUES (?, ?, ?, ?)"
         );
         $stmt->execute([$user['id'], $feedback, $userMsg, $aiResponse]);
+        if ($feedback === 'not-helpful' && $userMsg !== '') {
+            scheduleContinuousLearningForQuery($db, $userMsg);
+        }
         sendSuccess(['stored' => true]);
     } catch (Exception $e) {
         error_log('ai_chat_feedback insert error: ' . $e->getMessage());
@@ -1045,6 +1434,129 @@ function getAIChatPersistenceContext() {
     return is_array($context) ? $context : [];
 }
 
+function normalizeAIChatConversationOptions(array $options, $limit = 6) {
+    $clean = [];
+    $seen = [];
+
+    foreach ($options as $option) {
+        $text = trim((string)$option);
+        $text = preg_replace('/\s+/', ' ', $text);
+        if ($text === '' || strlen($text) > 90) {
+            continue;
+        }
+        $key = strtolower($text);
+        if (isset($seen[$key])) {
+            continue;
+        }
+        $seen[$key] = true;
+        $clean[] = $text;
+        if (count($clean) >= $limit) {
+            break;
+        }
+    }
+
+    return $clean;
+}
+
+function buildAIChatDefaultConversationOptions(array $data, array $context) {
+    $message = strtolower(trim((string)($context['resolved_message'] ?? $context['original_message'] ?? '')));
+    $options = [];
+
+    if (!empty($data['search_results'])) {
+        $options = [
+            'Show cheaper options',
+            'Only automatic cars',
+            'Compare the first two',
+            'What should I check before buying?',
+            'Show similar cars in another location',
+            'How do I contact the seller?'
+        ];
+    } elseif (!empty($data['car_hire_companies'])) {
+        $options = [
+            'Show self-drive only',
+            'Which is cheapest?',
+            'Which has a driver?',
+            'Show airport transfer options',
+            'Find options in another city',
+            'What should I ask before booking?'
+        ];
+    } elseif (!empty($data['garages'])) {
+        $options = [
+            'Which garage is closest?',
+            'Show emergency help only',
+            'Which one handles my car brand?',
+            'Give me their contact details',
+            'What should I ask before visiting?',
+            'Find garages in another location'
+        ];
+    } elseif (!empty($data['dealers'])) {
+        $options = [
+            'Show their inventory',
+            'Which dealer has the most cars?',
+            'Give me their contact details',
+            'Find dealers in another city',
+            'What questions should I ask?',
+            'Show verified dealers only'
+        ];
+    } elseif (!empty($data['marketplace_scout'])) {
+        $options = [
+            'Show only cars for sale',
+            'Show dealers from this scout',
+            'Search the web too',
+            'Broaden this search',
+            'Compare the best matches',
+            'Save this as my preference'
+        ];
+    } elseif (isset($data['total_results']) && (int)$data['total_results'] === 0) {
+        $options = [
+            'Broaden the search',
+            'Search the web too',
+            'Show similar alternatives',
+            'Remove the location filter',
+            'Search dealers instead',
+            'Search car hire instead'
+        ];
+    } elseif (strpos($message, 'price') !== false || strpos($message, 'budget') !== false) {
+        $options = [
+            'Compare with similar listings',
+            'Show cheaper alternatives',
+            'Estimate total ownership cost',
+            'What is a fair price?',
+            'Find cars in my budget',
+            'Explain the price difference'
+        ];
+    } elseif (strpos($message, 'part') !== false || strpos($message, 'spare') !== false || strpos($message, 'oem') !== false) {
+        $options = [
+            'Check compatibility',
+            'Find the OEM number',
+            'What symptoms mean it failed?',
+            'What should installation cost?',
+            'Find a garage for this repair',
+            'Search the web too'
+        ];
+    } elseif (strpos($message, 'fuel') !== false || strpos($message, 'consumption') !== false) {
+        $options = [
+            'Calculate my trip cost',
+            'Compare fuel economy',
+            'How can I reduce fuel use?',
+            'Show current fuel prices',
+            'Which engine is better?',
+            'Estimate monthly fuel cost'
+        ];
+    } else {
+        $options = [
+            'Search MotorLink database',
+            'Search the web too',
+            'Show cars for sale',
+            'Find a garage',
+            'Find car hire',
+            'Continue with more detail'
+        ];
+    }
+
+    return normalizeAIChatConversationOptions($options, 6);
+}
+
 function motorlink_filter_send_success_response($data, $code) {
     $context = getAIChatPersistenceContext();
     if (empty($context['active']) || !is_array($data) || (int)$code >= 400) {
@@ -1054,6 +1566,12 @@ function motorlink_filter_send_success_response($data, $code) {
     $responseText = trim((string)($data['response'] ?? ''));
     if ($responseText === '' || empty($context['db']) || empty($context['user_id'])) {
         return $data;
+    }
+
+    if (empty($data['conversation_options']) || !is_array($data['conversation_options'])) {
+        $data['conversation_options'] = buildAIChatDefaultConversationOptions($data, $context);
+    } else {
+        $data['conversation_options'] = normalizeAIChatConversationOptions($data['conversation_options'], 6);
     }
 
     try {
@@ -2657,6 +3175,314 @@ function buildAIChatStructuredRetrievalContext($db, $message, $conversationHisto
     return "\n\nLIVE MARKETPLACE RETRIEVAL (verified site data):\n" . implode("\n\n", $sections) . "\n";
 }
 
+function aiChatExtractScoutTerms($message, $limit = 5) {
+    $text = strtolower(trim((string)$message));
+    $text = preg_replace('~https?://\S+~', ' ', $text);
+    $tokens = preg_split('/[^a-z0-9]+/i', $text);
+    $stop = array_flip([
+        'the','and','for','with','from','that','this','what','have','has','are','you','your','our','their','please','show','find','search','scout','scan','look','through','database','website','site','motorlink','anything','everything','about','into','need','want','looking','cars','car','vehicle','vehicles','available','results','result','near','first','only','all'
+    ]);
+
+    $terms = [];
+    foreach ($tokens as $token) {
+        $token = trim((string)$token);
+        if (strlen($token) < 3 || isset($stop[$token])) {
+            continue;
+        }
+        if (!in_array($token, $terms, true)) {
+            $terms[] = $token;
+        }
+        if (count($terms) >= $limit) {
+            break;
+        }
+    }
+
+    return $terms;
+}
+
+function aiChatBuildScoutWhere(array $fields, array $terms, array &$params, $matchMode = 'all') {
+    $conditions = [];
+    foreach ($terms as $term) {
+        $term = strtolower(trim((string)$term));
+        if ($term === '') {
+            continue;
+        }
+        $perTerm = [];
+        foreach ($fields as $field) {
+            $perTerm[] = "LOWER(COALESCE({$field}, '')) LIKE ?";
+            $params[] = '%' . $term . '%';
+        }
+        if (!empty($perTerm)) {
+            $conditions[] = '(' . implode(' OR ', $perTerm) . ')';
+        }
+    }
+
+    if (empty($conditions)) {
+        return '';
+    }
+
+    return strtolower((string)$matchMode) === 'any'
+        ? '(' . implode(' OR ', $conditions) . ')'
+        : implode(' AND ', $conditions);
+}
+
+function aiChatBuildUrl($runtimeSiteUrl, $path) {
+    $path = trim((string)$path);
+    if ($path === '') {
+        return '';
+    }
+    if (preg_match('~^https?://~i', $path)) {
+        return $path;
+    }
+    return rtrim((string)$runtimeSiteUrl, '/') . '/' . ltrim($path, '/');
+}
+
+function aiChatAppendStaticPageScout(array &$sections, array $terms, $runtimeSiteUrl) {
+    $pages = [
+        ['Browse Cars', 'index.html', 'cars listings marketplace buy vehicle search'],
+        ['Sell Your Car', 'sell.html', 'sell list advertise vehicle listing'],
+        ['Dealers', 'dealers.html', 'dealer showroom car sales business'],
+        ['Garages', 'garages.html', 'garage mechanic repair service maintenance'],
+        ['Car Hire', 'car-hire.html', 'hire rental self drive chauffeur airport wedding'],
+        ['Know Your Car', 'car-database.html', 'specifications vin journey planner vehicle specs'],
+        ['Help', 'help.html', 'help support faq questions'],
+        ['Safety', 'safety.html', 'safety scam fraud secure buying selling'],
+        ['Contact', 'contact.html', 'contact support phone email']
+    ];
+
+    $matches = [];
+    foreach ($pages as $page) {
+        $haystack = strtolower($page[0] . ' ' . $page[2]);
+        foreach ($terms as $term) {
+            if (strpos($haystack, strtolower($term)) !== false) {
+                $matches[] = '- Website page: ' . $page[0] . ' - ' . aiChatBuildUrl($runtimeSiteUrl, $page[1]);
+                break;
+            }
+        }
+        if (count($matches) >= 3) {
+            break;
+        }
+    }
+
+    if (!empty($matches)) {
+        $sections[] = "Website pages:\n" . implode("\n", $matches);
+    }
+}
+
+function buildAIChatMarketplaceScoutSnippet($db, $message, $runtimeSiteUrl = '', $matchMode = 'all') {
+    $terms = aiChatExtractScoutTerms($message, 5);
+    if (empty($terms)) {
+        return '';
+    }
+
+    $sections = [];
+
+    try {
+        $params = [];
+        $where = aiChatBuildScoutWhere([
+            'cl.title', 'cl.description', 'mk.name', 'cm.name', 'loc.name', 'loc.district', 'loc.region', 'cl.fuel_type', 'cl.transmission', 'cl.exterior_color'
+        ], $terms, $params, $matchMode);
+        if ($where !== '') {
+            $base = "FROM car_listings cl
+                     LEFT JOIN car_makes mk ON cl.make_id = mk.id
+                     LEFT JOIN car_models cm ON cl.model_id = cm.id
+                     LEFT JOIN locations loc ON cl.location_id = loc.id
+                     WHERE cl.status = 'active' AND cl.approval_status = 'approved' AND {$where}";
+            $countStmt = $db->prepare("SELECT COUNT(DISTINCT cl.id) {$base}");
+            $countStmt->execute($params);
+            $count = (int)$countStmt->fetchColumn();
+
+            if ($count > 0) {
+                $stmt = $db->prepare("SELECT cl.id, cl.title, cl.year, cl.price, mk.name AS make_name, cm.name AS model_name, loc.name AS location_name {$base} ORDER BY cl.id DESC LIMIT 3");
+                $stmt->execute($params);
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $lines = ["Listings ({$count} match" . ($count === 1 ? '' : 'es') . '):'];
+                foreach ($rows as $row) {
+                    $label = trim((string)($row['title'] ?? ''));
+                    if ($label === '') {
+                        $label = trim((string)($row['make_name'] ?? '') . ' ' . (string)($row['model_name'] ?? '') . ' ' . (string)($row['year'] ?? ''));
+                    }
+                    $line = '- ' . aiChatTruncateText($label, 90);
+                    if (!empty($row['price'])) {
+                        $line .= ' - ' . getChatCurrencyCode($db) . ' ' . number_format((float)$row['price']);
+                    }
+                    if (!empty($row['location_name'])) {
+                        $line .= ' - ' . aiChatTruncateText($row['location_name'], 50);
+                    }
+                    $line .= ' - ' . aiChatBuildUrl($runtimeSiteUrl, 'car.html?id=' . (int)$row['id']);
+                    $lines[] = $line;
+                }
+                $sections[] = implode("\n", $lines);
+            }
+        }
+    } catch (Exception $e) {
+        error_log('Marketplace scout listings error: ' . $e->getMessage());
+    }
+
+    try {
+        $params = [];
+        $where = aiChatBuildScoutWhere(['d.business_name', 'd.description', 'd.specialization', 'd.address', 'loc.name', 'loc.district', 'loc.region'], $terms, $params, $matchMode);
+        if ($where !== '') {
+            $base = "FROM car_dealers d LEFT JOIN locations loc ON d.location_id = loc.id WHERE d.status = 'active' AND {$where}";
+            $countStmt = $db->prepare("SELECT COUNT(DISTINCT d.id) {$base}");
+            $countStmt->execute($params);
+            $count = (int)$countStmt->fetchColumn();
+            if ($count > 0) {
+                $stmt = $db->prepare("SELECT d.id, d.business_name, d.phone, loc.name AS location_name {$base} ORDER BY d.id DESC LIMIT 3");
+                $stmt->execute($params);
+                $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                $lines = ["Dealers ({$count} match" . ($count === 1 ? '' : 'es') . '):'];
+                foreach ($rows as $row) {
+                    $line = '- ' . aiChatTruncateText($row['business_name'] ?? 'Dealer', 90);
+                    if (!empty($row['location_name'])) { $line .= ' - ' . aiChatTruncateText($row['location_name'], 50); }
+                    if (!empty($row['phone'])) { $line .= ' - ' . aiChatTruncateText($row['phone'], 35); }
+                    $line .= ' - ' . aiChatBuildUrl($runtimeSiteUrl, 'showroom.html?id=' . (int)$row['id']);
+                    $lines[] = $line;
+                }
+                $sections[] = implode("\n", $lines);
+            }
+        }
+    } catch (Exception $e) {
+        error_log('Marketplace scout dealers error: ' . $e->getMessage());
+    }
+
+    try {
+        $garageColumns = aichatGetTableColumns($db, 'garages');
+        if (!empty($garageColumns)) {
+            $fields = [];
+            foreach (['name', 'description', 'services', 'specialization', 'specializes_in_cars', 'address', 'emergency_services'] as $field) {
+                if (isset($garageColumns[$field])) { $fields[] = 'g.' . $field; }
+            }
+            $fields = array_merge($fields, ['loc.name', 'loc.district', 'loc.region']);
+            $params = [];
+            $where = aiChatBuildScoutWhere($fields, $terms, $params, $matchMode);
+            if ($where !== '') {
+                $statusWhere = isset($garageColumns['status']) ? "g.status = 'active' AND " : '';
+                $base = "FROM garages g LEFT JOIN locations loc ON g.location_id = loc.id WHERE {$statusWhere}{$where}";
+                $countStmt = $db->prepare("SELECT COUNT(DISTINCT g.id) {$base}");
+                $countStmt->execute($params);
+                $count = (int)$countStmt->fetchColumn();
+                if ($count > 0) {
+                    $stmt = $db->prepare("SELECT g.id, g.name, g.phone, loc.name AS location_name {$base} ORDER BY g.id DESC LIMIT 3");
+                    $stmt->execute($params);
+                    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    $lines = ["Garages ({$count} match" . ($count === 1 ? '' : 'es') . '):'];
+                    foreach ($rows as $row) {
+                        $line = '- ' . aiChatTruncateText($row['name'] ?? 'Garage', 90);
+                        if (!empty($row['location_name'])) { $line .= ' - ' . aiChatTruncateText($row['location_name'], 50); }
+                        if (!empty($row['phone'])) { $line .= ' - ' . aiChatTruncateText($row['phone'], 35); }
+                        $line .= ' - ' . aiChatBuildUrl($runtimeSiteUrl, 'garages.html?id=' . (int)$row['id']);
+                        $lines[] = $line;
+                    }
+                    $sections[] = implode("\n", $lines);
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log('Marketplace scout garages error: ' . $e->getMessage());
+    }
+
+    try {
+        $companyColumns = aichatGetTableColumns($db, 'car_hire_companies');
+        if (!empty($companyColumns)) {
+            $fields = [];
+            foreach (['business_name', 'owner_name', 'description', 'address', 'hire_category', 'special_services', 'event_types'] as $field) {
+                if (isset($companyColumns[$field])) { $fields[] = 'ch.' . $field; }
+            }
+            $fields = array_merge($fields, ['loc.name', 'loc.district', 'loc.region']);
+            $params = [];
+            $where = aiChatBuildScoutWhere($fields, $terms, $params, $matchMode);
+            if ($where !== '') {
+                $statusWhere = isset($companyColumns['status']) ? "ch.status = 'active' AND " : '';
+                $base = "FROM car_hire_companies ch LEFT JOIN locations loc ON ch.location_id = loc.id WHERE {$statusWhere}{$where}";
+                $countStmt = $db->prepare("SELECT COUNT(DISTINCT ch.id) {$base}");
+                $countStmt->execute($params);
+                $count = (int)$countStmt->fetchColumn();
+                if ($count > 0) {
+                    $stmt = $db->prepare("SELECT ch.id, ch.business_name, ch.phone, loc.name AS location_name {$base} ORDER BY ch.id DESC LIMIT 3");
+                    $stmt->execute($params);
+                    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    $lines = ["Car hire ({$count} match" . ($count === 1 ? '' : 'es') . '):'];
+                    foreach ($rows as $row) {
+                        $line = '- ' . aiChatTruncateText($row['business_name'] ?? 'Car hire company', 90);
+                        if (!empty($row['location_name'])) { $line .= ' - ' . aiChatTruncateText($row['location_name'], 50); }
+                        if (!empty($row['phone'])) { $line .= ' - ' . aiChatTruncateText($row['phone'], 35); }
+                        $line .= ' - ' . aiChatBuildUrl($runtimeSiteUrl, 'car-hire-company.html?id=' . (int)$row['id']);
+                        $lines[] = $line;
+                    }
+                    $sections[] = implode("\n", $lines);
+                }
+            }
+        }
+    } catch (Exception $e) {
+        error_log('Marketplace scout car hire error: ' . $e->getMessage());
+    }
+
+    aiChatAppendStaticPageScout($sections, $terms, $runtimeSiteUrl);
+
+    if (empty($sections)) {
+        if ($matchMode !== 'any' && count($terms) > 1) {
+            return buildAIChatMarketplaceScoutSnippet($db, implode(' ', $terms), $runtimeSiteUrl, 'any');
+        }
+        return '';
+    }
+
+    $modeLabel = $matchMode === 'any' ? 'broad match' : 'strict match';
+    return "\n\nDATABASE AND WEBSITE SCOUT (MotorLink verified data, {$modeLabel}):\n" . implode("\n\n", $sections) . "\n";
+}
+
+function detectAIChatMarketplaceScoutQuery($message) {
+    $message = (string)$message;
+    return preg_match('/\b(?:scout|scan|search\s+(?:everything|all|the\s+database|your\s+database|the\s+site|your\s+site)|check\s+(?:the|your|my)\s+(?:database|site|website)|look\s+through\s+(?:the|your)\s+(?:database|site|website)|what\s+do\s+you\s+have|find\s+anything\s+(?:about|on|for))\b/i', $message) === 1;
+}
+
+function handleMarketplaceScoutQuery($db, $message, $conversationHistory = []) {
+    try {
+        $serverHost = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
+        $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $baseUrl = $serverHost ? ($protocol . '://' . $serverHost . '/') : '/';
+        $siteConfig = motorlink_get_public_site_runtime_config($db, ['runtime_base_url' => $baseUrl]);
+        $runtimeSiteUrl = rtrim((string)($siteConfig['site_url'] ?? $baseUrl), '/') . '/';
+
+        $scout = trim(buildAIChatMarketplaceScoutSnippet($db, $message, $runtimeSiteUrl));
+        $wantsWeb = aiChatMessageRequestsWebSearch($message);
+        $webContext = ($scout === '' || $wantsWeb) ? trim(buildAIChatLiveWebResearchContext($db, $message, 4)) : '';
+
+        $response = "I checked across MotorLink's database and website pages.";
+        if ($scout !== '') {
+            $response .= "\n\n" . $scout;
+        } else {
+            $response .= "\n\nI did not find a strong MotorLink database match for that exact wording.";
+        }
+
+        if ($webContext !== '') {
+            $response .= "\n\n" . $webContext;
+        } elseif ($scout === '') {
+            $response .= "\n\nI can still answer from general automotive knowledge, or you can ask me to broaden the search terms.";
+        }
+
+        sendSuccess([
+            'response' => $response,
+            'marketplace_scout' => true,
+            'conversation_options' => [
+                'Broaden this search',
+                'Search the web too',
+                'Show cars for sale only',
+                'Show dealers only',
+                'Show garages only',
+                'Continue with more detail'
+            ]
+        ]);
+    } catch (Throwable $e) {
+        error_log('handleMarketplaceScoutQuery error: ' . $e->getMessage());
+        sendSuccess([
+            'response' => 'I could not complete the full database scout just now. Try a shorter search phrase, or browse the main sections directly from the website.',
+            'marketplace_scout' => true,
+            'soft_error' => true
+        ]);
+    }
+}
+
 function handleAICarChat($db) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         sendError('POST method required', 405);
@@ -2729,6 +3555,7 @@ function handleAICarChat($db) {
 
         // Keep learning always on for valid automotive conversations.
         scheduleContinuousLearningForQuery($db, $originalMessage);
+        maybeRunDailyAIChatLearning($db);
 
         // Load AI settings and select active provider
         $settings = getAIChatSettings($db);
@@ -2791,6 +3618,12 @@ function handleAICarChat($db) {
         if ($actionResult !== false) {
             $logDeterministicUsage();
             sendSuccess($actionResult);
+            return;
+        }
+
+        if (detectAIChatMarketplaceScoutQuery($message)) {
+            $logDeterministicUsage();
+            handleMarketplaceScoutQuery($db, $message, $conversationHistory);
             return;
         }
 
@@ -3223,6 +4056,19 @@ function handleAICarChat($db) {
             ? "\nRECENT MARKETPLACE ENTITIES (latest results first; use these to resolve references like first/second/that one/their contact):\n{$recentEntityContext}\n"
             : '';
         $retrievalContext = buildAIChatStructuredRetrievalContext($db, $message, $conversationHistory, $runtimeSiteUrl, $userContext, $userLocation);
+        $hasDatabaseContext = !empty($databaseInfo) && !empty($databaseInfo['has_data']);
+        if (!$hasDatabaseContext || detectAIChatMarketplaceScoutQuery($message)) {
+            $scoutContext = buildAIChatMarketplaceScoutSnippet($db, $message, $runtimeSiteUrl);
+            if ($scoutContext !== '') {
+                $retrievalContext .= $scoutContext;
+            }
+        }
+        if ((!$hasDatabaseContext && trim($retrievalContext) === '') || aiChatMessageRequestsWebSearch($message)) {
+            $webResearchContext = buildAIChatLiveWebResearchContext($db, $message, 4);
+            if ($webResearchContext !== '') {
+                $retrievalContext .= $webResearchContext;
+            }
+        }
 
         // NOTE: The verbose system prompt block previously built here was deprecated
         // in favor of the compact fast-response prompt below. Keeping the compact
@@ -3427,11 +4273,12 @@ REMEMBER (MANDATORY WORKFLOW):
         $systemPrompt = "You are {$siteName} AI Assistant for {$marketContextLabel}. Provide accurate and prompt responses.\n\n"
             . "PRIORITIES:\n"
             . "1. For automotive/listing/dealer/garage/hire queries, prioritize MotorLink database and retrieval context.\n"
-            . "2. If exact data is unavailable, say so briefly and provide best-effort guidance.\n"
-            . "3. Keep responses concise by default (max ~120 words) unless user asks for details.\n"
-            . "4. For greetings/short prompts, reply in 1-2 short sentences.\n"
-            . "5. Use simple markdown bullets when helpful.\n"
-            . "6. Non-automotive questions are allowed; answer briefly and clearly.\n\n"
+            . "2. If MotorLink data is unavailable, use LIVE WEB RESEARCH when supplied; label it as external web context and avoid invented certainty.\n"
+            . "3. For follow-ups, preserve conversation context and resolve references like first, second, that one, their contact, or my car.\n"
+            . "4. Keep responses concise by default (max ~120 words) unless user asks for details.\n"
+            . "5. For greetings/short prompts, reply in 1-2 short sentences.\n"
+            . "6. Use simple markdown bullets when helpful.\n"
+            . "7. Non-automotive questions are allowed; answer briefly and clearly.\n\n"
             . "USER CONTEXT: {$contextInfo}{$locationContext}{$longTermMemoryCompact}{$conversationBriefCompact}{$recentEntityCompact}\n"
             . "BASE URL: {$baseUrl}{$databaseContextCompact}{$retrievalContextCompact}{$activeVehicleBlock}";
 
@@ -7361,13 +8208,16 @@ function callAIChatKnowledgeFallback($db, $query, $type, $baseUrl = '') {
         return null;
     }
 
+    $liveWebContext = buildAIChatLiveWebResearchContext($db, $query, 4);
+
     $systemPrompt = "You are the MotorLink AI Assistant for Malawi. "
         . "The MotorLink database has no matching {$typeLabel} for the user's query. "
         . "Your job is to be genuinely helpful by:\n"
         . "1. Briefly acknowledging nothing was found in our database (1 sentence).\n"
-        . "2. Using your general knowledge to suggest: what alternatives or similar options typically exist, what the user should look for, or what questions to ask when searching.\n"
-        . "3. If relevant, mention that new businesses can register on MotorLink so the directory grows.\n"
-        . "Keep the response under 150 words. Use short bullet points where helpful. Do not invent specific business names or phone numbers.{$browseHint}";
+        . "2. If LIVE WEB RESEARCH is supplied, use it as external context without inventing phone numbers or exact availability.\n"
+        . "3. Using your general knowledge to suggest: what alternatives or similar options typically exist, what the user should look for, or what questions to ask when searching.\n"
+        . "4. If relevant, mention that new businesses can register on MotorLink so the directory grows.\n"
+        . "Keep the response under 150 words. Use short bullet points where helpful. Do not invent specific business names or phone numbers.{$browseHint}{$liveWebContext}";
 
     $messages = [
         ['role' => 'system', 'content' => $systemPrompt],

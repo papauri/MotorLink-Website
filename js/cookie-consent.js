@@ -6,12 +6,20 @@
 class CookieConsentManager {
     constructor() {
         this.consentKey = 'cookie_consent';
-        this.consentVersion = '1.0';
+        this.consentVersion = (window.CONFIG && CONFIG.COOKIE_CONSENT_VERSION) ? CONFIG.COOKIE_CONSENT_VERSION : '1.0';
+        this.enabled = !(window.CONFIG && CONFIG.COOKIE_CONSENT_ENABLED === false);
+        this.logEnabled = !(window.CONFIG && CONFIG.COOKIE_CONSENT_LOG_ENABLED === false);
         this.bannerShown = false;
         this.init();
     }
 
     init() {
+        this.setupEventListeners();
+
+        if (!this.enabled) {
+            return;
+        }
+
         // Check if consent has been given
         const consent = this.getConsent();
         
@@ -24,9 +32,6 @@ class CookieConsentManager {
             // Consent already given, apply preferences
             this.applyConsent(consent);
         }
-
-        // Add event listeners for settings modal
-        this.setupEventListeners();
     }
 
     getConsent() {
@@ -45,11 +50,12 @@ class CookieConsentManager {
         }
     }
 
-    saveConsent(preferences) {
+    saveConsent(preferences, action = 'custom') {
+        const normalizedPreferences = this.normalizePreferences(preferences);
         const consent = {
             version: this.consentVersion,
             timestamp: new Date().toISOString(),
-            preferences: preferences
+            preferences: normalizedPreferences
         };
         
         localStorage.setItem(this.consentKey, JSON.stringify(consent));
@@ -59,16 +65,26 @@ class CookieConsentManager {
         
         // Apply the consent preferences
         this.applyConsent(consent);
+        this.logConsent(consent, action);
+    }
+
+    normalizePreferences(preferences = {}) {
+        return {
+            essential: true,
+            functional: preferences.functional !== false,
+            analytics: preferences.analytics === true
+        };
     }
 
     setCookie(name, value, days) {
         const expires = new Date();
         expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-        document.cookie = `${name}=${value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+        const secureFlag = window.location.protocol === 'https:' ? ';Secure' : '';
+        document.cookie = `${name}=${encodeURIComponent(value)};expires=${expires.toUTCString()};path=/;SameSite=Lax${secureFlag}`;
     }
 
     applyConsent(consent) {
-        const prefs = consent.preferences || {};
+        const prefs = this.normalizePreferences(consent.preferences || {});
         
         // Essential cookies are always allowed
         // Functional cookies
@@ -82,9 +98,34 @@ class CookieConsentManager {
         
         // Analytics cookies
         if (prefs.analytics === true) {
-            // Analytics allowed
+            if (typeof window.enableMotorLinkAnalytics === 'function') {
+                window.enableMotorLinkAnalytics();
+            }
         } else {
-            // Analytics rejected - no action needed as we don't use external analytics
+            if (typeof window.disableMotorLinkAnalytics === 'function') {
+                window.disableMotorLinkAnalytics();
+            }
+        }
+    }
+
+    logConsent(consent, action) {
+        if (!this.logEnabled || !window.CONFIG || !CONFIG.API_URL) return;
+
+        try {
+            fetch(`${CONFIG.API_URL}?action=log_cookie_consent`, {
+                method: 'POST',
+                credentials: CONFIG.USE_CREDENTIALS ? 'include' : 'same-origin',
+                keepalive: true,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    version: consent.version,
+                    action,
+                    preferences: consent.preferences,
+                    page_url: window.location.href
+                })
+            }).catch(() => {});
+        } catch (error) {
+            // Consent is already saved locally; logging is best-effort.
         }
     }
 
@@ -165,7 +206,7 @@ class CookieConsentManager {
             functional: true,
             analytics: true
         };
-        this.saveConsent(preferences);
+        this.saveConsent(preferences, 'accept_all');
         this.hideBanner();
         this.showToast('Cookie preferences saved. Thank you!', 'success');
     }
@@ -176,7 +217,7 @@ class CookieConsentManager {
             functional: false,
             analytics: false
         };
-        this.saveConsent(preferences);
+        this.saveConsent(preferences, 'reject_all');
         this.hideBanner();
         this.showToast('Cookie preferences saved. Essential cookies are still active.', 'info');
     }
@@ -328,7 +369,7 @@ class CookieConsentManager {
             analytics: document.getElementById('cookieAnalytics').checked
         };
         
-        this.saveConsent(preferences);
+        this.saveConsent(preferences, 'custom');
         this.closeSettingsModal();
         this.hideBanner();
         

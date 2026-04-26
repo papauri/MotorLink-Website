@@ -181,6 +181,11 @@
   padding-top: 4px; /* Small breathing room below the filter card */
 }
 
+.car-hire-page-wrapper .companies-grid {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+}
+
 /* Large phones: 2-column grid (481px–639px) */
 @media (min-width: 481px) and (max-width: 639px) {
   .companies-grid {
@@ -194,12 +199,41 @@
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 28px;
   }
+
+  .car-hire-page-wrapper .companies-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }
 
 @media (min-width: 1100px) {
   .companies-grid {
     grid-template-columns: repeat(3, 1fr) !important;
     gap: 32px;
+  }
+
+  .car-hire-page-wrapper .companies-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .car-hire-page-wrapper .companies-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .car-hire-page-wrapper .companies-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 14px !important;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .car-hire-page-wrapper .companies-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 20px !important;
   }
 }
 
@@ -479,6 +513,12 @@
   font-size: 1rem;
   font-weight: 700;
   color: #1f2937;
+}
+
+.company-card .company-reviews-count {
+  font-size: 0.8rem;
+  color: #78716c;
+  font-weight: 500;
 }
 
 /* Stats Display */

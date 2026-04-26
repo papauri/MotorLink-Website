@@ -9,6 +9,7 @@ let companies = [];
 let stats = {};
 let userLocation = null;
 let geocodedCompanies = new Map(); // Cache geocoded addresses
+const CAR_HIRE_NEARBY_RADIUS_KM = 10;
 
 // Pagination state
 let carHirePerPage = 25;
@@ -53,7 +54,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStats();
     loadLocations();
     loadCompanies();
-    getUserLocation();
 
     // When Google Maps API finishes loading (async), retry geocoding if we already
     // have user location (handles the race condition where geolocation resolved first)
@@ -114,6 +114,11 @@ document.addEventListener('DOMContentLoaded', function() {
         mobileCarHireSearch.addEventListener('keydown', e => {
             if (e.key === 'Enter') { e.preventDefault(); doSearch(); }
         });
+    }
+
+    const nearbyBtn = document.getElementById('carHireNearbyBtn');
+    if (nearbyBtn) {
+        nearbyBtn.addEventListener('click', findNearbyCarHire);
     }
 });
 
@@ -228,14 +233,23 @@ async function loadCompanies() {
 function populateAdditionalFilters(companiesData) {
     // Populate vehicle type filter from company data
     const vehicleTypes = [...new Set(companiesData.flatMap(company => {
+        const types = [];
         if (company.vehicle_types && typeof company.vehicle_types === 'string') {
             try {
-                return JSON.parse(company.vehicle_types);
+                types.push(...JSON.parse(company.vehicle_types));
             } catch (e) {
-                return [];
             }
+        } else if (Array.isArray(company.vehicle_types)) {
+            types.push(...company.vehicle_types);
         }
-        return company.vehicle_types || [];
+        if (Array.isArray(company.fleet)) {
+            company.fleet.forEach(vehicle => {
+                if (vehicle.vehicle_category) types.push(vehicle.vehicle_category);
+                if (vehicle.make_name) types.push(vehicle.make_name);
+                if (vehicle.model_name) types.push(vehicle.model_name);
+            });
+        }
+        return types;
     }))];
 
     const vehicleTypeFilter = document.getElementById('vehicleTypeFilter');
@@ -335,6 +349,9 @@ function renderCompanies(data) {
             distanceInfo = `<button type="button" class="loc-chip distance-info clickable-chip" onclick="event.stopPropagation(); window.open('${mapsUrl}', '_blank', 'noopener,noreferrer');" title="Get directions to ${escapeHtml(company.business_name || '')}"><i class="fas fa-location-arrow"></i> ${distance.toFixed(1)} km away</button>`;
         }
 
+        const avgRating = parseFloat(company.avg_rating || company.rating || 0);
+        const reviewCount = parseInt(company.review_count || company.total_reviews || 0);
+
         return `
         <a href="car-hire-company.html?id=${company.id}" class="company-card-link">
             <div class="company-card ${isFeatured ? 'featured-company' : ''}">
@@ -376,6 +393,14 @@ function renderCompanies(data) {
                 ` : ''}
 
                 <div class="company-card-body">
+                    ${avgRating > 0 ? `
+                    <div class="company-rating-display">
+                        <span class="company-stars">${generateStarRating(avgRating)}</span>
+                        <span class="company-rating-number">${avgRating.toFixed(1)}</span>
+                        <span class="company-reviews-count">${reviewCount} review${reviewCount === 1 ? '' : 's'}</span>
+                    </div>
+                    ` : ''}
+
                     ${(company.total_vehicles > 0 || company.daily_rate_from || company.weekly_rate_from) ? `
                     <div class="company-stats-display">
                         ${company.total_vehicles > 0 ? `<div class="stat-item-inline"><i class="fas fa-car"></i><span>${company.total_vehicles} vehicles</span></div>` : ''}
@@ -521,14 +546,31 @@ function applyFilters() {
     // Text search (name, description, location, address, phone)
     if (searchTerm) {
         filtered = filtered.filter(c => {
-            const name  = (c.business_name || c.company_name || '').toLowerCase();
-            const desc  = (c.description   || '').toLowerCase();
-            const loc   = (c.location_name || c.location || '').toLowerCase();
-            const addr  = (c.address       || '').toLowerCase();
-            const phone = (c.phone         || c.contact_phone || '').toLowerCase();
-            return name.includes(searchTerm) || desc.includes(searchTerm) ||
-                   loc.includes(searchTerm)  || addr.includes(searchTerm) ||
-                   phone.includes(searchTerm);
+            const fleetText = Array.isArray(c.fleet)
+                ? c.fleet.map(v => [v.make_name, v.model_name, v.vehicle_category, v.transmission, v.fuel_type, v.seats].join(' ')).join(' ')
+                : '';
+            const searchable = [
+                c.business_name,
+                c.company_name,
+                c.owner_name,
+                c.description,
+                c.location_name,
+                c.location,
+                c.region,
+                c.address,
+                c.phone,
+                c.contact_phone,
+                c.whatsapp,
+                c.email,
+                c.website,
+                c.facebook_url,
+                c.instagram_url,
+                c.hire_category,
+                c.event_types,
+                c.vehicle_types,
+                fleetText
+            ].map(value => String(value || '').toLowerCase()).join(' ');
+            return searchable.includes(searchTerm);
         });
     }
 
@@ -540,17 +582,24 @@ function applyFilters() {
     // Vehicle type filter
     if (vehicleType) {
         filtered = filtered.filter(c => {
-            if (!c.vehicle_types) return false;
+            const normalizedWanted = vehicleType.toLowerCase();
+            const candidateTypes = [];
             try {
-                const types = typeof c.vehicle_types === 'string'
+                const types = c.vehicle_types
+                    ? (typeof c.vehicle_types === 'string'
                     ? JSON.parse(c.vehicle_types)
-                    : c.vehicle_types;
-                return types.some(type =>
-                    type.toLowerCase().replace(/\s+/g, '_').includes(vehicleType)
-                );
+                    : c.vehicle_types)
+                    : [];
+                if (Array.isArray(types)) candidateTypes.push(...types);
             } catch (e) {
-                return false;
             }
+            if (Array.isArray(c.fleet)) {
+                c.fleet.forEach(vehicle => candidateTypes.push(vehicle.vehicle_category, vehicle.make_name, vehicle.model_name));
+            }
+
+            return candidateTypes.some(type =>
+                String(type || '').toLowerCase().replace(/\s+/g, '_').includes(normalizedWanted)
+            );
         });
     }
 
@@ -598,8 +647,10 @@ function applyFilters() {
     const distanceFilterEl = document.getElementById('distanceFilter');
     const distanceRadius = distanceFilterEl && !distanceFilterEl.disabled ? parseFloat(distanceFilterEl.value) : NaN;
     if (!isNaN(distanceRadius) && userLocation) {
+        const hasDistanceData = filtered.some(c => c.latitude && c.longitude);
         filtered = filtered.filter(c => {
-            if (!c.latitude || !c.longitude) return true; // keep ungeocoded companies
+            if (!hasDistanceData) return true;
+            if (!c.latitude || !c.longitude) return false;
             const dist = calculateDistance(userLocation.lat, userLocation.lng, parseFloat(c.latitude), parseFloat(c.longitude));
             return dist <= distanceRadius;
         });
@@ -634,41 +685,6 @@ function applyFilters() {
     renderCompanies(filtered);
     updateResultsCount(filtered.length);
 }
-
-function buildCarHirePaginationHTML(total, page, perPage) {
-    if (total === 0) return '';
-    const effPer = perPage === 0 ? total : perPage;
-    const totalPages = Math.ceil(total / effPer);
-    const start = (page - 1) * effPer + 1;
-    const end   = Math.min(page * effPer, total);
-    return `<div class="ml-pagination">
-        <span class="ml-pag-info">Showing ${start}\u2013${end} of ${total}</span>
-        <div class="ml-pag-controls">
-            <button class="ml-pag-btn" onclick="window.setCarHirePage(${page - 1},${perPage})" ${page <= 1 ? 'disabled' : ''}>&#8249; Prev</button>
-            <span class="ml-pag-pages">Page ${page} of ${totalPages}</span>
-            <button class="ml-pag-btn" onclick="window.setCarHirePage(${page + 1},${perPage})" ${page >= totalPages ? 'disabled' : ''}>Next &#8250;</button>
-        </div>
-        <label class="ml-pag-perpage">Show:&nbsp;<select class="ml-pag-select" onchange="window.setCarHirePage(1,parseInt(this.value))">
-            <option value="25" ${perPage===25?'selected':''}>25</option>
-            <option value="50" ${perPage===50?'selected':''}>50</option>
-            <option value="100" ${perPage===100?'selected':''}>100</option>
-            <option value="200" ${perPage===200?'selected':''}>200</option>
-            <option value="250" ${perPage===250?'selected':''}>250</option>
-            <option value="0" ${perPage===0?'selected':''}>All</option>
-        </select></label>
-    </div>`;
-}
-
-window.setCarHirePage = function(page, perPage) {
-    const total = carHireFilteredAll.length;
-    const effPer = perPage === 0 ? total : perPage;
-    const totalPages = Math.ceil(total / effPer) || 1;
-    carHireCurrentPage = Math.max(1, Math.min(page, totalPages));
-    carHirePerPage = perPage;
-    renderCompanies(carHireFilteredAll);
-    const grid = document.getElementById('companiesGrid');
-    if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
 
 function buildCarHirePaginationHTML(total, page, perPage) {
     if (total === 0) return '';
@@ -833,13 +849,52 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c; // Distance in km
 }
 
+function setCarHireNearbyButtonLoading(isLoading) {
+    const button = document.getElementById('carHireNearbyBtn');
+    if (!button) return;
+    button.disabled = isLoading;
+    button.innerHTML = isLoading
+        ? '<i class="fas fa-spinner fa-spin"></i> Locating...'
+        : '<i class="fas fa-location-arrow"></i> Nearby (10km)';
+}
+
+function activateCarHireNearbyFilter() {
+    const distFilter = document.getElementById('distanceFilter');
+    if (distFilter) {
+        distFilter.disabled = false;
+        distFilter.title = 'Filter by distance from your location';
+        distFilter.value = String(CAR_HIRE_NEARBY_RADIUS_KM);
+    }
+
+    const sortFilter = document.getElementById('sortFilter');
+    if (sortFilter) sortFilter.value = 'nearest';
+
+    showCarHireStatusHint(`Showing car hire companies within ${CAR_HIRE_NEARBY_RADIUS_KM}km of your location.`);
+
+    if (companies.length > 0) {
+        geocodeAndRenderCompanies();
+    } else {
+        applyFilters();
+    }
+}
+
+function findNearbyCarHire() {
+    if (userLocation) {
+        activateCarHireNearbyFilter();
+        return;
+    }
+
+    getUserLocation({ activateNearby: true });
+}
+
 // Get user's current location
-function getUserLocation() {
+function getUserLocation(options = {}) {
     if (!navigator.geolocation) {
         showCarHireStatusHint('Location services are not supported by your browser.', true);
         return;
     }
 
+    setCarHireNearbyButtonLoading(!!options.activateNearby);
     showCarHireStatusHint('<i class="fas fa-spinner fa-spin"></i> Getting your location…');
 
     navigator.geolocation.getCurrentPosition(
@@ -856,7 +911,13 @@ function getUserLocation() {
             if (distFilter) {
                 distFilter.disabled = false;
                 distFilter.title = 'Filter by distance from your location';
-                distFilter.addEventListener('change', () => applyFilters());
+            }
+
+            setCarHireNearbyButtonLoading(false);
+
+            if (options.activateNearby) {
+                activateCarHireNearbyFilter();
+                return;
             }
 
             // Geocode then re-apply filters (preserves current sort/filter state)
@@ -874,6 +935,7 @@ function getUserLocation() {
             if (sortEl && sortEl.value === 'nearest') {
                 sortEl.value = 'featured';
             }
+            setCarHireNearbyButtonLoading(false);
         },
         {
             enableHighAccuracy: false,

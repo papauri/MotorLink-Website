@@ -9,6 +9,7 @@ const GARAGES_CONFIG = {
 
 // Constants
 const MAX_DISTANCE_FOR_SORTING = 999999; // Used when garage has no distance info
+const GARAGE_NEARBY_RADIUS_KM = 10;
 
 // Global variables
 let userLocation = null;
@@ -17,6 +18,7 @@ let currentGarages = [];
 let googleGarages = [];
 let geocodedGarages = new Map(); // Cache for geocoded garage addresses
 let shouldGeocodeOnMapsReady = false; // Flag to geocode when Maps API loads
+let nearbyGarageSearchActive = false;
 
 // Pagination state
 let garagesPerPage = 25;
@@ -342,6 +344,11 @@ function setupNearbyButton() {
     if (findNearbyBtn) {
         findNearbyBtn.addEventListener('click', findNearbyGarages);
     }
+
+    const nearbyGaragesBtn = document.getElementById('nearbyGaragesBtn');
+    if (nearbyGaragesBtn) {
+        nearbyGaragesBtn.addEventListener('click', findNearbyGarages);
+    }
     
     // Setup mobile nearby FAB
     const mobileNearbyFab = document.getElementById('mobileNearbyFab');
@@ -350,10 +357,25 @@ function setupNearbyButton() {
     }
 }
 
+function getNearbyGarageButtons() {
+    return [
+        document.getElementById('findNearbyBtn'),
+        document.getElementById('nearbyGaragesBtn')
+    ].filter(Boolean);
+}
+
+function setNearbyGarageButtonsLoading(isLoading) {
+    getNearbyGarageButtons().forEach((button) => {
+        button.disabled = isLoading;
+        button.innerHTML = isLoading
+            ? '<i class="fas fa-spinner fa-spin"></i> Locating...'
+            : '<i class="fas fa-location-arrow"></i> Nearby (10km)';
+    });
+}
+
 function setupFilters() {
     const applyBtn = document.getElementById('applyFiltersBtn');
     const clearBtn = document.getElementById('clearFiltersBtn');
-    const nearbyBtn = document.getElementById('nearbyGaragesBtn');
 
     if (applyBtn) {
         applyBtn.addEventListener('click', function() {
@@ -367,10 +389,6 @@ function setupFilters() {
         });
     }
 
-    if (nearbyBtn) {
-        nearbyBtn.addEventListener('click', findNearbyGarages);
-    }
-    
     // Auto-apply filters when dropdowns change (only on desktop, not mobile)
     // On mobile, filters should only apply when "Apply" button is clicked
     const isMobile = window.innerWidth <= 768;
@@ -559,14 +577,9 @@ function findNearbyGarages() {
         return;
     }
     
-    const findNearbyBtn = document.getElementById('findNearbyBtn');
+    nearbyGarageSearchActive = true;
     const mobileNearbyFab = document.getElementById('mobileNearbyFab');
-    
-    if (findNearbyBtn) {
-        const originalText = findNearbyBtn.innerHTML;
-        findNearbyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Locating...';
-        findNearbyBtn.disabled = true;
-    }
+    setNearbyGarageButtonsLoading(true);
     
     if (mobileNearbyFab) {
         mobileNearbyFab.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -583,10 +596,10 @@ function findNearbyGarages() {
             };
             
             showLocationStatus();
-            if (findNearbyBtn) {
-                findNearbyBtn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Update Location';
-                findNearbyBtn.disabled = false;
-            }
+            setNearbyGarageButtonsLoading(false);
+
+            const sortFilter = document.getElementById('sortFilter');
+            if (sortFilter) sortFilter.value = 'distance';
             
             if (mobileNearbyFab) {
                 mobileNearbyFab.innerHTML = '<i class="fas fa-location-arrow"></i><span class="fab-text">Nearby</span>';
@@ -754,8 +767,8 @@ async function loadGoogleMapsGarages() {
                             placeLng
                         );
                         
-                        // Filter out places that are too far
-                        if (distance > 100) { // 100km max
+                        // Filter out places outside the explicit nearby radius
+                        if (distance > GARAGE_NEARBY_RADIUS_KM) {
                             return null;
                         }
                         
@@ -803,7 +816,7 @@ async function loadGoogleMapsGaragesLegacy() {
         const service = new google.maps.places.PlacesService(document.createElement('div'));
         const request = {
             location: new google.maps.LatLng(userLocation.lat, userLocation.lng),
-            radius: 10000, // 10km
+            radius: GARAGE_NEARBY_RADIUS_KM * 1000,
             type: 'car_repair',
             keyword: 'auto repair garage mechanic'
         };
@@ -853,7 +866,13 @@ function combineAndDisplayGarages() {
     });
     
     // Combine garages, prioritizing database garages
-    const allGarages = [...currentGarages, ...uniqueGoogleGarages];
+    let allGarages = [...currentGarages, ...uniqueGoogleGarages];
+
+    if (nearbyGarageSearchActive) {
+        allGarages = allGarages
+            .filter(garage => garage.distance != null && garage.distance <= GARAGE_NEARBY_RADIUS_KM)
+            .sort((a, b) => (a.distance ?? MAX_DISTANCE_FOR_SORTING) - (b.distance ?? MAX_DISTANCE_FOR_SORTING));
+    }
     
     displayGarages(allGarages);
     updateActiveFilters();
@@ -863,7 +882,7 @@ function combineAndDisplayGarages() {
     const sortFilter = document.getElementById('sortFilter');
     const isSortedByDistance = sortFilter && sortFilter.value === 'distance';
     const statusMessage = isSortedByDistance 
-        ? `Found ${allGarages.length} garages (${currentGarages.length} from MotorLink, ${uniqueGoogleGarages.length} from nearby) - Sorted by distance`
+        ? `Found ${allGarages.length} garages within ${GARAGE_NEARBY_RADIUS_KM}km (${currentGarages.length} MotorLink checked, ${uniqueGoogleGarages.length} nearby map results) - Sorted by distance`
         : `Found ${allGarages.length} garages (${currentGarages.length} from MotorLink, ${uniqueGoogleGarages.length} from nearby)`;
     
     showSearchStatus(statusMessage, 'success');
@@ -1009,6 +1028,7 @@ function clearFilters() {
     if (sortFilter) sortFilter.value = 'featured';
     
     userLocation = null;
+    nearbyGarageSearchActive = false;
     hideLocationStatus();
     hideSearchStatus();
     loadGarages();
@@ -1271,14 +1291,9 @@ window.setGaragesPage = function(page, perPage) {
 function updateSortFilterUI(garages) {
     const sortFilter = document.getElementById('sortFilter');
     if (!sortFilter) return;
-    
-    const currentSort = sortFilter.value;
-    const hasDistanceInfo = garages.some(g => g.distance != null);
-    const shouldSortByDistance = hasDistanceInfo && userLocation;
-    
-    // Automatically switch to distance sorting if on featured and distances are available
-    if (currentSort === 'featured' && shouldSortByDistance) {
-        sortFilter.value = 'distance';
+
+    if (sortFilter.value === 'distance' && !userLocation) {
+        sortFilter.value = 'featured';
     }
 }
 

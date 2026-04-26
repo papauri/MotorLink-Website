@@ -143,7 +143,10 @@ const DEFAULT_PUBLIC_SITE_CONFIG = {
     geo_region: '',
     geo_placename: '',
     geo_position: '',
-    icbm: ''
+    icbm: '',
+    cookie_consent_enabled: '1',
+    cookie_consent_version: '1.0',
+    cookie_consent_log_enabled: '1'
 };
 
 function getDefaultPublicSiteUrl() {
@@ -362,6 +365,9 @@ function applyRuntimeSiteConfig(runtimeConfig = {}) {
     CONFIG.GEO_PLACENAME = merged.geo_placename || '';
     CONFIG.GEO_POSITION = merged.geo_position || '';
     CONFIG.ICBM = merged.icbm || '';
+    CONFIG.COOKIE_CONSENT_ENABLED = merged.cookie_consent_enabled !== '0';
+    CONFIG.COOKIE_CONSENT_VERSION = merged.cookie_consent_version || DEFAULT_PUBLIC_SITE_CONFIG.cookie_consent_version;
+    CONFIG.COOKIE_CONSENT_LOG_ENABLED = merged.cookie_consent_log_enabled !== '0';
 
     if (merged.google_maps_api_key) {
         CONFIG.GOOGLE_MAPS_API_KEY = merged.google_maps_api_key;
@@ -371,7 +377,7 @@ function applyRuntimeSiteConfig(runtimeConfig = {}) {
     }
     if (merged.ga_measurement_id && /^G-[A-Z0-9]+$/i.test(merged.ga_measurement_id)) {
         CONFIG.GA_MEASUREMENT_ID = merged.ga_measurement_id;
-        injectGA4(merged.ga_measurement_id);
+        maybeInjectGA4();
     }
 
     applyBrandingToDocument();
@@ -404,8 +410,44 @@ function getPublicSiteConfigSnapshot() {
         icbm: CONFIG.ICBM,
         google_maps_api_key: CONFIG.GOOGLE_MAPS_API_KEY,
         google_maps_map_id: CONFIG.GOOGLE_MAPS_MAP_ID,
-        ga_measurement_id: CONFIG.GA_MEASUREMENT_ID
+        ga_measurement_id: CONFIG.GA_MEASUREMENT_ID,
+        cookie_consent_enabled: CONFIG.COOKIE_CONSENT_ENABLED ? '1' : '0',
+        cookie_consent_version: CONFIG.COOKIE_CONSENT_VERSION,
+        cookie_consent_log_enabled: CONFIG.COOKIE_CONSENT_LOG_ENABLED ? '1' : '0'
     };
+}
+
+function getStoredCookieConsent() {
+    try {
+        const raw = localStorage.getItem('cookie_consent');
+        return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+        return null;
+    }
+}
+
+function hasMotorLinkAnalyticsConsent() {
+    const consent = getStoredCookieConsent();
+    return !!(consent && consent.preferences && consent.preferences.analytics === true);
+}
+
+function maybeInjectGA4() {
+    if (!CONFIG.GA_MEASUREMENT_ID || !hasMotorLinkAnalyticsConsent()) return;
+    injectGA4(CONFIG.GA_MEASUREMENT_ID);
+}
+
+function enableMotorLinkAnalytics() {
+    if (!CONFIG.GA_MEASUREMENT_ID) return;
+    injectGA4(CONFIG.GA_MEASUREMENT_ID);
+    if (typeof window.gtag === 'function') {
+        window.gtag('consent', 'update', { analytics_storage: 'granted' });
+    }
+}
+
+function disableMotorLinkAnalytics() {
+    if (typeof window.gtag === 'function') {
+        window.gtag('consent', 'update', { analytics_storage: 'denied' });
+    }
 }
 
 /**
@@ -423,9 +465,13 @@ function injectGA4(measurementId) {
     window.dataLayer = window.dataLayer || [];
     function gtag() { window.dataLayer.push(arguments); }
     window.gtag = window.gtag || gtag;
+    gtag('consent', 'default', { analytics_storage: 'granted' });
     gtag('js', new Date());
     gtag('config', measurementId);
 }
+
+window.enableMotorLinkAnalytics = enableMotorLinkAnalytics;
+window.disableMotorLinkAnalytics = disableMotorLinkAnalytics;
 
 function applyBrandingToDocument() {
     if (document && document.documentElement) {
@@ -586,7 +632,10 @@ const CONFIG = {
     USE_CREDENTIALS: true,
     GOOGLE_MAPS_API_KEY: null,
     GOOGLE_MAPS_MAP_ID: null,
-    GA_MEASUREMENT_ID: null
+    GA_MEASUREMENT_ID: null,
+    COOKIE_CONSENT_ENABLED: DEFAULT_PUBLIC_SITE_CONFIG.cookie_consent_enabled !== '0',
+    COOKIE_CONSENT_VERSION: DEFAULT_PUBLIC_SITE_CONFIG.cookie_consent_version,
+    COOKIE_CONSENT_LOG_ENABLED: DEFAULT_PUBLIC_SITE_CONFIG.cookie_consent_log_enabled !== '0'
 };
 
 let __runtimePublicConfigPromise = null;
