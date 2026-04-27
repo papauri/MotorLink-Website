@@ -29,7 +29,7 @@ class RecommendationEngine {
 
         $preferences = $this->analyzeUserPreferences();
         $collaborative = $this->collaborativeFiltering();
-        $content = $this->contentBasedFiltering($preferences, max($limit * 3, 24));
+        $content = $this->contentBasedFiltering($preferences, max($limit * 4, 32));
 
         $recommendations = $this->mergeAndRank($collaborative, $content, $preferences);
 
@@ -43,7 +43,138 @@ class RecommendationEngine {
             $recommendations = $this->getTrendingCars(max($limit * 2, 12), $excludeListingId);
         }
 
-        return array_slice($recommendations, 0, $limit);
+        return $this->diversifyRecommendations($recommendations, $limit);
+    }
+
+    /**
+     * Find cars that are genuinely similar to the listing a logged-in user is viewing.
+     */
+    public function getSimilarListings($listingId, $limit = 8) {
+        $listingId = (int)$listingId;
+        $limit = max(1, min(18, (int)$limit));
+
+        if ($listingId <= 0) {
+            return [];
+        }
+
+        $anchor = $this->getAnchorListing($listingId);
+        if (!$anchor) {
+            return [];
+        }
+
+        $targetPrice = max(1, (float)($anchor['price'] ?? 0));
+        $targetMileage = max(1, (float)($anchor['mileage'] ?? 0));
+        $targetYear = max(1990, (int)($anchor['year'] ?? date('Y')));
+        $priceMin = $targetPrice > 1 ? $targetPrice * 0.65 : 0;
+        $priceMax = $targetPrice > 1 ? $targetPrice * 1.45 : 999999999;
+        $yearMin = $targetYear - 4;
+        $yearMax = $targetYear + 4;
+        $candidateLimit = min(80, max($limit * 6, 36));
+
+        $sql = "
+            SELECT
+                cl.id,
+                cl.title,
+                cl.featured_image_id,
+                cl.make_id,
+                cl.model_id,
+                cl.year,
+                cl.price,
+                cl.negotiable,
+                cl.mileage,
+                cl.fuel_type,
+                cl.transmission,
+                cl.condition_type,
+                cl.exterior_color,
+                cl.interior_color,
+                cl.engine_size,
+                cl.doors,
+                cl.seats,
+                cl.drivetrain,
+                cl.location_id,
+                cl.listing_type,
+                cl.views_count,
+                cl.favorites_count,
+                cl.created_at,
+                cl.updated_at,
+                cm.name AS make_name,
+                cmo.name AS model_name,
+                cmo.body_type AS body_type,
+                loc.name AS location_name,
+                COALESCE(cl.featured_image_id,
+                    (SELECT id FROM car_listing_images WHERE listing_id = cl.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1)
+                ) AS primary_image_id,
+                (
+                    CASE WHEN cl.model_id = ? THEN 34 ELSE 0 END +
+                    CASE WHEN cl.make_id = ? THEN 18 ELSE 0 END +
+                    CASE WHEN cmo.body_type = ? THEN 12 ELSE 0 END +
+                    CASE WHEN cl.fuel_type = ? THEN 7 ELSE 0 END +
+                    CASE WHEN cl.transmission = ? THEN 6 ELSE 0 END +
+                    CASE WHEN cl.drivetrain = ? THEN 5 ELSE 0 END +
+                    CASE WHEN cl.condition_type = ? THEN 3 ELSE 0 END +
+                    CASE WHEN cl.seats = ? THEN 4 ELSE 0 END +
+                    GREATEST(0, 11 - (ABS(COALESCE(cl.year, ?) - ?) * 2.2)) +
+                    GREATEST(0, 12 - ((ABS(COALESCE(cl.price, ?) - ?) / ?) * 24)) +
+                    GREATEST(0, 6 - ((ABS(COALESCE(cl.mileage, ?) - ?) / ?) * 10)) +
+                    CASE WHEN cl.location_id = ? THEN 3 ELSE 0 END +
+                    CASE WHEN COALESCE(cl.featured_image_id,
+                        (SELECT id FROM car_listing_images WHERE listing_id = cl.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1)
+                    ) IS NOT NULL THEN 2 ELSE 0 END +
+                    CASE WHEN cl.listing_type = 'premium' THEN 3 WHEN cl.listing_type = 'featured' THEN 2 ELSE 0 END +
+                    LEAST(COALESCE(cl.views_count, 0) / 75, 4) +
+                    LEAST(COALESCE(cl.favorites_count, 0) / 12, 3) +
+                    GREATEST(0, 4 - (DATEDIFF(NOW(), cl.created_at) / 14))
+                ) AS similarity_score
+            FROM car_listings cl
+            INNER JOIN car_makes cm ON cl.make_id = cm.id
+            INNER JOIN car_models cmo ON cl.model_id = cmo.id
+            INNER JOIN locations loc ON cl.location_id = loc.id
+            WHERE cl.status = 'active'
+              AND cl.approval_status = 'approved'
+              AND cl.id != ?
+              AND (
+                  cl.model_id = ?
+                  OR cl.make_id = ?
+                  OR cmo.body_type = ?
+                  OR cl.year BETWEEN ? AND ?
+                  OR cl.price BETWEEN ? AND ?
+                  OR cl.seats = ?
+              )
+            ORDER BY similarity_score DESC, cl.created_at DESC
+            LIMIT {$candidateLimit}
+        ";
+
+        $params = [
+            (int)$anchor['model_id'],
+            (int)$anchor['make_id'],
+            $anchor['body_type'],
+            $anchor['fuel_type'],
+            $anchor['transmission'],
+            $anchor['drivetrain'],
+            $anchor['condition_type'],
+            (int)$anchor['seats'],
+            $targetYear, $targetYear,
+            $targetPrice, $targetPrice, $targetPrice,
+            $targetMileage, $targetMileage, $targetMileage,
+            (int)$anchor['location_id'],
+            $listingId,
+            (int)$anchor['model_id'],
+            (int)$anchor['make_id'],
+            $anchor['body_type'],
+            $yearMin, $yearMax,
+            $priceMin, $priceMax,
+            (int)$anchor['seats']
+        ];
+
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $rows = $this->decorateListingRows($stmt->fetchAll(PDO::FETCH_ASSOC));
+            return array_slice($rows, 0, $limit);
+        } catch (Exception $e) {
+            error_log('getSimilarListings failed: ' . $e->getMessage());
+            return [];
+        }
     }
 
     /**
@@ -52,32 +183,62 @@ class RecommendationEngine {
     private function analyzeUserPreferences() {
         $defaults = $this->getDefaultPreferences();
         $historyPrefs = $this->loadHistoryPreferences();
+        $savedPrefs = $this->loadSavedListingPreferences();
         $storedPrefs = $this->loadStoredPreferences();
 
-        $defaults['avg_price'] = $this->pickNumericPreference($historyPrefs['avg_price'] ?? null, $storedPrefs['avg_price'] ?? null, $defaults['avg_price']);
-        $defaults['avg_year'] = $this->pickNumericPreference($historyPrefs['avg_year'] ?? null, $storedPrefs['avg_year'] ?? null, $defaults['avg_year']);
-        $defaults['avg_mileage'] = $this->pickNumericPreference($historyPrefs['avg_mileage'] ?? null, $storedPrefs['avg_mileage'] ?? null, $defaults['avg_mileage']);
+        $defaults['avg_price'] = $this->pickNumericPreference($historyPrefs['avg_price'] ?? null, $savedPrefs['avg_price'] ?? null, $storedPrefs['avg_price'] ?? null, $defaults['avg_price']);
+        $defaults['avg_year'] = $this->pickNumericPreference($historyPrefs['avg_year'] ?? null, $savedPrefs['avg_year'] ?? null, $storedPrefs['avg_year'] ?? null, $defaults['avg_year']);
+        $defaults['avg_mileage'] = $this->pickNumericPreference($historyPrefs['avg_mileage'] ?? null, $savedPrefs['avg_mileage'] ?? null, $storedPrefs['avg_mileage'] ?? null, $defaults['avg_mileage']);
 
         $defaults['preferred_makes'] = $this->mergePreferenceLists(
             $defaults['preferred_makes'],
             $historyPrefs['preferred_makes'] ?? [],
+            $savedPrefs['preferred_makes'] ?? [],
             $storedPrefs['preferred_makes'] ?? []
+        );
+
+        $defaults['preferred_models'] = $this->mergePreferenceLists(
+            $defaults['preferred_models'],
+            $historyPrefs['preferred_models'] ?? [],
+            $savedPrefs['preferred_models'] ?? [],
+            $storedPrefs['preferred_models'] ?? []
         );
 
         $defaults['preferred_body_types'] = $this->mergePreferenceLists(
             $defaults['preferred_body_types'],
             $historyPrefs['preferred_body_types'] ?? [],
+            $savedPrefs['preferred_body_types'] ?? [],
             $storedPrefs['preferred_body_types'] ?? []
         );
 
         $defaults['preferred_fuel_types'] = $this->mergePreferenceLists(
             $historyPrefs['preferred_fuel_types'] ?? [],
+            $savedPrefs['preferred_fuel_types'] ?? [],
             $storedPrefs['preferred_fuel_types'] ?? []
         );
 
         $defaults['preferred_transmissions'] = $this->mergePreferenceLists(
             $historyPrefs['preferred_transmissions'] ?? [],
+            $savedPrefs['preferred_transmissions'] ?? [],
             $storedPrefs['preferred_transmissions'] ?? []
+        );
+
+        $defaults['preferred_drivetrains'] = $this->mergePreferenceLists(
+            $historyPrefs['preferred_drivetrains'] ?? [],
+            $savedPrefs['preferred_drivetrains'] ?? [],
+            $storedPrefs['preferred_drivetrains'] ?? []
+        );
+
+        $defaults['preferred_conditions'] = $this->mergePreferenceLists(
+            $historyPrefs['preferred_conditions'] ?? [],
+            $savedPrefs['preferred_conditions'] ?? [],
+            $storedPrefs['preferred_conditions'] ?? []
+        );
+
+        $defaults['preferred_locations'] = $this->mergePreferenceLists(
+            $historyPrefs['preferred_locations'] ?? [],
+            $savedPrefs['preferred_locations'] ?? [],
+            $storedPrefs['preferred_locations'] ?? []
         );
 
         $defaults['interaction_score'] = $this->calculateInteractionScore();
@@ -118,17 +279,26 @@ class RecommendationEngine {
                         / NULLIF(SUM(COALESCE(vh.view_count, 1)), 0)        AS avg_mileage,
                     GROUP_CONCAT(DISTINCT cm.name
                         ORDER BY vh.view_count DESC SEPARATOR ',')          AS preferred_makes,
+                    GROUP_CONCAT(DISTINCT cmo.name
+                        ORDER BY vh.view_count DESC SEPARATOR ',')          AS preferred_models,
                     GROUP_CONCAT(DISTINCT cmo.body_type
                         ORDER BY vh.view_count DESC SEPARATOR ',')          AS preferred_body_types,
                     GROUP_CONCAT(DISTINCT cl.fuel_type
                         ORDER BY vh.view_count DESC SEPARATOR ',')          AS preferred_fuel_types,
                     GROUP_CONCAT(DISTINCT cl.transmission
                         ORDER BY vh.view_count DESC SEPARATOR ',')          AS preferred_transmissions,
+                    GROUP_CONCAT(DISTINCT cl.drivetrain
+                        ORDER BY vh.view_count DESC SEPARATOR ',')          AS preferred_drivetrains,
+                    GROUP_CONCAT(DISTINCT cl.condition_type
+                        ORDER BY vh.view_count DESC SEPARATOR ',')          AS preferred_conditions,
+                    GROUP_CONCAT(DISTINCT loc.name
+                        ORDER BY vh.view_count DESC SEPARATOR ',')          AS preferred_locations,
                     COUNT(DISTINCT vh.listing_id)                           AS total_views
                 FROM {$historyTable} vh
                 JOIN car_listings cl  ON vh.listing_id = cl.id
                 JOIN car_makes cm     ON cl.make_id = cm.id
                 JOIN car_models cmo   ON cl.model_id = cmo.id
+                JOIN locations loc    ON cl.location_id = loc.id
                 WHERE vh.{$identity} = ?
                 AND vh.last_viewed > DATE_SUB(NOW(), INTERVAL 45 DAY)
             ";
@@ -146,12 +316,76 @@ class RecommendationEngine {
                 'avg_year'               => !empty($row['avg_year'])   ? (float)$row['avg_year']   : null,
                 'avg_mileage'            => !empty($row['avg_mileage'])? (float)$row['avg_mileage']: null,
                 'preferred_makes'        => $this->normalizePreferenceList($row['preferred_makes']        ?? ''),
+                'preferred_models'       => $this->normalizePreferenceList($row['preferred_models']       ?? ''),
                 'preferred_body_types'   => $this->normalizePreferenceList($row['preferred_body_types']   ?? ''),
                 'preferred_fuel_types'   => $this->normalizePreferenceList($row['preferred_fuel_types']   ?? ''),
                 'preferred_transmissions'=> $this->normalizePreferenceList($row['preferred_transmissions']?? ''),
+                'preferred_drivetrains'  => $this->normalizePreferenceList($row['preferred_drivetrains']  ?? ''),
+                'preferred_conditions'   => $this->normalizePreferenceList($row['preferred_conditions']   ?? ''),
+                'preferred_locations'    => $this->normalizePreferenceList($row['preferred_locations']    ?? ''),
             ];
         } catch (Exception $e) {
             error_log('Recommendation history preference query failed: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Saved cars are high-intent preference signals for logged-in buyers.
+     */
+    private function loadSavedListingPreferences() {
+        if (!$this->userId) {
+            return [];
+        }
+
+        try {
+            $sql = "
+                SELECT
+                    AVG(cl.price) AS avg_price,
+                    AVG(cl.year) AS avg_year,
+                    AVG(cl.mileage) AS avg_mileage,
+                    GROUP_CONCAT(DISTINCT cm.name ORDER BY sl.created_at DESC SEPARATOR ',') AS preferred_makes,
+                    GROUP_CONCAT(DISTINCT cmo.name ORDER BY sl.created_at DESC SEPARATOR ',') AS preferred_models,
+                    GROUP_CONCAT(DISTINCT cmo.body_type ORDER BY sl.created_at DESC SEPARATOR ',') AS preferred_body_types,
+                    GROUP_CONCAT(DISTINCT cl.fuel_type ORDER BY sl.created_at DESC SEPARATOR ',') AS preferred_fuel_types,
+                    GROUP_CONCAT(DISTINCT cl.transmission ORDER BY sl.created_at DESC SEPARATOR ',') AS preferred_transmissions,
+                    GROUP_CONCAT(DISTINCT cl.drivetrain ORDER BY sl.created_at DESC SEPARATOR ',') AS preferred_drivetrains,
+                    GROUP_CONCAT(DISTINCT cl.condition_type ORDER BY sl.created_at DESC SEPARATOR ',') AS preferred_conditions,
+                    GROUP_CONCAT(DISTINCT loc.name ORDER BY sl.created_at DESC SEPARATOR ',') AS preferred_locations
+                FROM saved_listings sl
+                JOIN car_listings cl ON sl.listing_id = cl.id
+                JOIN car_makes cm ON cl.make_id = cm.id
+                JOIN car_models cmo ON cl.model_id = cmo.id
+                JOIN locations loc ON cl.location_id = loc.id
+                WHERE sl.user_id = ?
+                  AND cl.status = 'active'
+                  AND cl.approval_status = 'approved'
+                  AND sl.created_at > DATE_SUB(NOW(), INTERVAL 180 DAY)
+            ";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$this->userId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) {
+                return [];
+            }
+
+            return [
+                'avg_price' => !empty($row['avg_price']) ? (float)$row['avg_price'] : null,
+                'avg_year' => !empty($row['avg_year']) ? (float)$row['avg_year'] : null,
+                'avg_mileage' => !empty($row['avg_mileage']) ? (float)$row['avg_mileage'] : null,
+                'preferred_makes' => $this->normalizePreferenceList($row['preferred_makes'] ?? ''),
+                'preferred_models' => $this->normalizePreferenceList($row['preferred_models'] ?? ''),
+                'preferred_body_types' => $this->normalizePreferenceList($row['preferred_body_types'] ?? ''),
+                'preferred_fuel_types' => $this->normalizePreferenceList($row['preferred_fuel_types'] ?? ''),
+                'preferred_transmissions' => $this->normalizePreferenceList($row['preferred_transmissions'] ?? ''),
+                'preferred_drivetrains' => $this->normalizePreferenceList($row['preferred_drivetrains'] ?? ''),
+                'preferred_conditions' => $this->normalizePreferenceList($row['preferred_conditions'] ?? ''),
+                'preferred_locations' => $this->normalizePreferenceList($row['preferred_locations'] ?? ''),
+            ];
+        } catch (Exception $e) {
+            error_log('Recommendation saved preference query failed: ' . $e->getMessage());
             return [];
         }
     }
@@ -183,9 +417,13 @@ class RecommendationEngine {
 
             $stored = [
                 'preferred_makes'         => $this->normalizePreferenceList($decoded['preferred_makes']  ?? ($decoded['makes']       ?? [])),
+                'preferred_models'        => $this->normalizePreferenceList($decoded['preferred_models'] ?? ($decoded['models']      ?? [])),
                 'preferred_body_types'    => $this->normalizePreferenceList($decoded['preferred_body_types'] ?? ($decoded['body_types'] ?? [])),
                 'preferred_fuel_types'    => $this->normalizePreferenceList($decoded['preferred_fuel_types']  ?? ($decoded['fuel_types']  ?? [])),
                 'preferred_transmissions' => $this->normalizePreferenceList($decoded['preferred_transmissions'] ?? ($decoded['transmissions'] ?? [])),
+                'preferred_drivetrains'   => $this->normalizePreferenceList($decoded['preferred_drivetrains'] ?? ($decoded['drivetrains'] ?? [])),
+                'preferred_conditions'    => $this->normalizePreferenceList($decoded['preferred_conditions'] ?? ($decoded['conditions'] ?? [])),
+                'preferred_locations'     => $this->normalizePreferenceList($decoded['preferred_locations'] ?? ($decoded['locations'] ?? [])),
                 'avg_price' => null,
                 'avg_year'  => null,
                 'avg_mileage' => null
@@ -214,16 +452,14 @@ class RecommendationEngine {
         }
     }
 
-    private function pickNumericPreference($primary, $secondary, $fallback) {
-        if (is_numeric($primary) && (float)$primary > 0) {
-            return (float)$primary;
+    private function pickNumericPreference(...$values) {
+        foreach ($values as $value) {
+            if (is_numeric($value) && (float)$value > 0) {
+                return (float)$value;
+            }
         }
 
-        if (is_numeric($secondary) && (float)$secondary > 0) {
-            return (float)$secondary;
-        }
-
-        return (float)$fallback;
+        return 0.0;
     }
 
     private function mergePreferenceLists(...$lists) {
@@ -282,6 +518,8 @@ class RecommendationEngine {
             return 0;
         }
 
+        $score = 0.0;
+
         try {
             $sql = "
                 SELECT
@@ -299,11 +537,28 @@ class RecommendationEngine {
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$this->userId]);
-            return (float)($stmt->fetchColumn() ?: 0);
+            $score += (float)($stmt->fetchColumn() ?: 0);
         } catch (Exception $e) {
             // Table may not be available in all environments.
-            return 0;
         }
+
+        try {
+            $stmt = $this->db->prepare("SELECT COUNT(*) * 4 FROM saved_listings WHERE user_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 180 DAY)");
+            $stmt->execute([$this->userId]);
+            $score += (float)($stmt->fetchColumn() ?: 0);
+        } catch (Exception $e) {
+            // Optional table.
+        }
+
+        try {
+            $stmt = $this->db->prepare("SELECT COALESCE(SUM(view_count), 0) FROM viewing_history WHERE user_id = ? AND last_viewed > DATE_SUB(NOW(), INTERVAL 45 DAY)");
+            $stmt->execute([$this->userId]);
+            $score += min((float)($stmt->fetchColumn() ?: 0), 80);
+        } catch (Exception $e) {
+            // Optional table.
+        }
+
+        return $score;
     }
 
     /**
@@ -385,9 +640,13 @@ class RecommendationEngine {
         $avgMileage = max(1,    (float)($preferences['avg_mileage'] ?? 50000));
 
         $preferredMakes         = $this->normalizePreferenceList($preferences['preferred_makes']         ?? []);
+        $preferredModels        = $this->normalizePreferenceList($preferences['preferred_models']        ?? []);
         $preferredBodyTypes     = $this->normalizePreferenceList($preferences['preferred_body_types']    ?? []);
         $preferredFuelTypes     = $this->normalizePreferenceList($preferences['preferred_fuel_types']    ?? []);
         $preferredTransmissions = $this->normalizePreferenceList($preferences['preferred_transmissions'] ?? []);
+        $preferredDrivetrains   = $this->normalizePreferenceList($preferences['preferred_drivetrains']   ?? []);
+        $preferredConditions    = $this->normalizePreferenceList($preferences['preferred_conditions']    ?? []);
+        $preferredLocations     = $this->normalizePreferenceList($preferences['preferred_locations']     ?? []);
 
         // Lower score = better match (similarity distance, not ranking score).
         // Price/year/mileage deviation weights sum to 0.76; attribute bonuses bring it down further.
@@ -409,6 +668,12 @@ class RecommendationEngine {
             $params = array_merge($params, $preferredMakes);
         }
 
+        if (!empty($preferredModels)) {
+            $placeholders = implode(',', array_fill(0, count($preferredModels), '?'));
+            $scoreSql .= " + CASE WHEN cmo.name IN ({$placeholders}) THEN -0.28 ELSE 0 END";
+            $params = array_merge($params, $preferredModels);
+        }
+
         if (!empty($preferredBodyTypes)) {
             $placeholders = implode(',', array_fill(0, count($preferredBodyTypes), '?'));
             $scoreSql .= " + CASE WHEN cmo.body_type IN ({$placeholders}) THEN -0.12 ELSE 0 END";
@@ -427,6 +692,27 @@ class RecommendationEngine {
             $params = array_merge($params, $preferredTransmissions);
         }
 
+        if (!empty($preferredDrivetrains)) {
+            $placeholders = implode(',', array_fill(0, count($preferredDrivetrains), '?'));
+            $scoreSql .= " + CASE WHEN cl.drivetrain IN ({$placeholders}) THEN -0.05 ELSE 0 END";
+            $params = array_merge($params, $preferredDrivetrains);
+        }
+
+        if (!empty($preferredConditions)) {
+            $placeholders = implode(',', array_fill(0, count($preferredConditions), '?'));
+            $scoreSql .= " + CASE WHEN cl.condition_type IN ({$placeholders}) THEN -0.04 ELSE 0 END";
+            $params = array_merge($params, $preferredConditions);
+        }
+
+        if (!empty($preferredLocations)) {
+            $placeholders = implode(',', array_fill(0, count($preferredLocations), '?'));
+            $scoreSql .= " + CASE WHEN loc.name IN ({$placeholders}) THEN -0.05 ELSE 0 END";
+            $params = array_merge($params, $preferredLocations);
+        }
+
+        $scoreSql .= " + CASE WHEN COALESCE(cl.featured_image_id, (SELECT id FROM car_listing_images WHERE listing_id = cl.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1)) IS NOT NULL THEN -0.04 ELSE 0.08 END";
+        $scoreSql .= " + CASE WHEN cl.listing_type = 'premium' THEN -0.04 WHEN cl.listing_type = 'featured' THEN -0.025 ELSE 0 END";
+
         // Exclude listings the user has already viewed in the past 7 days
         // so recommendations are always fresh discoveries, not repeats.
         $excludeViewedSql = '';
@@ -439,15 +725,49 @@ class RecommendationEngine {
                 )
             ";
             $params[] = $this->userId;
+
+            $excludeViewedSql .= "
+                AND cl.id NOT IN (
+                    SELECT listing_id FROM saved_listings
+                    WHERE user_id = ?
+                )
+            ";
+            $params[] = $this->userId;
         }
 
         $sql = "
             SELECT
-                cl.*,
+                cl.id,
+                cl.title,
+                cl.featured_image_id,
+                cl.make_id,
+                cl.model_id,
+                cl.year,
+                cl.price,
+                cl.negotiable,
+                cl.mileage,
+                cl.fuel_type,
+                cl.transmission,
+                cl.condition_type,
+                cl.exterior_color,
+                cl.interior_color,
+                cl.engine_size,
+                cl.doors,
+                cl.seats,
+                cl.drivetrain,
+                cl.location_id,
+                cl.listing_type,
+                cl.views_count,
+                cl.favorites_count,
+                cl.created_at,
+                cl.updated_at,
                 cm.name AS make_name,
                 cmo.name AS model_name,
                 cmo.body_type AS body_type,
                 loc.name AS location_name,
+                COALESCE(cl.featured_image_id,
+                    (SELECT id FROM car_listing_images WHERE listing_id = cl.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1)
+                ) AS primary_image_id,
                 ({$scoreSql}) AS similarity_score
             FROM car_listings cl
             JOIN car_makes cm  ON cl.make_id    = cm.id
@@ -463,7 +783,7 @@ class RecommendationEngine {
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $this->decorateListingRows($stmt->fetchAll(PDO::FETCH_ASSOC));
         } catch (Exception $e) {
             error_log('Content filtering failed: ' . $e->getMessage());
             return [];
@@ -476,9 +796,13 @@ class RecommendationEngine {
     private function mergeAndRank($collaborative, $content, $preferences) {
         $merged = [];
         $preferredMakes         = $this->normalizePreferenceList($preferences['preferred_makes']         ?? []);
+        $preferredModels        = $this->normalizePreferenceList($preferences['preferred_models']        ?? []);
         $preferredBodyTypes     = $this->normalizePreferenceList($preferences['preferred_body_types']    ?? []);
         $preferredFuelTypes     = $this->normalizePreferenceList($preferences['preferred_fuel_types']    ?? []);
         $preferredTransmissions = $this->normalizePreferenceList($preferences['preferred_transmissions'] ?? []);
+        $preferredDrivetrains   = $this->normalizePreferenceList($preferences['preferred_drivetrains']   ?? []);
+        $preferredConditions    = $this->normalizePreferenceList($preferences['preferred_conditions']    ?? []);
+        $preferredLocations     = $this->normalizePreferenceList($preferences['preferred_locations']     ?? []);
 
         foreach ($collaborative as $item) {
             $id = (int)($item['id'] ?? 0);
@@ -514,6 +838,10 @@ class RecommendationEngine {
                 $merged[$id]['score'] += 0.06;
             }
 
+            if (!empty($item['model_name']) && in_array($item['model_name'], $preferredModels, true)) {
+                $merged[$id]['score'] += 0.08;
+            }
+
             if (!empty($item['body_type']) && in_array($item['body_type'], $preferredBodyTypes, true)) {
                 $merged[$id]['score'] += 0.04;
             }
@@ -524,6 +852,22 @@ class RecommendationEngine {
 
             if (!empty($item['transmission']) && in_array($item['transmission'], $preferredTransmissions, true)) {
                 $merged[$id]['score'] += 0.03;
+            }
+
+            if (!empty($item['drivetrain']) && in_array($item['drivetrain'], $preferredDrivetrains, true)) {
+                $merged[$id]['score'] += 0.03;
+            }
+
+            if (!empty($item['condition_type']) && in_array($item['condition_type'], $preferredConditions, true)) {
+                $merged[$id]['score'] += 0.025;
+            }
+
+            if (!empty($item['location_name']) && in_array($item['location_name'], $preferredLocations, true)) {
+                $merged[$id]['score'] += 0.025;
+            }
+
+            if (!empty($item['primary_image_id']) || !empty($item['featured_image_id'])) {
+                $merged[$id]['score'] += 0.025;
             }
         }
 
@@ -574,7 +918,7 @@ class RecommendationEngine {
 
         try {
             $sql = "
-                SELECT listing_id, COUNT(*) AS views, COUNT(DISTINCT user_id) AS unique_views
+                SELECT listing_id, SUM(COALESCE(view_count, 1)) AS views, COUNT(DISTINCT user_id) AS unique_views
                 FROM viewing_history
                 WHERE listing_id IN ({$placeholders})
                 AND last_viewed > DATE_SUB(NOW(), INTERVAL 10 DAY)
@@ -595,7 +939,7 @@ class RecommendationEngine {
 
         try {
             $sql = "
-                SELECT listing_id, COUNT(*) AS views, COUNT(DISTINCT session_id) AS unique_views
+                SELECT listing_id, SUM(COALESCE(view_count, 1)) AS views, COUNT(DISTINCT session_id) AS unique_views
                 FROM guest_viewing_history
                 WHERE listing_id IN ({$placeholders})
                 AND last_viewed > DATE_SUB(NOW(), INTERVAL 10 DAY)
@@ -626,6 +970,31 @@ class RecommendationEngine {
             $item['score'] += min(($views / 120), 0.10) + min(($unique / 80), 0.06);
         }
         unset($item);
+
+        try {
+            $sql = "
+                SELECT listing_id, COUNT(*) AS saves
+                FROM saved_listings
+                WHERE listing_id IN ({$placeholders})
+                GROUP BY listing_id
+            ";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($ids);
+            $savedCounts = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $savedCounts[(int)$row['listing_id']] = (int)$row['saves'];
+            }
+
+            foreach ($items as &$item) {
+                $id = (int)($item['id'] ?? 0);
+                if (isset($savedCounts[$id])) {
+                    $item['score'] += min($savedCounts[$id] / 45, 0.07);
+                }
+            }
+            unset($item);
+        } catch (Exception $e) {
+            // Optional table.
+        }
     }
 
     private function fetchListingDetails($listingIds) {
@@ -637,11 +1006,37 @@ class RecommendationEngine {
         $placeholders = implode(',', array_fill(0, count($listingIds), '?'));
         $sql = "
             SELECT
-                cl.*,
+                cl.id,
+                cl.title,
+                cl.featured_image_id,
+                cl.make_id,
+                cl.model_id,
+                cl.year,
+                cl.price,
+                cl.negotiable,
+                cl.mileage,
+                cl.fuel_type,
+                cl.transmission,
+                cl.condition_type,
+                cl.exterior_color,
+                cl.interior_color,
+                cl.engine_size,
+                cl.doors,
+                cl.seats,
+                cl.drivetrain,
+                cl.location_id,
+                cl.listing_type,
+                cl.views_count,
+                cl.favorites_count,
+                cl.created_at,
+                cl.updated_at,
                 cm.name AS make_name,
                 cmo.name AS model_name,
                 cmo.body_type AS body_type,
-                loc.name AS location_name
+                loc.name AS location_name,
+                COALESCE(cl.featured_image_id,
+                    (SELECT id FROM car_listing_images WHERE listing_id = cl.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1)
+                ) AS primary_image_id
             FROM car_listings cl
             JOIN car_makes cm ON cl.make_id = cm.id
             JOIN car_models cmo ON cl.model_id = cmo.id
@@ -654,11 +1049,116 @@ class RecommendationEngine {
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->execute($listingIds);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $this->decorateListingRows($stmt->fetchAll(PDO::FETCH_ASSOC));
         } catch (Exception $e) {
             error_log('fetchListingDetails failed: ' . $e->getMessage());
             return [];
         }
+    }
+
+    private function getAnchorListing($listingId) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT
+                    cl.id,
+                    cl.title,
+                    cl.featured_image_id,
+                    cl.make_id,
+                    cl.model_id,
+                    cl.year,
+                    cl.price,
+                    cl.negotiable,
+                    cl.mileage,
+                    cl.fuel_type,
+                    cl.transmission,
+                    cl.condition_type,
+                    cl.exterior_color,
+                    cl.interior_color,
+                    cl.engine_size,
+                    cl.doors,
+                    cl.seats,
+                    cl.drivetrain,
+                    cl.location_id,
+                    cl.listing_type,
+                    cl.views_count,
+                    cl.favorites_count,
+                    cl.created_at,
+                    cl.updated_at,
+                    cm.name AS make_name,
+                    cmo.name AS model_name,
+                    cmo.body_type AS body_type,
+                    loc.name AS location_name
+                FROM car_listings cl
+                INNER JOIN car_makes cm ON cl.make_id = cm.id
+                INNER JOIN car_models cmo ON cl.model_id = cmo.id
+                INNER JOIN locations loc ON cl.location_id = loc.id
+                WHERE cl.id = ?
+                  AND cl.status = 'active'
+                  AND cl.approval_status = 'approved'
+                LIMIT 1
+            ");
+            $stmt->execute([(int)$listingId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: null;
+        } catch (Exception $e) {
+            error_log('getAnchorListing failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    private function decorateListingRows($rows) {
+        if (!is_array($rows)) {
+            return [];
+        }
+
+        foreach ($rows as &$row) {
+            if (empty($row['featured_image_id']) && !empty($row['primary_image_id'])) {
+                $row['featured_image_id'] = (int)$row['primary_image_id'];
+            }
+
+            if (!empty($row['similarity_score'])) {
+                $row['similarity_score'] = round((float)$row['similarity_score'], 4);
+                $row['match_percent'] = (int)max(1, min(99, round(((float)$row['similarity_score'] / 96) * 100)));
+            }
+        }
+        unset($row);
+
+        return $rows;
+    }
+
+    private function diversifyRecommendations($items, $limit) {
+        $limit = max(1, min(30, (int)$limit));
+        $selected = [];
+        $deferred = [];
+        $makeCounts = [];
+        $modelCounts = [];
+
+        foreach ($items as $item) {
+            $make = strtolower((string)($item['make_name'] ?? 'unknown'));
+            $model = strtolower((string)($item['model_name'] ?? 'unknown'));
+
+            if (($makeCounts[$make] ?? 0) >= 3 || ($modelCounts[$model] ?? 0) >= 2) {
+                $deferred[] = $item;
+                continue;
+            }
+
+            $selected[] = $item;
+            $makeCounts[$make] = ($makeCounts[$make] ?? 0) + 1;
+            $modelCounts[$model] = ($modelCounts[$model] ?? 0) + 1;
+
+            if (count($selected) >= $limit) {
+                return $selected;
+            }
+        }
+
+        foreach ($deferred as $item) {
+            $selected[] = $item;
+            if (count($selected) >= $limit) {
+                break;
+            }
+        }
+
+        return array_slice($selected, 0, $limit);
     }
 
     private function getDefaultPreferences() {
@@ -667,9 +1167,13 @@ class RecommendationEngine {
             'avg_year'                => 2018,
             'avg_mileage'             => 50000,
             'preferred_makes'         => ['Toyota', 'Nissan', 'Mazda'],
-            'preferred_body_types'    => ['Sedan', 'SUV'],
+            'preferred_models'        => [],
+            'preferred_body_types'    => ['sedan', 'suv', 'crossover'],
             'preferred_fuel_types'    => [],
             'preferred_transmissions' => [],
+            'preferred_drivetrains'   => [],
+            'preferred_conditions'    => [],
+            'preferred_locations'     => [],
             'interaction_score'       => 0
         ];
     }
@@ -832,11 +1336,37 @@ class RecommendationEngine {
 
         $sql = "
             SELECT
-                cl.*,
+                cl.id,
+                cl.title,
+                cl.featured_image_id,
+                cl.make_id,
+                cl.model_id,
+                cl.year,
+                cl.price,
+                cl.negotiable,
+                cl.mileage,
+                cl.fuel_type,
+                cl.transmission,
+                cl.condition_type,
+                cl.exterior_color,
+                cl.interior_color,
+                cl.engine_size,
+                cl.doors,
+                cl.seats,
+                cl.drivetrain,
+                cl.location_id,
+                cl.listing_type,
+                cl.views_count,
+                cl.favorites_count,
+                cl.created_at,
+                cl.updated_at,
                 cm.name AS make_name,
                 cmo.name AS model_name,
                 cmo.body_type AS body_type,
                 loc.name AS location_name,
+                COALESCE(cl.featured_image_id,
+                    (SELECT id FROM car_listing_images WHERE listing_id = cl.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1)
+                ) AS primary_image_id,
                 COALESCE(vh.total_views, 0) + COALESCE(gvh.total_views, 0) AS total_views,
                 COALESCE(vh.unique_views, 0) + COALESCE(gvh.unique_views, 0) AS unique_viewers
             FROM car_listings cl
@@ -844,13 +1374,13 @@ class RecommendationEngine {
             JOIN car_models cmo ON cl.model_id = cmo.id
             JOIN locations loc ON cl.location_id = loc.id
             LEFT JOIN (
-                SELECT listing_id, COUNT(*) AS total_views, COUNT(DISTINCT user_id) AS unique_views
+                SELECT listing_id, SUM(COALESCE(view_count, 1)) AS total_views, COUNT(DISTINCT user_id) AS unique_views
                 FROM viewing_history
                 WHERE last_viewed > DATE_SUB(NOW(), INTERVAL 10 DAY)
                 GROUP BY listing_id
             ) vh ON vh.listing_id = cl.id
             LEFT JOIN (
-                SELECT listing_id, COUNT(*) AS total_views, COUNT(DISTINCT session_id) AS unique_views
+                SELECT listing_id, SUM(COALESCE(view_count, 1)) AS total_views, COUNT(DISTINCT session_id) AS unique_views
                 FROM guest_viewing_history
                 WHERE last_viewed > DATE_SUB(NOW(), INTERVAL 10 DAY)
                 GROUP BY listing_id
@@ -865,7 +1395,7 @@ class RecommendationEngine {
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $rows = $this->decorateListingRows($stmt->fetchAll(PDO::FETCH_ASSOC));
 
             if (!empty($rows)) {
                 return $rows;
@@ -877,11 +1407,37 @@ class RecommendationEngine {
         try {
             $fallbackSql = "
                 SELECT
-                    cl.*,
+                    cl.id,
+                    cl.title,
+                    cl.featured_image_id,
+                    cl.make_id,
+                    cl.model_id,
+                    cl.year,
+                    cl.price,
+                    cl.negotiable,
+                    cl.mileage,
+                    cl.fuel_type,
+                    cl.transmission,
+                    cl.condition_type,
+                    cl.exterior_color,
+                    cl.interior_color,
+                    cl.engine_size,
+                    cl.doors,
+                    cl.seats,
+                    cl.drivetrain,
+                    cl.location_id,
+                    cl.listing_type,
+                    cl.views_count,
+                    cl.favorites_count,
+                    cl.created_at,
+                    cl.updated_at,
                     cm.name AS make_name,
                     cmo.name AS model_name,
                     cmo.body_type AS body_type,
-                    loc.name AS location_name
+                    loc.name AS location_name,
+                    COALESCE(cl.featured_image_id,
+                        (SELECT id FROM car_listing_images WHERE listing_id = cl.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1)
+                    ) AS primary_image_id
                 FROM car_listings cl
                 JOIN car_makes cm ON cl.make_id = cm.id
                 JOIN car_models cmo ON cl.model_id = cmo.id
@@ -895,12 +1451,16 @@ class RecommendationEngine {
 
             $stmt = $this->db->prepare($fallbackSql);
             $stmt->execute($params);
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            return $this->decorateListingRows($stmt->fetchAll(PDO::FETCH_ASSOC));
         } catch (Exception $e) {
             error_log('getTrendingCars failed: ' . $e->getMessage());
             return [];
         }
     }
+}
+
+if (defined('MOTORLINK_RECOMMENDATION_ENGINE_LIB_ONLY')) {
+    return;
 }
 
 // -----------------------------------------------------------------------------
@@ -954,6 +1514,29 @@ try {
                     'type' => $type,
                     'count' => count($recommendations),
                     'session_tracking' => $sessionId ? true : false
+                ]
+            ]);
+            break;
+
+        case 'get_similar_listings':
+            if (!$userId) {
+                sendError('Authentication required', 401);
+            }
+
+            $listingId = (int)($_GET['listing_id'] ?? $_POST['listing_id'] ?? ($jsonInput['listing_id'] ?? 0));
+            if ($listingId <= 0) {
+                sendError('Missing listing_id', 400);
+            }
+
+            $limit = (int)($_GET['limit'] ?? $_POST['limit'] ?? ($jsonInput['limit'] ?? 8));
+            $similarListings = $engine->getSimilarListings($listingId, $limit);
+
+            sendSuccess([
+                'similar_listings' => $similarListings,
+                'meta' => [
+                    'type' => 'similar',
+                    'count' => count($similarListings),
+                    'listing_id' => $listingId
                 ]
             ]);
             break;
@@ -1015,12 +1598,15 @@ try {
                     $stmt = $reDB->prepare("
                         SELECT
                             vh.listing_id, vh.last_viewed,
-                            cl.title, cl.make, cl.model, cl.year, cl.price, cl.mileage,
+                            cl.title, cm.name AS make, cmo.name AS model, cmo.body_type,
+                            cl.year, cl.price, cl.mileage,
                             cl.fuel_type, cl.transmission, cl.location_id,
                             l.name AS location_name,
-                            (SELECT id FROM car_listing_images WHERE listing_id = cl.id AND is_primary = 1 LIMIT 1) AS primary_image_id
+                            (SELECT id FROM car_listing_images WHERE listing_id = cl.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1) AS primary_image_id
                         FROM viewing_history vh
-                        JOIN car_listings cl ON cl.id = vh.listing_id AND cl.status = 'active'
+                        JOIN car_listings cl ON cl.id = vh.listing_id AND cl.status = 'active' AND cl.approval_status = 'approved'
+                        JOIN car_makes cm ON cl.make_id = cm.id
+                        JOIN car_models cmo ON cl.model_id = cmo.id
                         LEFT JOIN locations l ON l.id = cl.location_id
                         WHERE vh.user_id = ?
                         ORDER BY vh.last_viewed DESC
@@ -1038,12 +1624,15 @@ try {
                     $stmt = $reDB->prepare("
                         SELECT
                             gvh.listing_id, gvh.last_viewed,
-                            cl.title, cl.make, cl.model, cl.year, cl.price, cl.mileage,
+                            cl.title, cm.name AS make, cmo.name AS model, cmo.body_type,
+                            cl.year, cl.price, cl.mileage,
                             cl.fuel_type, cl.transmission, cl.location_id,
                             l.name AS location_name,
-                            (SELECT id FROM car_listing_images WHERE listing_id = cl.id AND is_primary = 1 LIMIT 1) AS primary_image_id
+                            (SELECT id FROM car_listing_images WHERE listing_id = cl.id ORDER BY is_primary DESC, sort_order ASC, id ASC LIMIT 1) AS primary_image_id
                         FROM guest_viewing_history gvh
-                        JOIN car_listings cl ON cl.id = gvh.listing_id AND cl.status = 'active'
+                        JOIN car_listings cl ON cl.id = gvh.listing_id AND cl.status = 'active' AND cl.approval_status = 'approved'
+                        JOIN car_makes cm ON cl.make_id = cm.id
+                        JOIN car_models cmo ON cl.model_id = cmo.id
                         LEFT JOIN locations l ON l.id = cl.location_id
                         WHERE gvh.session_id = ?
                         ORDER BY gvh.last_viewed DESC

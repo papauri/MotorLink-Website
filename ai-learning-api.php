@@ -516,7 +516,7 @@ function getLearningPriorityModelsFromDatabase($db, $limit = 100) {
 
     try {
         $limit = max(1, min((int)$limit, 500));
-        $stmt = $db->query("\n            SELECT DISTINCT mk.name AS make_name, cm.name AS model_name\n            FROM car_models cm\n            INNER JOIN car_makes mk ON cm.make_id = mk.id\n            WHERE cm.is_active = 1 AND mk.is_active = 1\n            ORDER BY mk.name, cm.name\n            LIMIT {$limit}\n        ");
+        $stmt = $db->query("\n            SELECT\n                mk.name AS make_name,\n                cm.name AS model_name,\n                COUNT(DISTINCT cl.id) AS active_listing_count,\n                COALESCE(SUM(cl.views_count), 0) AS listing_views,\n                COALESCE(SUM(cl.favorites_count), 0) AS listing_favorites\n            FROM car_models cm\n            INNER JOIN car_makes mk ON cm.make_id = mk.id\n            LEFT JOIN car_listings cl\n                ON cl.make_id = mk.id\n               AND cl.model_id = cm.id\n               AND cl.status = 'active'\n               AND cl.approval_status = 'approved'\n            WHERE cm.is_active = 1 AND mk.is_active = 1\n            GROUP BY mk.name, cm.name\n            ORDER BY active_listing_count DESC, listing_views DESC, listing_favorites DESC, mk.name, cm.name\n            LIMIT {$limit}\n        ");
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as $row) {
@@ -528,7 +528,10 @@ function getLearningPriorityModelsFromDatabase($db, $limit = 100) {
 
             $models[] = [
                 'make' => $makeName,
-                'model' => $modelName
+                'model' => $modelName,
+                'active_listing_count' => (int)($row['active_listing_count'] ?? 0),
+                'listing_views' => (int)($row['listing_views'] ?? 0),
+                'listing_favorites' => (int)($row['listing_favorites'] ?? 0)
             ];
         }
     } catch (Exception $e) {
@@ -1069,6 +1072,13 @@ function buildIntentionalDatabaseCarSummary(array $row) {
         $lines[] = "- Seating capacity: " . $row['seating_capacity'];
     }
 
+    $activeListings = (int)($row['active_listing_count'] ?? 0);
+    $listingViews = (int)($row['listing_views'] ?? 0);
+    $listingFavorites = (int)($row['listing_favorites'] ?? 0);
+    if ($activeListings > 0 || $listingViews > 0 || $listingFavorites > 0) {
+        $lines[] = "- Marketplace demand in MotorLink DB: {$activeListings} active approved listing" . ($activeListings === 1 ? '' : 's') . ", {$listingViews} listing view" . ($listingViews === 1 ? '' : 's') . ", {$listingFavorites} favorite" . ($listingFavorites === 1 ? '' : 's') . ".";
+    }
+
     $lines[] = "Source: MotorLink internal car_models database.";
 
     return implode("\n", $lines);
@@ -1117,11 +1127,35 @@ function learnWebCacheFromDatabaseCars($db, $count = 300) {
                 cm.fuel_consumption_combined_l100km,
                 cm.transmission_type,
                 cm.drive_type,
-                cm.seating_capacity
+                cm.seating_capacity,
+                COUNT(DISTINCT cl.id) AS active_listing_count,
+                COALESCE(SUM(cl.views_count), 0) AS listing_views,
+                COALESCE(SUM(cl.favorites_count), 0) AS listing_favorites
             FROM car_models cm
             INNER JOIN car_makes mk ON cm.make_id = mk.id
+            LEFT JOIN car_listings cl
+                ON cl.make_id = mk.id
+               AND cl.model_id = cm.id
+               AND cl.status = 'active'
+               AND cl.approval_status = 'approved'
             WHERE cm.is_active = 1 AND mk.is_active = 1
-            ORDER BY mk.name ASC, cm.name ASC
+            GROUP BY
+                mk.name,
+                cm.name,
+                cm.year_start,
+                cm.year_end,
+                cm.body_type,
+                cm.engine_size_liters,
+                cm.engine_cylinders,
+                cm.horsepower_hp,
+                cm.torque_nm,
+                cm.fuel_type,
+                cm.fuel_tank_capacity_liters,
+                cm.fuel_consumption_combined_l100km,
+                cm.transmission_type,
+                cm.drive_type,
+                cm.seating_capacity
+            ORDER BY active_listing_count DESC, listing_views DESC, listing_favorites DESC, mk.name ASC, cm.name ASC
             LIMIT {$modelFetchLimit}
         ";
 

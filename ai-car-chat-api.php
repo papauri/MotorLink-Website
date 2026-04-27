@@ -856,6 +856,200 @@ function scheduleContinuousLearningForQuery($db, $message) {
     });
 }
 
+function detectAIChatDatabaseLearningTrigger($message) {
+    $message = strtolower(trim((string)$message));
+    if ($message === '') {
+        return false;
+    }
+
+    return preg_match('/\b(learn|refresh|update|scan|rebuild|improve|teach)\b.*\b(database|db|motorlink data|inventory|listings|makes|models|car_models|learning cache)\b/i', $message) === 1
+        || preg_match('/\b(database|db|motorlink data|inventory|listings|makes|models|car_models)\b.*\b(learn|refresh|update|scan|rebuild|improve|teach)\b/i', $message) === 1
+        || preg_match('/\blearn\b.*\b(important|popular|available|active|live)\b.*\b(cars|vehicles|models|listings)\b/i', $message) === 1;
+}
+
+function scheduleAIChatDatabasePriorityLearning($db, $message, $limit = 24) {
+    if (!($db instanceof PDO)) {
+        return false;
+    }
+
+    $limit = max(5, min((int)$limit, 80));
+    $normalizedMessage = trim((string)$message);
+    static $scheduled = [];
+    $scheduleKey = hash('sha256', 'db-priority|' . strtolower($normalizedMessage) . '|' . $limit);
+    if (isset($scheduled[$scheduleKey])) {
+        return true;
+    }
+    $scheduled[$scheduleKey] = true;
+
+    register_shutdown_function(function() use ($db, $limit) {
+        try {
+            require_once __DIR__ . '/ai-learning-api.php';
+            if (function_exists('learnWebCacheFromDatabaseCars')) {
+                @learnWebCacheFromDatabaseCars($db, $limit);
+            }
+        } catch (Throwable $e) {
+            error_log('AI chat database priority learning error: ' . $e->getMessage());
+        }
+    });
+
+    return true;
+}
+
+function detectAIChatCorrectionSignal($message) {
+    $message = strtolower(trim((string)$message));
+    if ($message === '') {
+        return false;
+    }
+
+    return preg_match('/\b(wrong|incorrect|not correct|not accurate|false|mistake|correction|actually|to correct you|you missed|you forgot)\b/i', $message) === 1;
+}
+
+function detectAIChatExplicitLearningTrigger($message) {
+    $message = trim((string)$message);
+    if ($message === '') {
+        return false;
+    }
+
+    return detectAIChatCorrectionSignal($message)
+        || preg_match('/\b(remember|learn this|note this|important|save this|store this|keep in mind|for future|next time|always remember|do not forget|don\'t forget)\b/i', $message) === 1;
+}
+
+function extractAIChatLearningPayloadText($message, $limit = 500) {
+    $payload = trim((string)$message);
+    if ($payload === '') {
+        return '';
+    }
+
+    $payload = preg_replace('/^\s*(please\s+)?(remember|learn this|note this|save this|store this|keep in mind|for future|next time|important|correction)\s*[:\-]?\s*/i', '', $payload);
+    $payload = preg_replace('/^\s*(you\s+are\s+wrong|that\s+is\s+wrong|wrong|incorrect|actually)\s*[,;:\-]?\s*/i', '', (string)$payload);
+    $payload = trim(preg_replace('/\s+/', ' ', (string)$payload));
+
+    return aiChatTruncateText($payload !== '' ? $payload : $message, $limit);
+}
+
+function classifyAIChatFeedbackFailure($userMessage, $aiResponse = '') {
+    $haystack = strtolower(trim((string)$userMessage . ' ' . (string)$aiResponse));
+    if ($haystack === '') {
+        return 'unknown';
+    }
+
+    if (preg_match('/\b(price|pricing|budget|cost|mwk|kwacha|mk|under|below|million|cheap|cheapest|expensive|value)\b/i', $haystack)) {
+        return 'pricing';
+    }
+    if (preg_match('/\b(location|near|nearby|distance|district|region|lilongwe|blantyre|mzuzu|zomba|salima|mangochi)\b/i', $haystack)) {
+        return 'location';
+    }
+    if (preg_match('/\b(contact|phone|number|whatsapp|call|email)\b/i', $haystack)) {
+        return 'contact';
+    }
+    if (preg_match('/\b(spec|engine|fuel|transmission|drivetrain|part|parts|oem|compatibility|fitment|horsepower|torque)\b/i', $haystack)) {
+        return 'technical';
+    }
+    if (preg_match('/\b(listing|listings|dealer|garage|hire|rental|available|inventory|showroom|search|find)\b/i', $haystack)) {
+        return 'marketplace';
+    }
+
+    return 'quality';
+}
+
+function ensureAIChatFeedbackTable($db) {
+    static $ensured = false;
+    if ($ensured || !($db instanceof PDO)) {
+        return;
+    }
+
+    try {
+        $db->exec("CREATE TABLE IF NOT EXISTS `ai_chat_feedback` (
+            `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            `user_id` INT UNSIGNED NOT NULL,
+            `feedback` ENUM('helpful','not-helpful') NOT NULL,
+            `user_message` TEXT NOT NULL,
+            `ai_response` MEDIUMTEXT NOT NULL,
+            `failure_type` VARCHAR(40) DEFAULT NULL,
+            `correction_text` MEDIUMTEXT DEFAULT NULL,
+            `learning_status` VARCHAR(30) NOT NULL DEFAULT 'pending',
+            `learning_scheduled_at` DATETIME DEFAULT NULL,
+            `context_json` MEDIUMTEXT DEFAULT NULL,
+            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            INDEX `idx_feedback_type` (`feedback`),
+            INDEX `idx_feedback_failure` (`failure_type`),
+            INDEX `idx_created` (`created_at`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Exception $e) {
+        error_log('ai_chat_feedback table create error: ' . $e->getMessage());
+    }
+
+    $alterStatements = [
+        "ALTER TABLE ai_chat_feedback ADD COLUMN failure_type VARCHAR(40) DEFAULT NULL AFTER ai_response",
+        "ALTER TABLE ai_chat_feedback ADD COLUMN correction_text MEDIUMTEXT DEFAULT NULL AFTER failure_type",
+        "ALTER TABLE ai_chat_feedback ADD COLUMN learning_status VARCHAR(30) NOT NULL DEFAULT 'pending' AFTER correction_text",
+        "ALTER TABLE ai_chat_feedback ADD COLUMN learning_scheduled_at DATETIME DEFAULT NULL AFTER learning_status",
+        "ALTER TABLE ai_chat_feedback ADD COLUMN context_json MEDIUMTEXT DEFAULT NULL AFTER learning_scheduled_at",
+        "ALTER TABLE ai_chat_feedback ADD INDEX idx_feedback_failure (failure_type)"
+    ];
+
+    foreach ($alterStatements as $statement) {
+        try {
+            $db->exec($statement);
+        } catch (Exception $e) {
+            // Column or index already exists on upgraded databases.
+        }
+    }
+
+    $ensured = true;
+}
+
+function aiChatCompactFeedbackText($text, $limit = 220) {
+    $text = trim(strip_tags((string)$text));
+    $text = preg_replace('/\s+/', ' ', (string)$text);
+    return aiChatTruncateText($text, $limit);
+}
+
+function storeAIChatFeedbackRecord($db, $userId, $feedback, $userMessage, $aiResponse, array $extra = []) {
+    ensureAIChatFeedbackTable($db);
+
+    $failureType = trim((string)($extra['failure_type'] ?? classifyAIChatFeedbackFailure($userMessage, $aiResponse)));
+    $correctionText = trim((string)($extra['correction_text'] ?? ''));
+    $learningStatus = trim((string)($extra['learning_status'] ?? ($feedback === 'not-helpful' ? 'scheduled' : 'not_needed')));
+    $contextJson = !empty($extra['context']) ? json_encode($extra['context'], JSON_UNESCAPED_UNICODE) : null;
+    $scheduledAt = $feedback === 'not-helpful' ? date('Y-m-d H:i:s') : null;
+
+    try {
+        $stmt = $db->prepare(
+            "INSERT INTO ai_chat_feedback
+                (user_id, feedback, user_message, ai_response, failure_type, correction_text, learning_status, learning_scheduled_at, context_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        );
+        $stmt->execute([
+            (int)$userId,
+            $feedback,
+            $userMessage,
+            $aiResponse,
+            aiChatTruncateText($failureType, 40),
+            $correctionText !== '' ? aiChatTruncateText($correctionText, 4000) : null,
+            aiChatTruncateText($learningStatus !== '' ? $learningStatus : 'pending', 30),
+            $scheduledAt,
+            $contextJson
+        ]);
+        return true;
+    } catch (Exception $e) {
+        error_log('ai_chat_feedback rich insert error: ' . $e->getMessage());
+    }
+
+    try {
+        $stmt = $db->prepare(
+            "INSERT INTO ai_chat_feedback (user_id, feedback, user_message, ai_response)
+             VALUES (?, ?, ?, ?)"
+        );
+        $stmt->execute([(int)$userId, $feedback, $userMessage, $aiResponse]);
+        return true;
+    } catch (Exception $e) {
+        error_log('ai_chat_feedback fallback insert error: ' . $e->getMessage());
+        return false;
+    }
+}
+
 /**
  * Handle AI Car Chat requests
  * Provides AI-powered assistance for car-related questions only
@@ -890,40 +1084,60 @@ function handleAIFeedback($db) {
         sendError('Invalid feedback value', 400);
     }
 
-    // Create table on first use (idempotent)
-    try {
-        $db->exec("CREATE TABLE IF NOT EXISTS `ai_chat_feedback` (
-            `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
-            `user_id`      INT UNSIGNED NOT NULL,
-            `feedback`     ENUM('helpful','not-helpful') NOT NULL,
-            `user_message` TEXT         NOT NULL,
-            `ai_response`  MEDIUMTEXT   NOT NULL,
-            `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            INDEX `idx_feedback_type` (`feedback`),
-            INDEX `idx_created`       (`created_at`)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
-    } catch (Exception $e) {
-        error_log('ai_chat_feedback table create error: ' . $e->getMessage());
-        // Non-fatal — still attempt insert below
-    }
+    ensureAIChatFeedbackTable($db);
 
     if ($userMsg === '' || $aiResponse === '') {
         // No context to store; still acknowledge so UI doesn't error
         sendSuccess(['stored' => false]);
     }
 
-    try {
-        $stmt = $db->prepare(
-            "INSERT INTO ai_chat_feedback (user_id, feedback, user_message, ai_response)
-             VALUES (?, ?, ?, ?)"
-        );
-        $stmt->execute([$user['id'], $feedback, $userMsg, $aiResponse]);
-        sendSuccess(['stored' => true]);
-    } catch (Exception $e) {
-        error_log('ai_chat_feedback insert error: ' . $e->getMessage());
-        sendSuccess(['stored' => false]);  // Silent — feedback must never block UX
+    $correctionText = isset($data['correction_text']) ? trim((string)$data['correction_text']) : '';
+    if ($correctionText === '' && detectAIChatCorrectionSignal($userMsg)) {
+        $correctionText = extractAIChatLearningPayloadText($userMsg, 700);
     }
+
+    $failureType = classifyAIChatFeedbackFailure($userMsg, $aiResponse);
+    $stored = storeAIChatFeedbackRecord($db, $user['id'], $feedback, $userMsg, $aiResponse, [
+        'failure_type' => $failureType,
+        'correction_text' => $correctionText,
+        'context' => [
+            'endpoint' => 'ai_chat_feedback',
+            'message_topic' => detectAIChatTopic($userMsg, $aiResponse)
+        ]
+    ]);
+
+    if ($feedback === 'not-helpful') {
+        scheduleContinuousLearningForQuery($db, $userMsg);
+        if (in_array($failureType, ['marketplace', 'technical', 'pricing', 'location'], true) || detectAIChatDatabaseLearningTrigger($userMsg)) {
+            scheduleAIChatDatabasePriorityLearning($db, $userMsg, 16);
+        }
+
+        upsertAIChatUserMemory(
+            $db,
+            $user['id'],
+            'last_not_helpful_' . substr(hash('sha256', strtolower($userMsg)), 0, 16),
+            'User rejected answer for: ' . aiChatCompactFeedbackText($userMsg, 220) . ' | Failure type: ' . $failureType,
+            'correction',
+            0.86,
+            $userMsg
+        );
+
+        if ($correctionText !== '') {
+            upsertAIChatUserMemory(
+                $db,
+                $user['id'],
+                'correction_' . substr(hash('sha256', strtolower($correctionText)), 0, 16),
+                $correctionText,
+                'correction',
+                0.94,
+                $userMsg
+            );
+        }
+
+        refreshAIChatUserSummary($db, $user['id']);
+    }
+
+    sendSuccess(['stored' => $stored]);
 }
 
 /**
@@ -932,6 +1146,7 @@ function handleAIFeedback($db) {
  */
 function loadPositiveFeedbackExamples($db, $limit = 4) {
     try {
+        ensureAIChatFeedbackTable($db);
         $stmt = $db->prepare(
             "SELECT user_message, ai_response
              FROM ai_chat_feedback
@@ -955,8 +1170,9 @@ function loadPositiveFeedbackExamples($db, $limit = 4) {
  */
 function loadNegativeFeedbackExamples($db, $limit = 3) {
     try {
+        ensureAIChatFeedbackTable($db);
         $stmt = $db->prepare(
-            "SELECT user_message, ai_response
+            "SELECT user_message, ai_response, failure_type, correction_text
              FROM ai_chat_feedback
              WHERE feedback = 'not-helpful'
                AND LENGTH(user_message) BETWEEN 6 AND 300
@@ -987,8 +1203,8 @@ function buildFeedbackSelfImprovementBlock($db) {
     if (!empty($positives)) {
         $out .= "GOOD PATTERNS (users rated these helpful — replicate this style):\n";
         foreach ($positives as $p) {
-            $q = substr(trim((string)($p['user_message'] ?? '')), 0, 120);
-            $a = substr(trim((string)($p['ai_response']  ?? '')), 0, 200);
+            $q = aiChatCompactFeedbackText($p['user_message'] ?? '', 120);
+            $a = aiChatCompactFeedbackText($p['ai_response'] ?? '', 200);
             if ($q !== '' && $a !== '') {
                 $out .= "  • Q: \"{$q}\" → A: \"{$a}\"\n";
             }
@@ -997,10 +1213,15 @@ function buildFeedbackSelfImprovementBlock($db) {
     if (!empty($negatives)) {
         $out .= "AVOID PATTERNS (users rated these unhelpful — do NOT answer like this):\n";
         foreach ($negatives as $n) {
-            $q = substr(trim((string)($n['user_message'] ?? '')), 0, 120);
-            $a = substr(trim((string)($n['ai_response']  ?? '')), 0, 160);
+            $q = aiChatCompactFeedbackText($n['user_message'] ?? '', 120);
+            $a = aiChatCompactFeedbackText($n['ai_response'] ?? '', 160);
+            $failureType = aiChatCompactFeedbackText($n['failure_type'] ?? '', 40);
+            $correction = aiChatCompactFeedbackText($n['correction_text'] ?? '', 180);
             if ($q !== '' && $a !== '') {
-                $out .= "  • Q: \"{$q}\" → WEAK ANSWER: \"{$a}\"\n";
+                $out .= "  • Q: \"{$q}\"" . ($failureType !== '' ? " ({$failureType})" : '') . " → WEAK ANSWER: \"{$a}\"\n";
+                if ($correction !== '') {
+                    $out .= "    Correction to respect: {$correction}\n";
+                }
             }
         }
         $out .= "When faced with similar questions, produce a clearly better, more specific, and more actionable answer than the weak examples above.\n";
@@ -1589,6 +1810,12 @@ function buildAIChatUserSummaryText($memoryRows, $recentTopics = []) {
     if (!empty($memoryMap['preferred_body_type'])) {
         $preferenceParts[] = 'Body type: ' . ucfirst($memoryMap['preferred_body_type']);
     }
+    if (!empty($memoryMap['preferred_drivetrain'])) {
+        $preferenceParts[] = 'Drivetrain: ' . strtoupper($memoryMap['preferred_drivetrain']);
+    }
+    if (!empty($memoryMap['preferred_condition'])) {
+        $preferenceParts[] = 'Condition: ' . ucfirst(str_replace('_', ' ', $memoryMap['preferred_condition']));
+    }
     if (!empty($memoryMap['preferred_seats'])) {
         $preferenceParts[] = 'Seats: ' . $memoryMap['preferred_seats'];
     }
@@ -1612,6 +1839,33 @@ function buildAIChatUserSummaryText($memoryRows, $recentTopics = []) {
     }
     if (!empty($interestParts)) {
         $lines[] = '- Interests: ' . implode('; ', $interestParts);
+    }
+
+    $importantParts = [];
+    $correctionParts = [];
+    foreach ((array)$memoryRows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $value = aiChatCompactFeedbackText($row['memory_value'] ?? '', 160);
+        if ($value === '') {
+            continue;
+        }
+
+        $type = strtolower(trim((string)($row['memory_type'] ?? '')));
+        if ($type === 'important') {
+            $importantParts[] = $value;
+        } elseif ($type === 'correction') {
+            $correctionParts[] = $value;
+        }
+    }
+
+    if (!empty($importantParts)) {
+        $lines[] = '- Important notes: ' . implode('; ', array_slice(array_unique($importantParts), 0, 3));
+    }
+    if (!empty($correctionParts)) {
+        $lines[] = '- Corrections to respect: ' . implode('; ', array_slice(array_unique($correctionParts), 0, 3));
     }
 
     if (!empty($recentTopics)) {
@@ -1762,6 +2016,17 @@ function extractAIChatPreferenceFacts($db, $message) {
     if (!empty($params['transmission'])) {
         $facts['preferred_transmission'] = strtolower((string)$params['transmission']);
     }
+    if (!empty($params['drivetrain'])) {
+        $facts['preferred_drivetrain'] = strtolower((string)$params['drivetrain']);
+    } elseif (preg_match('/\b(4x4|4wd|awd|fwd|rwd)\b/i', $message, $driveMatch)) {
+        $driveValue = strtolower((string)$driveMatch[1]);
+        $facts['preferred_drivetrain'] = $driveValue === '4x4' ? '4wd' : $driveValue;
+    }
+    if (!empty($params['condition'])) {
+        $facts['preferred_condition'] = strtolower((string)$params['condition']);
+    } elseif (preg_match('/\b(excellent|very good|very_good|good|fair|poor)\s+(?:condition|shape)?\b/i', $message, $conditionMatch)) {
+        $facts['preferred_condition'] = str_replace(' ', '_', strtolower($conditionMatch[1]));
+    }
     if (!empty($params['seats']) && is_numeric($params['seats'])) {
         $facts['preferred_seats'] = (string)(int)$params['seats'];
     }
@@ -1784,6 +2049,123 @@ function extractAIChatPreferenceFacts($db, $message) {
     }
 
     return $facts;
+}
+
+function extractAIChatExplicitMemoryFacts($db, $message) {
+    $message = trim((string)$message);
+    if ($message === '' || !detectAIChatExplicitLearningTrigger($message)) {
+        return [];
+    }
+
+    $payload = extractAIChatLearningPayloadText($message, 700);
+    if ($payload === '') {
+        return [];
+    }
+
+    $type = detectAIChatCorrectionSignal($message) ? 'correction' : 'important';
+    $prefix = $type === 'correction' ? 'correction_' : 'important_note_';
+
+    $facts = [[
+        'key' => $prefix . substr(hash('sha256', strtolower($payload)), 0, 16),
+        'value' => $payload,
+        'type' => $type,
+        'confidence' => $type === 'correction' ? 0.94 : 0.90
+    ]];
+
+    $preferenceFacts = extractAIChatPreferenceFacts($db, $message);
+    $memoryTypeMap = [
+        'preferred_location' => 'preference',
+        'budget_max_mwk' => 'budget',
+        'preferred_make' => 'preference',
+        'preferred_model' => 'preference',
+        'preferred_body_type' => 'preference',
+        'preferred_fuel_type' => 'preference',
+        'preferred_transmission' => 'preference',
+        'preferred_drivetrain' => 'preference',
+        'preferred_condition' => 'preference',
+        'preferred_seats' => 'preference',
+        'search_purpose' => 'intent'
+    ];
+
+    foreach ($preferenceFacts as $key => $value) {
+        if (!isset($memoryTypeMap[$key]) || trim((string)$value) === '') {
+            continue;
+        }
+
+        $facts[] = [
+            'key' => $key,
+            'value' => (string)$value,
+            'type' => $memoryTypeMap[$key],
+            'confidence' => 0.88
+        ];
+    }
+
+    return $facts;
+}
+
+function storeAIChatTriggeredLearningFacts($db, $userId, $message, $source = 'explicit') {
+    $stored = [];
+    foreach (extractAIChatExplicitMemoryFacts($db, $message) as $fact) {
+        $key = trim((string)($fact['key'] ?? ''));
+        $value = trim((string)($fact['value'] ?? ''));
+        if ($key === '' || $value === '') {
+            continue;
+        }
+
+        upsertAIChatUserMemory(
+            $db,
+            $userId,
+            $key,
+            $value,
+            $fact['type'] ?? 'important',
+            $fact['confidence'] ?? 0.88,
+            $source . ': ' . aiChatTruncateText($message, 230)
+        );
+        $stored[] = $key;
+    }
+
+    if (!empty($stored)) {
+        refreshAIChatUserSummary($db, $userId);
+    }
+
+    return $stored;
+}
+
+function buildAIChatLearningTriggerResponse($storedKeys, $databaseLearningScheduled = false) {
+    $parts = [];
+    if (!empty($storedKeys)) {
+        $parts[] = 'I stored that as long-term chat memory so future answers can respect it.';
+    }
+    if ($databaseLearningScheduled) {
+        $parts[] = 'I also queued a live MotorLink database learning refresh focused on important active makes, models, and listing demand.';
+    }
+    if (empty($parts)) {
+        $parts[] = 'I did not find a clear fact to store. Tell me what to remember using a phrase like "remember" or "correction".';
+    }
+
+    return implode(' ', $parts);
+}
+
+function maybeHandleAIChatLearningTrigger($db, $userId, $message) {
+    $message = trim((string)$message);
+    $hasExplicitLearning = detectAIChatExplicitLearningTrigger($message);
+    $hasDatabaseLearning = detectAIChatDatabaseLearningTrigger($message);
+
+    if (!$hasExplicitLearning && !$hasDatabaseLearning) {
+        return false;
+    }
+
+    $storedKeys = $hasExplicitLearning ? storeAIChatTriggeredLearningFacts($db, $userId, $message, 'chat_trigger') : [];
+    $databaseLearningScheduled = $hasDatabaseLearning ? scheduleAIChatDatabasePriorityLearning($db, $message, 32) : false;
+
+    $respondNow = $hasDatabaseLearning || preg_match('/^\s*(please\s+)?(remember|learn this|note this|save this|store this|keep in mind|for future|next time|important|correction|wrong|incorrect|actually)\b/i', $message) === 1;
+
+    return [
+        'respond_now' => $respondNow,
+        'stored_keys' => $storedKeys,
+        'database_learning_scheduled' => $databaseLearningScheduled,
+        'response' => buildAIChatLearningTriggerResponse($storedKeys, $databaseLearningScheduled)
+    ];
 }
 
 function aiChatMessageMentionsBudget($message) {
@@ -1829,13 +2211,18 @@ function buildPersistentMemoryAwareMessage($db, $message, $memoryRows) {
         return false;
     }
 
+    $shortMemoryFilterFollowUp = str_word_count($message) <= 5
+        && preg_match('/\b(automatic|manual|diesel|petrol|hybrid|electric|4x4|4wd|awd|fwd|rwd|excellent|good|fair|cheaper|cheapest|newer|older|only|same|budget|under|below)\b/i', $message) === 1;
+
     if (
-        detectCarHireQuery($message) ||
-        detectDealerQuery($message) ||
-        detectGarageQuery($message) ||
-        detectSearchQuery($message) ||
-        detectCarSpecQuery($message) ||
-        detectCarRecommendationQuery($message)
+        !$shortMemoryFilterFollowUp && (
+            detectCarHireQuery($message) ||
+            detectDealerQuery($message) ||
+            detectGarageQuery($message) ||
+            detectSearchQuery($message) ||
+            detectCarSpecQuery($message) ||
+            detectCarRecommendationQuery($message)
+        )
     ) {
         return false;
     }
@@ -2380,6 +2767,8 @@ function persistAIChatConversationOutcome($db, $context, $responseData) {
         'preferred_body_type' => 'preference',
         'preferred_fuel_type' => 'preference',
         'preferred_transmission' => 'preference',
+        'preferred_drivetrain' => 'preference',
+        'preferred_condition' => 'preference',
         'preferred_seats' => 'preference',
         'search_purpose' => 'intent',
         'last_topic' => 'routing',
@@ -2390,6 +2779,14 @@ function persistAIChatConversationOutcome($db, $context, $responseData) {
         $type = $memoryTypeMap[$key] ?? 'preference';
         $confidence = in_array($key, ['last_topic', 'last_market_tool'], true) ? 0.90 : 0.78;
         upsertAIChatUserMemory($db, $userId, $key, $value, $type, $confidence, $originalMessage);
+    }
+
+    if (detectAIChatExplicitLearningTrigger($originalMessage) && empty($context['learning_triggered'])) {
+        storeAIChatTriggeredLearningFacts($db, $userId, $originalMessage, 'conversation');
+    }
+
+    if (detectAIChatDatabaseLearningTrigger($originalMessage) && empty($context['database_learning_scheduled'])) {
+        scheduleAIChatDatabasePriorityLearning($db, $originalMessage, 24);
     }
 
     refreshAIChatUserSummary($db, $userId);
@@ -2822,6 +3219,22 @@ function handleAICarChat($db) {
             logAIChatUsage($db, $user['id'], $message, 0, 0, $modelName, 0.0, 'deterministic_no_provider');
         };
 
+        $learningTriggerResult = maybeHandleAIChatLearningTrigger($db, $user['id'], $originalMessage);
+        if ($learningTriggerResult !== false && !empty($learningTriggerResult['respond_now'])) {
+            $logDeterministicUsage();
+            updateAIChatPersistenceContext([
+                'learning_triggered' => true,
+                'database_learning_scheduled' => !empty($learningTriggerResult['database_learning_scheduled'])
+            ]);
+            sendSuccess([
+                'response' => $learningTriggerResult['response'],
+                'learning_triggered' => true,
+                'stored_memory_count' => count($learningTriggerResult['stored_keys'] ?? []),
+                'database_learning_scheduled' => !empty($learningTriggerResult['database_learning_scheduled'])
+            ]);
+            return;
+        }
+
         // Get user context (type, business info, etc.)
         $userContext = getUserContext($db, $user);
         updateAIChatPersistenceContext(['user_context' => $userContext]);
@@ -3192,7 +3605,7 @@ function handleAICarChat($db) {
                 }
             }
         } else {
-            $databaseContext = "\n\nDATABASE CHECK: No matching data found in MotorLink database (including cache tables) for this query. Use your AI knowledge, research capabilities, and web searches to provide a comprehensive, summarized overview. Always offer alternatives and similar options when appropriate.";
+            $databaseContext = "\n\nDATABASE CHECK: No matching data found in MotorLink database or learning cache for this query. Use cautious provider knowledge only, do not claim live browsing, and offer similar MotorLink alternatives when appropriate.";
         }
 
         // Build context-aware system prompt
@@ -3478,10 +3891,16 @@ REMEMBER (MANDATORY WORKFLOW):
             . "2. If exact data is unavailable, say so briefly and provide best-effort guidance.\n"
             . "3. For follow-ups, preserve conversation context and resolve references like first, second, that one, their contact, or my car.\n"
             . "4. Tolerate typos and unclear phrasing; infer the likely vehicle intent before asking for clarification.\n"
-            . "5. Think through trade-offs deeply, then answer concisely by default (max ~140 words) unless user asks for details.\n"
+            . "5. Think through trade-offs deeply, then answer concisely by default (max about 160 words) unless user asks for details.\n"
             . "6. For greetings/short prompts, reply in 1-2 short sentences.\n"
             . "7. Use simple markdown bullets when helpful.\n"
-            . "8. Non-automotive questions are allowed; answer politely, briefly, and bridge back to MotorLink only when useful.\n\n"
+            . "8. If the user corrects you or marks a fact as important, treat that as higher priority than older memory unless it conflicts with verified DB data.\n\n"
+            . "RESPONSE QUALITY CONTRACT:\n"
+            . "- Lead with the answer or best match, then give the reason, then the next useful action.\n"
+            . "- Label source strength: MotorLink database, learned cache, recent conversation, or general guidance.\n"
+            . "- Never invent exact prices, contacts, OEM numbers, stock availability, or specs when the provided context does not contain them.\n"
+            . "- For marketplace answers, include links when IDs are available and avoid listing more than the best few options.\n"
+            . "- For mistakes/retries, change the substance of the answer, not just the wording.\n\n"
             . "USER CONTEXT: {$contextInfo}{$locationContext}{$longTermMemoryCompact}{$conversationBriefCompact}{$recentEntityCompact}\n"
             . "BASE URL: {$baseUrl}{$databaseContextCompact}{$retrievalContextCompact}{$activeVehicleBlock}";
 
