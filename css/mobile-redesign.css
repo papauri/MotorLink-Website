@@ -1276,6 +1276,8 @@ body.header-force-mobile .nav.mobile-active a {
     border-radius: 0 !important;
     white-space: normal !important;
     min-height: auto !important;
+    color: #111827 !important;
+    background: transparent !important;
 }
 
 body.header-force-mobile .nav.active a:last-child,
@@ -1547,6 +1549,16 @@ body.header-force-mobile .logo {
         line-height: 1.25 !important;
         white-space: normal !important;
         min-height: 44px !important;
+        color: #111827 !important;
+        background: transparent !important;
+    }
+
+    body.header-force-mobile .nav.active a:hover,
+    body.header-force-mobile .nav.mobile-active a:hover,
+    body.header-force-mobile .nav.active .mobile-dash-link:hover,
+    body.header-force-mobile .nav.mobile-active .mobile-dash-link:hover {
+        color: #1a7431 !important;
+        background: rgba(26, 116, 49, 0.07) !important;
     }
 
     body.header-force-mobile .nav.active > .dashboard-link,
